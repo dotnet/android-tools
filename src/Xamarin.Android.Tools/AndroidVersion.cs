@@ -102,6 +102,8 @@ namespace Xamarin.Android.Tools
 			new AndroidVersion (22, "5.1",   "Lollipop",                new Version (5, 1)),
 			new AndroidVersion (23, "6.0",   "Marshmallow",             new Version (6, 0)),
 			new AndroidVersion (24, "7.0",   "Nougat",                  new Version (7, 0)),
+			new AndroidVersion (25, "7.1",   "Nougat",                  new Version (7, 1)),
+			new AndroidVersion (26, "8.0",   "O",                       new Version (8, 0)),
 		};
 	}
 }
