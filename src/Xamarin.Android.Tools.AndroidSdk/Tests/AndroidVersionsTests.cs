@@ -40,6 +40,16 @@ namespace Xamarin.Android.Tools.Tests
 		}
 
 		[Test]
+		public void Contructor_UnstableVersions ()
+		{
+			var versions = new AndroidVersions (
+				new [] { new AndroidVersion (apiLevel: 100, osVersion: "100.0", codeName: "Test", id: "Z", stable: false) }
+			);
+			Assert.IsNull (versions.MaxStableVersion);
+			Assert.IsNull (versions.MinStableVersion);
+		}
+
+		[Test]
 		public void Constructor_FrameworkDirectories ()
 		{
 			var frameworkDir    = Path.GetTempFileName ();
