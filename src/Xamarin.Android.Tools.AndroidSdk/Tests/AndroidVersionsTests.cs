@@ -77,9 +77,20 @@ namespace Xamarin.Android.Tools.Tests
 					"  <Stable>False</Stable>",
 					"</AndroidApiInfo>",
 				});
+				Directory.CreateDirectory (Path.Combine (frameworkDir, "MonoAndroid", "v108.1.99"));
+				File.WriteAllLines (Path.Combine (frameworkDir, "MonoAndroid", "v108.1.99", "AndroidApiInfo.xml"), new []{
+					"<AndroidApiInfo>",
+					"  <Id>Z</Id>",
+					"  <Level>127</Level>",
+					"  <Name>Z</Name>",
+					"  <Version>v108.1.99</Version>",
+					"  <Stable>False</Stable>",
+					"</AndroidApiInfo>",
+				});
 				var versions    = new AndroidVersions (new [] {
 					Path.Combine (frameworkDir, "MonoAndroid", "v5.1"),
-					Path.Combine (frameworkDir, "MonoAndroid", "v6.0")
+					Path.Combine (frameworkDir, "MonoAndroid", "v6.0"),
+					Path.Combine (frameworkDir, "MonoAndroid", "v108.1.99")
 				});
 				Assert.IsNotNull (versions.FrameworkDirectories);
 				Assert.AreEqual (1,     versions.FrameworkDirectories.Count);
