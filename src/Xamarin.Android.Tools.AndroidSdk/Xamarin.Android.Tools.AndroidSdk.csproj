@@ -49,6 +49,7 @@
     <Compile Include="ProcessUtils.cs" />
     <Compile Include="AndroidAppManifest.cs" />
     <Compile Include="FileUtil.cs" />
+    <Compile Include="JdkProperties.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
