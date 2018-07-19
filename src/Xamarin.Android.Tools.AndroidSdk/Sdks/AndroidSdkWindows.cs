@@ -223,22 +223,22 @@ namespace Xamarin.Android.Tools
 		}
 		#endregion
 
-		public override void Initialize(string androidSdkPath = null, string androidNdkPath = null, string javaSdkPath = null)
+		public override void Initialize (string androidSdkPath = null, string androidNdkPath = null, string javaSdkPath = null)
 		{
-			base.Initialize(androidSdkPath, androidNdkPath, javaSdkPath);
+			base.Initialize (androidSdkPath, androidNdkPath, javaSdkPath);
 
 			var jdkPath = JavaSdkPath;
-			if (!string.IsNullOrEmpty(jdkPath)) {
-				var cur = Environment.GetEnvironmentVariable("JAVA_HOME");
-				if (!string.IsNullOrEmpty(cur))
-					Environment.SetEnvironmentVariable("JAVA_HOME", jdkPath);
+			if (!string.IsNullOrEmpty (jdkPath)) {
+				var cur = Environment.GetEnvironmentVariable ("JAVA_HOME");
+				if (!string.IsNullOrEmpty (cur))
+					Environment.SetEnvironmentVariable ("JAVA_HOME", jdkPath);
 
 				var javaBinPath = this.JavaBinPath;
-				if (!string.IsNullOrEmpty(javaBinPath)) {
-					var environmentPath = Environment.GetEnvironmentVariable("PATH");
-					if (!environmentPath.Contains(javaBinPath)){
-						var processPath = string.Concat(javaBinPath, Path.PathSeparator, environmentPath);
-						Environment.SetEnvironmentVariable("PATH", processPath);
+				if (!string.IsNullOrEmpty (javaBinPath)) {
+					var environmentPath = Environment.GetEnvironmentVariable ("PATH");
+					if (!environmentPath.Contains (javaBinPath)) {
+						var processPath = string.Concat (javaBinPath, Path.PathSeparator, environmentPath);
+						Environment.SetEnvironmentVariable ("PATH", processPath);
 					}
 				}
 			}
