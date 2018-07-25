@@ -62,6 +62,7 @@ namespace Xamarin.Android.Tools
 					if (ValidateJavaSdkLocation (path))
 						return path;
 				}
+
 				return null;
 			}
 		}
@@ -93,6 +94,14 @@ namespace Xamarin.Android.Tools
 			if (!string.IsNullOrEmpty (preferedJavaSdkPath))
 				return preferedJavaSdkPath;
 
+			var javaHomeEnv = Environment.GetEnvironmentVariable ("JAVA_HOME");
+			if (!String.IsNullOrEmpty (javaHomeEnv) && ValidateJavaSdkLocation (javaHomeEnv))
+				return javaHomeEnv;
+
+			var libExecJavaHome = GetUsrLibExecJavaHomeSdkPath ();
+			if (!String.IsNullOrEmpty (libExecJavaHome) && ValidateJavaSdkLocation (libExecJavaHome))
+				return libExecJavaHome;
+
 			// Look in PATH
 			foreach (var path in FindExecutableInPath (JarSigner)) {
 				// Strip off "bin"
@@ -105,29 +114,34 @@ namespace Xamarin.Android.Tools
 			return null;
 		}
 
-		public override bool ValidateJavaSdkLocation (string loc) 
+		public override bool ValidateJavaSdkLocation (string loc)
 		{
 			var result = base.ValidateJavaSdkLocation (loc);
 
 			if (result) {
-				// handle apple's java stub
-				const string javaHomeExe = "/usr/libexec/java_home";
+				if (loc == "/usr") {
+					// handle apple's java stub
+					const string javaHomeExe = "/usr/libexec/java_home";
 
-				if (File.Exists (javaHomeExe)) {
-					// returns true if there is a java installed
-					var javaHomeTask = ProcessUtils.ExecuteToolAsync<bool> (javaHomeExe,
-						(output) => {
-							if (output.Contains ("(null)")) {
-								return false;
-							}
+					if (File.Exists (javaHomeExe)) {
+						// returns true if there is a java installed
+						var javaHomeTask = ProcessUtils.ExecuteToolAsync<bool> (javaHomeExe,
+							(output) => {
+								if (output.Contains ("(null)")) {
+									return false;
+								}
 
-							return true;
-						}, System.Threading.CancellationToken.None
-					);
+								return true;
+							}, System.Threading.CancellationToken.None
+						);
 
-					if (!javaHomeTask.Result) {
-						return false;
+						if (!javaHomeTask.Result) {
+							return false;
+						}
 					}
+				} else {
+					// Handle OpenJDK or other paths
+					return File.Exists (Path.Combine (loc, "bin", "javac"));
 				}
 			}
 
@@ -199,6 +213,27 @@ namespace Xamarin.Android.Tools
 
 			androidEl.SetAttributeValue ("path", path);
 			doc.Save (UnixConfigPath);
+		}
+
+		string GetUsrLibExecJavaHomeSdkPath ()
+		{
+			const string javaHomeExe = "/usr/libexec/java_home";
+
+			if (File.Exists (javaHomeExe)) {
+				var javaHomeTask = ProcessUtils.ExecuteToolAsync<string> (javaHomeExe,
+					(output) => {
+						if (output.Contains ("(null)")) {
+							return null;
+						}
+
+						return output;
+					}, System.Threading.CancellationToken.None
+				);
+
+				return javaHomeTask.Result;
+			}
+
+			return null;
 		}
 
 		private static string UnixConfigPath {
