@@ -138,30 +138,7 @@ namespace Xamarin.Android.Tools
 			var result = base.ValidateJavaSdkLocation (loc);
 
 			if (result) {
-				if (loc == "/usr") {
-					// handle apple's java stub
-					const string javaHomeExe = "/usr/libexec/java_home";
-
-					if (File.Exists (javaHomeExe)) {
-						// returns true if there is a java installed
-						var javaHomeTask = ProcessUtils.ExecuteToolAsync<bool> (javaHomeExe,
-							(output) => {
-								if (output.Contains ("(null)")) {
-									return false;
-								}
-
-								return true;
-							}, System.Threading.CancellationToken.None
-						);
-
-						if (!javaHomeTask.Result) {
-							return false;
-						}
-					}
-				} else {
-					// Handle OpenJDK or other paths
-					return File.Exists (Path.Combine (loc, "bin", "javac"));
-				}
+				return File.Exists (Path.Combine (loc, "bin", "javac"));
 			}
 
 			return result;
