@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -108,20 +109,7 @@ namespace Xamarin.Android.Tools
 
 		protected override string GetJavaSdkPath ()
 		{
-			var preferedJavaSdkPath = PreferedJavaSdkPath;
-			if (!string.IsNullOrEmpty (preferedJavaSdkPath))
-				return preferedJavaSdkPath;
-
-			// Look in PATH
-			foreach (var path in ProcessUtils.FindExecutablesInPath (JarSigner)) {
-				// Strip off "bin"
-				var dir = Path.GetDirectoryName (path);
-
-				if (ValidateJavaSdkLocation (dir))
-					return dir;
-			}
-
-			return null;
+			return JdkInfo.GetKnownSystemJdkInfos (Logger).FirstOrDefault ()?.HomePath;
 		}
 
 		public override bool ValidateJavaSdkLocation (string loc)
