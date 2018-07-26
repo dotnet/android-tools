@@ -81,7 +81,6 @@ namespace Xamarin.Android.Tools
 					if (ValidateJavaSdkLocation (path))
 						return path;
 				}
-
 				return null;
 			}
 		}
@@ -112,14 +111,6 @@ namespace Xamarin.Android.Tools
 			var preferedJavaSdkPath = PreferedJavaSdkPath;
 			if (!string.IsNullOrEmpty (preferedJavaSdkPath))
 				return preferedJavaSdkPath;
-
-			var javaHomeEnv = Environment.GetEnvironmentVariable ("JAVA_HOME");
-			if (!String.IsNullOrEmpty (javaHomeEnv) && ValidateJavaSdkLocation (javaHomeEnv))
-				return javaHomeEnv;
-
-			var libExecJavaHome = GetUsrLibExecJavaHomeSdkPath ();
-			if (!String.IsNullOrEmpty (libExecJavaHome) && ValidateJavaSdkLocation (libExecJavaHome))
-				return libExecJavaHome;
 
 			// Look in PATH
 			foreach (var path in FindExecutableInPath (JarSigner)) {
@@ -209,27 +200,6 @@ namespace Xamarin.Android.Tools
 
 			androidEl.SetAttributeValue ("path", path);
 			SaveConfig (doc);
-		}
-
-		string GetUsrLibExecJavaHomeSdkPath ()
-		{
-			const string javaHomeExe = "/usr/libexec/java_home";
-
-			if (File.Exists (javaHomeExe)) {
-				var javaHomeTask = ProcessUtils.ExecuteToolAsync<string> (javaHomeExe,
-					(output) => {
-						if (output.Contains ("(null)")) {
-							return null;
-						}
-
-						return output;
-					}, System.Threading.CancellationToken.None
-				);
-
-				return javaHomeTask.Result;
-			}
-
-			return null;
 		}
 
 		void SaveConfig (XDocument doc)
