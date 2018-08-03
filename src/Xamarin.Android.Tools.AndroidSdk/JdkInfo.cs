@@ -16,6 +16,8 @@ namespace Xamarin.Android.Tools
 
 		public      string                              HomePath                    {get;}
 
+		public      string                              Locator                     {get;}
+
 		public      string                              JarPath                     {get;}
 		public      string                              JavaPath                    {get;}
 		public      string                              JavacPath                   {get;}
@@ -37,7 +39,7 @@ namespace Xamarin.Android.Tools
 		Lazy<Dictionary<string, List<string>>>      javaProperties;
 		Lazy<Version>                               javaVersion;
 
-		public JdkInfo (string homePath)
+		public JdkInfo (string homePath, string locator = null)
 		{
 			if (homePath == null)
 				throw new ArgumentNullException (nameof (homePath));
@@ -45,6 +47,7 @@ namespace Xamarin.Android.Tools
 				throw new ArgumentException ("Not a directory", nameof (homePath));
 
 			HomePath            = homePath;
+			Locator             = locator;
 
 			var binPath         = Path.Combine (HomePath, "bin");
 			JarPath             = ProcessUtils.FindExecutablesInDirectory (binPath, "jar").FirstOrDefault ();
@@ -229,7 +232,7 @@ namespace Xamarin.Android.Tools
 		static IEnumerable<JdkInfo> GetConfiguredJdks (Action<TraceLevel, string> logger)
 		{
 			return GetConfiguredJdkPaths (logger)
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "monodroid-config.xml"))
 				.Where (jdk => jdk != null)
 				.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 		}
@@ -246,7 +249,7 @@ namespace Xamarin.Android.Tools
 		internal static IEnumerable<JdkInfo> GetMacOSMicrosoftJdks (Action<TraceLevel, string> logger)
 		{
 			return GetMacOSMicrosoftJdkPaths ()
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "$HOME/Library/Developer/Xamarin/jdk"))
 				.Where (jdk => jdk != null)
 				.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 		}
@@ -265,14 +268,14 @@ namespace Xamarin.Android.Tools
 			return Directory.EnumerateDirectories (jdks);
 		}
 
-		static JdkInfo TryGetJdkInfo (string path, Action<TraceLevel, string> logger)
+		static JdkInfo TryGetJdkInfo (string path, Action<TraceLevel, string> logger, string locator)
 		{
 			JdkInfo jdk = null;
 			try {
-				jdk = new JdkInfo (path);
+				jdk = new JdkInfo (path, locator);
 			}
 			catch (Exception e) {
-				logger (TraceLevel.Warning, $"Not a valid JDK directory: `{path}`");
+				logger (TraceLevel.Warning, $"Not a valid JDK directory: `{path}`; via locator: {locator}");
 				logger (TraceLevel.Verbose, e.ToString ());
 			}
 			return jdk;
@@ -290,7 +293,7 @@ namespace Xamarin.Android.Tools
 			var java_home = Environment.GetEnvironmentVariable ("JAVA_HOME");
 			if (string.IsNullOrEmpty (java_home))
 				yield break;
-			var jdk = TryGetJdkInfo (java_home, logger);
+			var jdk = TryGetJdkInfo (java_home, logger, "$JAVA_HOME");
 			if (jdk != null)
 				yield return jdk;
 		}
@@ -300,7 +303,7 @@ namespace Xamarin.Android.Tools
 		{
 			return GetLibexecJdkPaths (logger)
 				.Distinct ()
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "`/usr/libexec/java_home -X`"))
 				.Where (jdk => jdk != null)
 				.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 		}
@@ -339,7 +342,7 @@ namespace Xamarin.Android.Tools
 		{
 			return GetJavaAlternativesJdkPaths ()
 				.Distinct ()
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "`/usr/sbin/update-java-alternatives -l`"))
 				.Where (jdk => jdk != null);
 		}
 
@@ -372,7 +375,7 @@ namespace Xamarin.Android.Tools
 		{
 			return GetLibJvmJdkPaths ()
 				.Distinct ()
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "`ls /usr/lib/jvm/*`"))
 				.Where (jdk => jdk != null)
 				.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 		}
@@ -394,7 +397,7 @@ namespace Xamarin.Android.Tools
 		static IEnumerable<JdkInfo> GetPathEnvironmentJdks (Action<TraceLevel, string> logger)
 		{
 			return GetPathEnvironmentJdkPaths ()
-				.Select (p => TryGetJdkInfo (p, logger))
+				.Select (p => TryGetJdkInfo (p, logger, "$PATH"))
 				.Where (jdk => jdk != null);
 		}
 
