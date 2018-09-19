@@ -114,7 +114,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		public string ApkAnalyzerPath {
-			get { return sdk.ApkAnalyzer; }
+			get { return Path.Combine (sdk.AndroidToolsBinPath, sdk.ApkAnalyzer); }
 		}
 
 		public string AndroidNdkPath {
