@@ -113,6 +113,10 @@ namespace Xamarin.Android.Tools
 			return apiLevel != 0 && Directory.Exists (GetPlatformDirectory (apiLevel));
 		}
 
+		public string ApkAnalyzerPath {
+			get { return sdk.ApkAnalyzer; }
+		}
+
 		public string AndroidNdkPath {
 			get { return sdk.AndroidNdkPath; }
 		}
