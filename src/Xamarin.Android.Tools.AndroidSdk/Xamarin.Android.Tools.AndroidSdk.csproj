@@ -39,7 +39,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <FilesToSign Include="$(OutDir)\Xamarin.Android.Tools.AndroidSdk.dl">
+    <FilesToSign Include="$(OutDir)\Xamarin.Android.Tools.AndroidSdk.dll">
       <Authenticode>Microsoft</Authenticode>
     </FilesToSign>
   </ItemGroup>
