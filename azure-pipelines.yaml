@@ -35,12 +35,13 @@ jobs:
     inputs:
       solution: Xamarin.Android.Tools.sln
   - task: NuGetCommand@2
-    displayName: 'NuGet install NUnit3TestAdapter'
+    displayName: NuGet install NUnit.Console
     inputs:
       command: custom
-      arguments: 'install NUnit3TestAdapter -Version 3.10.0 -OutputDirectory packages'
-  - task: VSTest@2
-    displayName: 'VsTest - NUnit3'
+      arguments: install NUnit.Console -Version 3.9.0 -OutputDirectory packages
+  - script: mono packages/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe bin/TestDebug/Xamarin.Android.Tools.AndroidSdk-Tests.dll
+    displayName: Run NUnit Tests
+  - task: PublishTestResults@2
     inputs:
-      testAssemblyVer2: 'bin/TestDebug/*-Tests.dll'
-      pathtoCustomTestAdapters: 'packages/NUnit3TestAdapter.3.10.0/build/net35'
+      testResultsFormat: NUnit
+      testResultsFiles: TestResult.xml
