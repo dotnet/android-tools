@@ -1,0 +1,46 @@
+name: Xamarin.Android.Tools $(Rev:r)
+jobs:
+- job: windows
+  displayName: windows
+  pool: Hosted VS2017
+  steps:
+  - task: NuGetCommand@2
+    displayName: 'NuGet restore'
+    inputs:
+      restoreSolution: Xamarin.Android.Tools.sln
+  - task: MSBuild@1
+    displayName: 'Build solution Xamarin.Android.Tools.sln'
+    inputs:
+      solution: Xamarin.Android.Tools.sln
+  - task: NuGetCommand@2
+    displayName: 'NuGet install NUnit3TestAdapter'
+    inputs:
+      command: custom
+      arguments: 'install NUnit3TestAdapter -Version 3.10.0 -OutputDirectory packages'
+  - task: VSTest@2
+    displayName: 'VsTest - NUnit3'
+    inputs:
+      testAssemblyVer2: 'bin\TestDebug\*-Tests.dll'
+      pathtoCustomTestAdapters: 'packages\NUnit3TestAdapter.3.10.0\build\net35'
+- job: mac
+  displayName: mac
+  pool: Hosted macOS
+  steps:
+  - task: NuGetCommand@2
+    displayName: 'NuGet restore'
+    inputs:
+      restoreSolution: Xamarin.Android.Tools.sln
+  - task: MSBuild@1
+    displayName: 'Build solution Xamarin.Android.Tools.sln'
+    inputs:
+      solution: Xamarin.Android.Tools.sln
+  - task: NuGetCommand@2
+    displayName: 'NuGet install NUnit3TestAdapter'
+    inputs:
+      command: custom
+      arguments: 'install NUnit3TestAdapter -Version 3.10.0 -OutputDirectory packages'
+  - task: VSTest@2
+    displayName: 'VsTest - NUnit3'
+    inputs:
+      testAssemblyVer2: 'bin/TestDebug/*-Tests.dll'
+      pathtoCustomTestAdapters: 'packages/NUnit3TestAdapter.3.10.0/build/net35'
