@@ -26,12 +26,12 @@ jobs:
     displayName: NuGet pack
     inputs:
       command: pack
-      packagesToPack: src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.nuspec
-  - task: NuGetCommand@2
-    displayName: NuGet push
+      packagesToPack: src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj
+      packDestination: $(Build.ArtifactStagingDirectory)
+  - task: PublishBuildArtifacts@1
+    displayName: upload artifacts
     inputs:
-      command: push
-      publishVstsFeed: '3d20c03e-99cb-4c71-a5bd-70bfca6a78cb'
+      pathtoPublish: $(Build.ArtifactStagingDirectory)
 - job: mac
   displayName: mac
   pool: Hosted macOS
