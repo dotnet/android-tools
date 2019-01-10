@@ -41,6 +41,7 @@ jobs:
       arguments: install NUnit.Console -Version 3.9.0 -OutputDirectory packages
   - script: mono packages/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe bin/TestDebug/Xamarin.Android.Tools.AndroidSdk-Tests.dll
     displayName: Run NUnit Tests
+    continueOnError: true
   - task: PublishTestResults@2
     inputs:
       testResultsFormat: NUnit
