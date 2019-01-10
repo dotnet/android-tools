@@ -52,7 +52,7 @@ jobs:
   - script: mono packages/NUnit.ConsoleRunner.3.9.0/tools/nunit3-console.exe bin/TestDebug/Xamarin.Android.Tools.AndroidSdk-Tests.dll
     displayName: Run NUnit Tests
   - task: PublishTestResults@2
+    condition: always()
     inputs:
       testResultsFormat: NUnit
       testResultsFiles: TestResult.xml
-      condition: always()
