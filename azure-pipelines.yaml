@@ -22,6 +22,16 @@ jobs:
     inputs:
       testAssemblyVer2: 'bin\TestDebug\*-Tests.dll'
       pathtoCustomTestAdapters: 'packages\NUnit3TestAdapter.3.10.0\build\net35'
+  - task: NuGetCommand@2
+    displayName: NuGet pack
+    inputs:
+      command: pack
+      packagesToPack: src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.nuspec
+  - task: NuGetCommand@2
+    displayName: NuGet push
+    inputs:
+      command: push
+      publishVstsFeed: '3d20c03e-99cb-4c71-a5bd-70bfca6a78cb'
 - job: mac
   displayName: mac
   pool: Hosted macOS
