@@ -1,4 +1,5 @@
 # xamarin-android-tools
+[![Build Status](https://dev.azure.com/xamarin/Xamarin/_apis/build/status/Xamarin.Android.Tools)](https://dev.azure.com/xamarin/Xamarin/_build/latest?definitionId=2)
 
 **xamarin-android-tools** is a repo to easily share code between the
 [xamarin-android][x-a] repo and the Xamarin.Android commercial tooling,
