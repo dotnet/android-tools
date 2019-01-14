@@ -1,4 +1,8 @@
 name: Xamarin.Android.Tools $(Rev:r)
+variables:
+  major: 1
+  minor: 0
+  patch: $[counter('versioncounter', 100)]
 jobs:
 - job: windows
   displayName: windows
@@ -28,6 +32,9 @@ jobs:
       command: pack
       packagesToPack: src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj
       packDestination: $(Build.ArtifactStagingDirectory)
+      majorVersion: '$(major)'
+      minorVersion: '$(minor)'
+      patchVersion: '$(patch)'
   - task: PublishBuildArtifacts@1
     displayName: upload artifacts
     inputs:
