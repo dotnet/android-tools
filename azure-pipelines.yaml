@@ -29,12 +29,8 @@ jobs:
   - task: NuGetCommand@2
     displayName: NuGet pack
     inputs:
-      command: pack
-      packagesToPack: src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj
-      packDestination: $(Build.ArtifactStagingDirectory)
-      majorVersion: '$(major)'
-      minorVersion: '$(minor)'
-      patchVersion: '$(patch)'
+      command: custom
+      arguments: pack src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj -Version $(major).$(minor).$(patch) -OutputDirectory $(Build.ArtifactStagingDirectory)
   - task: PublishBuildArtifacts@1
     displayName: upload artifacts
     inputs:
