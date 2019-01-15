@@ -56,9 +56,32 @@ e.g. `bin\TestDebug`, contains unit tests and related files.
 
 # Contributing
 
+Package versioning follows [Semantic Versioning 2.0.0](https://semver.org/).
+The major version in the `nuget.version` file should be updated when a breaking change is introduced.
+The minor version should be updated when new functionality is added.
+The patch version will be automatically determined by the number of commits since the last version change.
+
 This project has adopted the code of conduct defined by the Contributor Covenant
 to clarify expected behavior in our community. For more information, see the
 [.NET Foundation Code of Conduct](http://www.dotnetfoundation.org/code-of-conduct).
+
+# Distribution
+
+Xamarin.Android.Tools.AndroidSdk nupkg files are produced for every build which occurrs on [Azure Devops](https://dev.azure.com/xamarin/Xamarin/_build?definitionId=2&_a=summary).
+To download one of these packages, navigate to the build you are interested in and click on the `Artifacts` button.
+
+Alternatively, "unofficial" releases are currently hosted on MyGet.
+Add the feed to your project's `NuGet.config` to reference these packages:
+
+```xml
+<configuration>
+  <packageSources>
+    <add
+      key="xamarin-android"
+      value="https://www.myget.org/F/xamarin-android/api/v3/index.json"/>
+  </packageSources>
+</configuration>
+```
 
 # Mailing Lists
 
