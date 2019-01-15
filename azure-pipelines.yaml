@@ -1,8 +1,4 @@
 name: Xamarin.Android.Tools $(Rev:r)
-variables:
-  major: 1
-  minor: 0
-  patch: $[counter('versioncounter', 100)]
 jobs:
 - job: windows
   displayName: windows
@@ -21,11 +17,17 @@ jobs:
     inputs:
       testAssemblyVer2: 'bin\TestDebug\*-Tests.dll'
       pathtoCustomTestAdapters: 'packages\NUnit3TestAdapter.3.12.0\build\net35'
+  - powershell: |
+      $hashOfLastVersionChange = & "git" "log" "--follow" "-1" "--pretty=%H" "nuget.version"
+      $commitsSinceVersionChange = & "git" "rev-list" "--count" "$hashOfLastVersionChange..HEAD"
+      $majorMinor = Get-Content "nuget.version"
+      $version = "$majorMinor.$commitsSinceVersionChange"
+      Write-Host "##vso[task.setvariable variable=xat.nuget.version]$version"
   - task: NuGetCommand@2
     displayName: NuGet pack
     inputs:
       command: custom
-      arguments: pack src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj -Version $(major).$(minor).$(patch) -OutputDirectory $(Build.ArtifactStagingDirectory)
+      arguments: pack src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj -Version $(xat.nuget.version) -OutputDirectory $(Build.ArtifactStagingDirectory)
   - task: PublishBuildArtifacts@1
     displayName: upload artifacts
     inputs:
