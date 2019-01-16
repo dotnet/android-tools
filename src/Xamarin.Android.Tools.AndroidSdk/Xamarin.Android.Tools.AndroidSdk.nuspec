@@ -10,7 +10,7 @@
     <projectUrl>https://github.com/xamarin/xamarin-android-tools</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Xamarin tools for interacting with the Android SDK.</description>
-    <copyright>Copyright 2019</copyright>
+    <copyright>$copyright$</copyright>
     <tags>Xamarin Xamarin.Android</tags>
   </metadata>
 </package>
