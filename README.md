@@ -86,8 +86,9 @@ Add the feed to your project's `NuGet.config` to reference these packages:
 <configuration>
   <packageSources>
     <add
-      key="xamarin-android"
-      value="https://www.myget.org/F/xamarin-android/api/v3/index.json"/>
+        key="xamarin-android"
+        value="https://www.myget.org/F/xamarin-android/api/v3/index.json"
+    />
   </packageSources>
 </configuration>
 ```
