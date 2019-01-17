@@ -1,5 +1,4 @@
 # xamarin-android-tools
-[![Build Status](https://dev.azure.com/xamarin/Xamarin/_apis/build/status/Xamarin.Android.Tools)](https://dev.azure.com/xamarin/Xamarin/_build/latest?definitionId=2)
 
 **xamarin-android-tools** is a repo to easily share code between the
 [xamarin-android][x-a] repo and the Xamarin.Android commercial tooling,
@@ -7,6 +6,16 @@ such as IDE extensions, without requiring that the IDE extensions
 submodule the entire **xamarin-android** repo, which is gigantic.
 
 [x-a]: https://github.com/xamarin/xamarin-android
+
+# Build Status
+
+| Platform              | Status |
+|-----------------------|--------|
+| **Windows**           | [![Windows Build Status][azure-Windows-icon]][azure-Windows-status] |
+
+[azure-Windows-icon]: https://dev.azure.com/xamarin/Xamarin/_apis/build/status/Xamarin.Android.Tools
+[azure-Windows-status]: https://dev.azure.com/xamarin/Xamarin/_build/latest?definitionId=2
+
 
 # Build Requirements
 
