@@ -221,10 +221,19 @@ namespace Xamarin.Android.Tools
 			var vs_default = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.CommonApplicationData), "Microsoft", "AndroidNDK");
 			var vs_default32bit = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.CommonApplicationData), "Microsoft", "AndroidNDK32");
 			var vs_2017_default = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.CommonApplicationData), "Microsoft", "AndroidNDK64");
+			var vs2017_shared_install_dir =
+				RegistryEx.GetValueString (RegistryEx.LocalMachine, @"SOFTWARE\Policies\Microsoft\VisualStudio\Setup", "SharedInstallationPath", RegistryEx.Wow64.Key32) ??
+				RegistryEx.GetValueString (RegistryEx.LocalMachine, @"SOFTWARE\Microsoft\VisualStudio\Setup", "SharedInstallationPath", RegistryEx.Wow64.Key32) ??
+				RegistryEx.GetValueString (RegistryEx.LocalMachine, @"SOFTWARE\Policies\Microsoft\VisualStudio\Setup", "SharedInstallationPath", RegistryEx.Wow64.Key64) ??
+				RegistryEx.GetValueString (RegistryEx.LocalMachine, @"SOFTWARE\Microsoft\VisualStudio\Setup", "SharedInstallationPath", RegistryEx.Wow64.Key64) ??
+				@"C:\";
+			var vs2017_install_drive = Path.GetPathRoot (vs2017_shared_install_dir);
+			var vs_2017_new_default32bit = Path.Combine (vs2017_install_drive, "Microsoft", "AndroidNDK");
+			var vs_2017_new_default = Path.Combine (vs2017_install_drive, "Microsoft", "AndroidNDK64");
 			var android_default = Path.Combine (OS.ProgramFilesX86, "Android");
 			var cdrive_default = @"C:\";
 
-			foreach (var basePath in new string [] {xamarin_private, android_default, vs_default, vs_default32bit, vs_2017_default, cdrive_default})
+			foreach (var basePath in new string [] {xamarin_private, android_default, vs_default, vs_default32bit, vs_2017_default, vs_2017_new_default32bit, vs_2017_new_default, cdrive_default })
 				if (Directory.Exists (basePath))
 					foreach (var dir in Directory.GetDirectories (basePath, "android-ndk-r*"))
 						if (ValidateAndroidNdkLocation (dir))
