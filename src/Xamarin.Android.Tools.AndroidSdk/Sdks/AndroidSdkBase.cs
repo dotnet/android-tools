@@ -65,7 +65,7 @@ namespace Xamarin.Android.Tools
 			androidNdkPath  = androidNdkPath ?? PreferedAndroidNdkPath;
 			javaSdkPath     = javaSdkPath ?? PreferedJavaSdkPath;
 
-			AndroidSdkPath  = ValidateAndroidSdkLocation (androidSdkPath) ? androidSdkPath : AllAndroidSdks.FirstOrDefault ();
+			AndroidSdkPath  = androidSdkPath ?? AllAndroidSdks.FirstOrDefault ();
 			AndroidNdkPath  = ValidateAndroidNdkLocation (androidNdkPath) ? androidNdkPath : AllAndroidNdks.FirstOrDefault ();
 			JavaSdkPath     = ValidateJavaSdkLocation (javaSdkPath) ? javaSdkPath : GetJavaSdkPath ();
 

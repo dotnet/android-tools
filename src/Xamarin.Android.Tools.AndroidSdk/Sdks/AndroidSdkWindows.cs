@@ -36,9 +36,7 @@ namespace Xamarin.Android.Tools
 			get {
 				var wow = RegistryEx.Wow64.Key32;
 				var regKey = GetMDRegistryKey ();
-				if (CheckRegistryKeyForExecutable (RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, wow, "platform-tools", Adb))
-					return RegistryEx.GetValueString (RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, wow);
-				return null;
+				return NullIfEmpty (RegistryEx.GetValueString (RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, wow));
 			}
 		}
 		public override string PreferedAndroidNdkPath {
