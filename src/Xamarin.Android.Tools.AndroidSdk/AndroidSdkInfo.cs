@@ -159,9 +159,9 @@ namespace Xamarin.Android.Tools
 		{
 			logger  = logger ?? DefaultConsoleLogger;
 
-			var sdk = CreateSdk (logger);
-            bool setSDKPath = sdk.SetPreferredAndroidSdkPath(path);
-            return setSDKPath;
+                        var sdk = CreateSdk(logger); 
+                        bool setSDKPath = sdk.SetPreferredAndroidSdkPath(path);
+                        return setSDKPath;
 		}
 
 		public static void SetPreferredJavaSdkPath (string path, Action<TraceLevel, string> logger = null)

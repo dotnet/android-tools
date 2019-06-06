@@ -237,10 +237,10 @@ namespace Xamarin.Android.Tools
 		}
 
 		public override bool SetPreferredAndroidSdkPath (string path)
-		{
-			var regKey = GetMDRegistryKey ();
-			RegistryEx.SetValueString (RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, path ?? "", RegistryEx.Wow64.Key32);
-                return true;
+		{               
+                        var regKey = GetMDRegistryKey();
+                        RegistryEx.SetValueString(RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, path ?? "", RegistryEx.Wow64.Key32);
+                        return true;
 		}
 
 		public override void SetPreferredJavaSdkPath (string path)
