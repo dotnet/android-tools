@@ -133,7 +133,7 @@ namespace Xamarin.Android.Tools
 			return path;
 		}
 
-		public override void SetPreferredAndroidSdkPath (string path)
+		public override bool SetPreferredAndroidSdkPath (string path)
 		{
 			path = NullIfEmpty (path);
 
@@ -145,8 +145,9 @@ namespace Xamarin.Android.Tools
 				doc.Root.Add (androidEl);
 			}
 
-			androidEl.SetAttributeValue ("path", path);
-			SaveConfig (doc, Logger);
+                       androidEl.SetAttributeValue("path", path);
+                       bool setConfig = SaveConfig(doc, Logger);
+                       return setConfig;
 		}
 
 		public override void SetPreferredJavaSdkPath (string path)
@@ -181,7 +182,7 @@ namespace Xamarin.Android.Tools
 			SaveConfig (doc, Logger);
 		}
 
-		void SaveConfig (XDocument doc, Action<TraceLevel, string> logger)
+		bool SaveConfig (XDocument doc, Action<TraceLevel, string> logger)
 		{
 			string cfg = UnixConfigPath;
 			List <string> created = null;
@@ -196,6 +197,7 @@ namespace Xamarin.Android.Tools
                                 catch (Exception ex)
                                 {
                                     logger(TraceLevel.Error, $"Unable to create directory {dir}, user do not have the right permissions, {ex.Message}.");
+                                    return false;
                                 }
                                     AddToList(dir);
                         }   
@@ -210,6 +212,7 @@ namespace Xamarin.Android.Tools
 					created = new List <string> ();
 				created.Add (path);
 			}
+                return true;
 		}
 
 		static  readonly    string  GetUnixConfigDirOverrideName            = $"UnixConfigPath directory override! {typeof (AndroidSdkInfo).AssemblyQualifiedName}";

@@ -236,10 +236,11 @@ namespace Xamarin.Android.Tools
 			return KernelEx.GetShortPathName (path);
 		}
 
-		public override void SetPreferredAndroidSdkPath (string path)
+		public override bool SetPreferredAndroidSdkPath (string path)
 		{
 			var regKey = GetMDRegistryKey ();
 			RegistryEx.SetValueString (RegistryEx.CurrentUser, regKey, MDREG_ANDROID_SDK, path ?? "", RegistryEx.Wow64.Key32);
+                return true;
 		}
 
 		public override void SetPreferredJavaSdkPath (string path)

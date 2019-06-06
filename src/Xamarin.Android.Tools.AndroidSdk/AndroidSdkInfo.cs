@@ -155,12 +155,13 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		public static void SetPreferredAndroidSdkPath (string path, Action<TraceLevel, string> logger = null)
+		public static bool SetPreferredAndroidSdkPath (string path, Action<TraceLevel, string> logger = null)
 		{
 			logger  = logger ?? DefaultConsoleLogger;
 
 			var sdk = CreateSdk (logger);
-			sdk.SetPreferredAndroidSdkPath (path);
+            bool setSDKPath = sdk.SetPreferredAndroidSdkPath(path);
+            return setSDKPath;
 		}
 
 		public static void SetPreferredJavaSdkPath (string path, Action<TraceLevel, string> logger = null)

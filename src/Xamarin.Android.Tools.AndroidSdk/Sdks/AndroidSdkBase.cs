@@ -109,7 +109,7 @@ namespace Xamarin.Android.Tools
 		protected abstract string GetJavaSdkPath ();
 		protected abstract string GetShortFormPath (string path);
 
-		public abstract void SetPreferredAndroidSdkPath (string path);
+		public abstract bool SetPreferredAndroidSdkPath (string path);
 		public abstract void SetPreferredJavaSdkPath (string path);
 		public abstract void SetPreferredAndroidNdkPath (string path);
 
