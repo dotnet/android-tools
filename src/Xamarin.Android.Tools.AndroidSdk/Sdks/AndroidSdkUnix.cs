@@ -146,7 +146,7 @@ namespace Xamarin.Android.Tools
 			}
 
 			androidEl.SetAttributeValue ("path", path);
-			SaveConfig (doc);
+			SaveConfig (doc, Logger);
 		}
 
 		public override void SetPreferredJavaSdkPath (string path)
@@ -162,7 +162,7 @@ namespace Xamarin.Android.Tools
 			}
 
 			javaEl.SetAttributeValue ("path", path);
-			SaveConfig (doc);
+			SaveConfig (doc, Logger);
 		}
 
 		public override void SetPreferredAndroidNdkPath (string path)
@@ -178,10 +178,10 @@ namespace Xamarin.Android.Tools
 			}
 
 			androidEl.SetAttributeValue ("path", path);
-			SaveConfig (doc);
+			SaveConfig (doc, Logger);
 		}
 
-		void SaveConfig (XDocument doc)
+		void SaveConfig (XDocument doc, Action<TraceLevel, string> logger)
 		{
 			string cfg = UnixConfigPath;
 			List <string> created = null;
@@ -189,11 +189,18 @@ namespace Xamarin.Android.Tools
 			if (!File.Exists (cfg)) {
 				string dir = Path.GetDirectoryName (cfg);
 				if (!Directory.Exists (dir)) {
-					Directory.CreateDirectory (dir);
-					AddToList (dir);
-				}
-				AddToList (cfg);
-			}
+                                try
+                                {
+                                    Directory.CreateDirectory(dir);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger(TraceLevel.Error, $"Unable to create directory {dir}, user do not have the right permissions, {ex.Message}.");
+                                }
+                                    AddToList(dir);
+                        }   
+        	   	AddToList (cfg);
+    		}
 			doc.Save (cfg);
 			FixOwnership (created);
 
