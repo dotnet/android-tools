@@ -173,8 +173,8 @@ namespace Xamarin.Android.Tools
 			var paths = new List<Tuple<string, Version>> ();
 			var rootPaths = new List<string>
 			{
-				Path.Combine (Environment.ExpandEnvironmentVariables ("%ProgramW6432%"), "Android", "Jdk"),
-				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86), "Android", "Jdk")
+				Path.Combine (Environment.ExpandEnvironmentVariables ("%ProgramW6432%"), "Android", "jdk"),
+				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86), "Android", "jdk")
 			};
 
 			foreach (var rootPath in rootPaths) {
