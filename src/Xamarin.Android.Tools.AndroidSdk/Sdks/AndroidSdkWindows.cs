@@ -132,7 +132,8 @@ namespace Xamarin.Android.Tools
 					.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 			}
 
-			return ToJdkInfos (GetPreferredJdkPaths (), "Preferred Registry")
+			return ToJdkInfos (GetKnownOpenJdkPaths (), "Well-known OpenJDK paths")
+				.Concat (ToJdkInfos(GetPreferredJdkPaths (), "Preferred Registry"))
 				.Concat (ToJdkInfos (GetOpenJdkPaths (), "OpenJDK"))
 				.Concat (ToJdkInfos (GetOracleJdkPaths (), "Oracle JDK"));
 		}
@@ -161,6 +162,37 @@ namespace Xamarin.Android.Tools
 				if (CheckRegistryKeyForExecutable (root, subKey, valueName, wow, "bin", _JarSigner))
 					yield return RegistryEx.GetValueString (root, subKey, valueName, wow);
 			}
+		}
+
+		/// <summary>
+		/// Locate OpenJDK installations by well known path.
+		/// </summary>
+		/// <returns>List of valid OpenJDK paths in version descending order.</returns>
+		private static IEnumerable<string> GetKnownOpenJdkPaths ()
+		{
+			string JdkFolderNamePattern = "microsoft_dist_openjdk_";
+
+			var paths = new List<dynamic> ();
+			var rootPaths = new List<string>
+			{
+				Path.Combine (Environment.ExpandEnvironmentVariables ("%ProgramW6432%"), "Android", "Jdk"),
+				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86), "Android", "Jdk")
+			};
+
+			foreach (var rootPath in rootPaths) {
+				if (Directory.Exists (rootPath))  {
+					foreach (var directoryName in Directory.EnumerateDirectories (rootPath, $"{JdkFolderNamePattern}*").ToList ()) {
+						var versionString = directoryName.Replace ($"{rootPath}\\{JdkFolderNamePattern}", string.Empty);
+						if (Version.TryParse (versionString, out Version ver)) {
+							paths.Add (new { Path = directoryName, Version = ver });
+						}
+					}
+				}
+			}
+
+			return paths.OrderByDescending (v => v.Version)
+						 .Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk, "bin"), _JarSigner).Any())
+						 .Select (openJdk => (string) openJdk.Path);
 		}
 
 		private static IEnumerable<string> GetOracleJdkPaths ()
