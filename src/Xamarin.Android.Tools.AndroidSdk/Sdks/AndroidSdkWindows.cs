@@ -170,7 +170,7 @@ namespace Xamarin.Android.Tools
 		{
 			string JdkFolderNamePattern = "microsoft_dist_openjdk_";
 
-			var paths = new List<dynamic> ();
+			var paths = new List<Tuple<string, Version>> ();
 			var rootPaths = new List<string>
 			{
 				Path.Combine (Environment.ExpandEnvironmentVariables ("%ProgramW6432%"), "Android", "Jdk"),
@@ -182,15 +182,15 @@ namespace Xamarin.Android.Tools
 					foreach (var directoryName in Directory.EnumerateDirectories (rootPath, $"{JdkFolderNamePattern}*").ToList ()) {
 						var versionString = directoryName.Replace ($"{rootPath}\\{JdkFolderNamePattern}", string.Empty);
 						if (Version.TryParse (versionString, out Version ver)) {
-							paths.Add (new { Path = directoryName, Version = ver });
+							paths.Add (new Tuple<string, Version>(directoryName, ver));
 						}
 					}
 				}
 			}
 
-			return paths.OrderByDescending (v => v.Version)
-						 .Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk, "bin"), _JarSigner).Any())
-						 .Select (openJdk => (string) openJdk.Path);
+			return paths.OrderByDescending (v => v.Item2)
+						 .Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk.Item1, "bin"), _JarSigner).Any())
+						 .Select (openJdk => openJdk.Item1);
 		}
 
 		private static IEnumerable<string> GetOracleJdkPaths ()
