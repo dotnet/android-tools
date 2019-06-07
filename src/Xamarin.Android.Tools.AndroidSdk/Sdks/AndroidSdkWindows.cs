@@ -41,6 +41,7 @@ namespace Xamarin.Android.Tools
 				return null;
 			}
 		}
+
 		public override string PreferedAndroidNdkPath {
 			get {
 				var wow = RegistryEx.Wow64.Key32;
@@ -50,13 +51,10 @@ namespace Xamarin.Android.Tools
 				return null;
 			}
 		}
+
 		public override string PreferedJavaSdkPath {
 			get {
-				var wow = RegistryEx.Wow64.Key32;
-				var regKey = GetMDRegistryKey ();
-				if (CheckRegistryKeyForExecutable (RegistryEx.CurrentUser, regKey, MDREG_JAVA_SDK, wow, "bin", JarSigner))
-					return RegistryEx.GetValueString (RegistryEx.CurrentUser, regKey, MDREG_JAVA_SDK, wow);
-				return null;
+				return GetKnownOpenJdkPaths ().FirstOrDefault ();
 			}
 		}
 
