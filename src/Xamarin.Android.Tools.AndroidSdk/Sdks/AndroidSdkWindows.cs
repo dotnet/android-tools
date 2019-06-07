@@ -41,7 +41,6 @@ namespace Xamarin.Android.Tools
 				return null;
 			}
 		}
-
 		public override string PreferedAndroidNdkPath {
 			get {
 				var wow = RegistryEx.Wow64.Key32;
@@ -51,10 +50,13 @@ namespace Xamarin.Android.Tools
 				return null;
 			}
 		}
-
 		public override string PreferedJavaSdkPath {
 			get {
-				return GetKnownOpenJdkPaths ().FirstOrDefault ();
+				var wow = RegistryEx.Wow64.Key32;
+				var regKey = GetMDRegistryKey ();
+				if (CheckRegistryKeyForExecutable (RegistryEx.CurrentUser, regKey, MDREG_JAVA_SDK, wow, "bin", JarSigner))
+					return RegistryEx.GetValueString (RegistryEx.CurrentUser, regKey, MDREG_JAVA_SDK, wow);
+				return null;
 			}
 		}
 
@@ -130,9 +132,9 @@ namespace Xamarin.Android.Tools
 					.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 			}
 
-			return ToJdkInfos (GetKnownOpenJdkPaths (), "Well-known OpenJDK paths")
-				.Concat (ToJdkInfos(GetPreferredJdkPaths (), "Preferred Registry"))
+			return ToJdkInfos (GetPreferredJdkPaths (), "Preferred Registry")
 				.Concat (ToJdkInfos (GetOpenJdkPaths (), "OpenJDK"))
+				.Concat (ToJdkInfos (GetKnownOpenJdkPaths (), "Well-known OpenJDK paths"))
 				.Concat (ToJdkInfos (GetOracleJdkPaths (), "Oracle JDK"));
 		}
 
@@ -189,8 +191,8 @@ namespace Xamarin.Android.Tools
 			}
 
 			return paths.OrderByDescending (v => v.Item2)
-						 .Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk.Item1, "bin"), _JarSigner).Any())
-						 .Select (openJdk => openJdk.Item1);
+				.Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk.Item1, "bin"), _JarSigner).Any())
+				.Select (openJdk => openJdk.Item1);
 		}
 
 		private static IEnumerable<string> GetOracleJdkPaths ()
