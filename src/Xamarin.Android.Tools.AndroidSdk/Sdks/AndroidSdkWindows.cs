@@ -173,10 +173,9 @@ namespace Xamarin.Android.Tools
 			string JdkFolderNamePattern = "microsoft_dist_openjdk_";
 
 			var paths = new List<Tuple<string, Version>> ();
-			var rootPaths = new List<string>
-			{
+			var rootPaths = new List<string> {
 				Path.Combine (Environment.ExpandEnvironmentVariables ("%ProgramW6432%"), "Android", "jdk"),
-				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86), "Android", "jdk")
+				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86), "Android", "jdk"),
 			};
 
 			foreach (var rootPath in rootPaths) {
@@ -191,7 +190,7 @@ namespace Xamarin.Android.Tools
 			}
 
 			return paths.OrderByDescending (v => v.Item2)
-				.Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine(openJdk.Item1, "bin"), _JarSigner).Any())
+				.Where (openJdk => ProcessUtils.FindExecutablesInDirectory (Path.Combine (openJdk.Item1, "bin"), _JarSigner).Any ())
 				.Select (openJdk => openJdk.Item1);
 		}
 
