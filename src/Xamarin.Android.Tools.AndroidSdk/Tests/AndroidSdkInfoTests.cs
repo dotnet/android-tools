@@ -135,6 +135,33 @@ namespace Xamarin.Android.Tools.Tests
 			}
 		}
 
+		[Test]
+		public void JdkDirectory_JavaHome ()
+		{
+			CreateSdks (out string root, out string jdk, out string ndk, out string sdk);
+
+			var logs = new StringWriter ();
+			Action<TraceLevel, string> logger = (level, message) => {
+				logs.WriteLine ($"[{level}] {message}");
+			};
+
+			string java_home = null;
+			try {
+				// We only set via JAVA_HOME
+				java_home = Environment.GetEnvironmentVariable ("JAVA_HOME", EnvironmentVariableTarget.Process);
+				Environment.SetEnvironmentVariable ("JAVA_HOME", jdk);
+				var info = new AndroidSdkInfo (logger, androidSdkPath: sdk, androidNdkPath: ndk, javaSdkPath: "");
+
+				Assert.AreEqual (ndk, info.AndroidNdkPath, "AndroidNdkPath not preserved!");
+				Assert.AreEqual (sdk, info.AndroidSdkPath, "AndroidSdkPath not preserved!");
+				Assert.AreEqual (jdk, info.JavaSdkPath, "JavaSdkPath not preserved!");
+			} finally {
+				if (java_home != null)
+					Environment.SetEnvironmentVariable ("JAVA_HOME", java_home, EnvironmentVariableTarget.Process);
+				Directory.Delete (root, recursive: true);
+			}
+		}
+
 		static  bool    IsWindows   => OS.IsWindows;
 
 		static void CreateSdks (out string root, out string jdk, out string ndk, out string sdk)
@@ -218,15 +245,21 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			javaExe             = IsWindows ? "Java.cmd" : "java.bash";
 			javacExe            = IsWindows ? "Javac.cmd" : "javac.bash";
+			var jar             = IsWindows ? "Jar.cmd" : "jar";
 			var jarSigner       = IsWindows ? "jarsigner.exe" : "jarsigner";
+			var jvm             = IsWindows ? "Jvm.dll" : "libjvm.dylib";
 			var javaBinPath     = Path.Combine (javaPath, "bin");
+			var jrePath         = Path.Combine (javaPath, "jre");
 
 			Directory.CreateDirectory (javaBinPath);
+			Directory.CreateDirectory (jrePath);
 
 			CreateFauxJavaExe (Path.Combine (javaBinPath, javaExe), javaVersion);
 			CreateFauxJavacExe (Path.Combine (javaBinPath, javacExe), javaVersion);
 
+			File.WriteAllText (Path.Combine (javaBinPath, jar), "");
 			File.WriteAllText (Path.Combine (javaBinPath, jarSigner), "");
+			File.WriteAllText (Path.Combine (jrePath, jvm), "");
 			return javaPath;
 		}
 
