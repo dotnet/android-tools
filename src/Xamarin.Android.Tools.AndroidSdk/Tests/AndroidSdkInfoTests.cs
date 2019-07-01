@@ -139,6 +139,7 @@ namespace Xamarin.Android.Tools.Tests
 		public void JdkDirectory_JavaHome ()
 		{
 			CreateSdks (out string root, out string jdk, out string ndk, out string sdk);
+			JdkInfoTests.CreateFauxJdk (jdk, releaseVersion: "1.8.999", releaseBuildNumber: "9", javaVersion: "1.8.999-9");
 
 			var logs = new StringWriter ();
 			Action<TraceLevel, string> logger = (level, message) => {
@@ -245,21 +246,15 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			javaExe             = IsWindows ? "Java.cmd" : "java.bash";
 			javacExe            = IsWindows ? "Javac.cmd" : "javac.bash";
-			var jar             = IsWindows ? "Jar.cmd" : "jar";
 			var jarSigner       = IsWindows ? "jarsigner.exe" : "jarsigner";
-			var jvm             = IsWindows ? "Jvm.dll" : "libjvm.dylib";
 			var javaBinPath     = Path.Combine (javaPath, "bin");
-			var jrePath         = Path.Combine (javaPath, "jre");
 
 			Directory.CreateDirectory (javaBinPath);
-			Directory.CreateDirectory (jrePath);
 
 			CreateFauxJavaExe (Path.Combine (javaBinPath, javaExe), javaVersion);
 			CreateFauxJavacExe (Path.Combine (javaBinPath, javacExe), javaVersion);
 
-			File.WriteAllText (Path.Combine (javaBinPath, jar), "");
 			File.WriteAllText (Path.Combine (javaBinPath, jarSigner), "");
-			File.WriteAllText (Path.Combine (jrePath, jvm), "");
 			return javaPath;
 		}
 
