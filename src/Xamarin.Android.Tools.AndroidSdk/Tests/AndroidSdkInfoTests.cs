@@ -136,6 +136,7 @@ namespace Xamarin.Android.Tools.Tests
 		}
 
 		[Test]
+		[Ignore ("This test will only work locally if you rename/remove your Open JDK directory.")]
 		public void JdkDirectory_JavaHome ()
 		{
 			CreateSdks (out string root, out string jdk, out string ndk, out string sdk);
