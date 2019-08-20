@@ -125,6 +125,10 @@ namespace Xamarin.Android.Tools
 				if (ValidateAndroidNdkLocation (ndkDir))
 					yield return ndkDir;
 			}
+
+			// Check for NDK directories inside the SDK directories
+			foreach (var ndk in FindNdkPathsInAndroidSdkPaths ())
+				yield return ndk;
 		}
 
 		protected override string GetShortFormPath (string path)

@@ -11,5 +11,5 @@ src/*.dll
 bin
 **/obj
 packages/
-TestResult-*.xml
+TestResult*.xml
 .vs/

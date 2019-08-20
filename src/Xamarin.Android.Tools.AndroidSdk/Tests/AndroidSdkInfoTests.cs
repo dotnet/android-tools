@@ -67,10 +67,8 @@ namespace Xamarin.Android.Tools.Tests
 		[Test]
 		public void Ndk_PathInSdk()
 		{
-			if (!OS.IsWindows)
-				Assert.Ignore("This only works in Windows");
-
 			CreateSdks(out string root, out string jdk, out string ndk, out string sdk);
+			var oldPath = Environment.GetEnvironmentVariable ("PATH");
 
 			var logs = new StringWriter();
 			Action<TraceLevel, string> logger = (level, message) => {
@@ -79,18 +77,54 @@ namespace Xamarin.Android.Tools.Tests
 
 			try
 			{
-				var ndkPath = Path.Combine(sdk, "ndk-bundle");
-				Directory.CreateDirectory(ndkPath);
-				Directory.CreateDirectory(Path.Combine(ndkPath, "toolchains"));
-				File.WriteAllText(Path.Combine(ndkPath, "ndk-stack.cmd"), "");
+				if (!OS.IsWindows)
+					Environment.SetEnvironmentVariable ("PATH", "dummypath");
 
+				var ndkPath = Path.Combine(sdk, "ndk-bundle");
+				Directory.CreateDirectory (ndkPath);
+				CreateFauxAndroidNdkDirectory (ndkPath);
 				var info = new AndroidSdkInfo(logger, androidSdkPath: sdk, androidNdkPath: null, javaSdkPath: jdk);
 				
 				Assert.AreEqual(ndkPath, info.AndroidNdkPath, "AndroidNdkPath not found inside sdk!");
 			}
 			finally
 			{
+				if (!OS.IsWindows)
+					Environment.SetEnvironmentVariable ("PATH", oldPath);
+
 				Directory.Delete(root, recursive: true);
+			}
+		}
+
+		[Test]
+		public void VersionedNdk_PathInSdk()
+		{
+			CreateSdks (out string root, out string jdk, out string ndk, out string sdk);
+			var oldPath = Environment.GetEnvironmentVariable ("PATH");
+
+			var logs = new StringWriter ();
+			Action<TraceLevel, string> logger = (level, message) => {
+				logs.WriteLine ($"[{level}] {message}");
+			};
+
+			try
+			{
+				if (!OS.IsWindows)
+					Environment.SetEnvironmentVariable ("PATH", "dummypath");
+
+				var ndkPath = Path.Combine (sdk, "ndk", "20.0.5594570");
+				Directory.CreateDirectory(ndkPath);
+				CreateFauxAndroidNdkDirectory (ndkPath);
+				var info = new AndroidSdkInfo (logger, androidSdkPath: sdk, androidNdkPath: null, javaSdkPath: jdk);
+				Assert.AreEqual (ndkPath, info.AndroidNdkPath, "Versioned AndroidNdkPath not found inside sdk!");
+				Assert.AreNotEqual (ndkPath, ndk, "The default NDK path created should not match the nested versioned NDK path!");
+			}
+			finally
+			{
+				if (!OS.IsWindows)
+					Environment.SetEnvironmentVariable ("PATH", oldPath);
+
+				Directory.Delete (root, recursive: true);
 			}
 		}
 

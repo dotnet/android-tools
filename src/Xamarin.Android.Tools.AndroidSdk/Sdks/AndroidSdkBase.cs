@@ -140,7 +140,36 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>
-		/// Checks that a value is the location of an Android SDK.
+		/// Searches all Android SDK locations for nested NDK installations.
+		/// </summary>
+		protected IEnumerable<string> FindNdkPathsInAndroidSdkPaths ()
+		{
+			string ndk;
+			var sdks = new List<string> ();
+			if (!string.IsNullOrEmpty (AndroidSdkPath))
+				sdks.Add (AndroidSdkPath);
+
+			sdks.AddRange (AllAndroidSdks);
+			foreach (var sdk in sdks.Distinct ()) {
+				// Check for the "ndk-bundle" directory inside the SDK directories
+				if (Directory.Exists (ndk = Path.Combine (sdk, "ndk-bundle"))) {
+					if (ValidateAndroidNdkLocation (ndk)) {
+						yield return ndk;
+					}
+				}
+				// Check for any versioned "ndk/$(VERSION)" directory inside the SDK directories
+				if (Directory.Exists (ndk = Path.Combine (sdk, "ndk"))) {
+					foreach (var versionedNdk in GetSortedToolDirectoryPaths (ndk)) {
+						if (ValidateAndroidNdkLocation (versionedNdk)) {
+							yield return versionedNdk;
+						}
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Checks that a value is the location of an Android NDK.
 		/// </summary>
 		public bool ValidateAndroidNdkLocation (string loc)
 		{
@@ -166,6 +195,25 @@ namespace Xamarin.Android.Tools
 				if (File.Exists (Path.Combine (dir, e)))
 					return e;
 			return exe;
+		}
+
+		public Version TryParseVersion (string v)
+		{
+			Version version;
+			if (Version.TryParse (v, out version))
+				return version;
+			return null;
+		}
+
+		public IEnumerable<string> GetSortedToolDirectoryPaths (string topToolDirectory)
+		{
+			var sorted = from p in Directory.EnumerateDirectories (topToolDirectory)
+				let version = TryParseVersion (Path.GetFileName (p))
+					where version != null
+				orderby version descending
+				select p;
+
+			return sorted;
 		}
 	}
 }

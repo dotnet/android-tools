@@ -46,32 +46,18 @@ namespace Xamarin.Android.Tools
 			var buildTools  = Path.Combine (AndroidSdkPath, "build-tools");
 			if (Directory.Exists (buildTools)) {
 				var preview = Directory.EnumerateDirectories (buildTools)
-					.Where(x => TryParseVersion (Path.GetFileName (x)) == null)
+					.Where(x => sdk.TryParseVersion (Path.GetFileName (x)) == null)
 					.Select(x => x);
 
 				foreach (var d in preview)
 					yield return d;
 
-				var sorted = from p in Directory.EnumerateDirectories (buildTools)
-					let version = TryParseVersion (Path.GetFileName (p))
-						where version != null
-					orderby version descending
-					select p;
-
-				foreach (var d in sorted)
+				foreach (var d in sdk.GetSortedToolDirectoryPaths (buildTools))
 					yield return d;
 			}
 			var ptPath  = Path.Combine (AndroidSdkPath, "platform-tools");
 			if (Directory.Exists (ptPath))
 				yield return ptPath;
-		}
-
-		static Version TryParseVersion (string v)
-		{
-			Version version;
-			if (Version.TryParse (v, out version))
-				return version;
-			return null;
 		}
 
 		public IEnumerable<AndroidVersion> GetInstalledPlatformVersions (AndroidVersions versions)
