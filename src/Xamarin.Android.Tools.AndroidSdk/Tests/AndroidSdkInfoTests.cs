@@ -113,7 +113,8 @@ namespace Xamarin.Android.Tools.Tests
 					Environment.SetEnvironmentVariable ("PATH", "dummypath");
 
 				var ndkPath = Path.Combine (sdk, "ndk", "20.0.5594570");
-				Directory.CreateDirectory(ndkPath);
+				Directory.CreateDirectory (ndkPath);
+				Directory.CreateDirectory (Path.Combine (sdk, "ndk", "noversion"));
 				CreateFauxAndroidNdkDirectory (ndkPath);
 				var info = new AndroidSdkInfo (logger, androidSdkPath: sdk, androidNdkPath: null, javaSdkPath: jdk);
 				Assert.AreEqual (ndkPath, info.AndroidNdkPath, "Versioned AndroidNdkPath not found inside sdk!");

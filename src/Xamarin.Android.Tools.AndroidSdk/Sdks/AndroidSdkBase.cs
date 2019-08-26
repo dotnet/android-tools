@@ -199,10 +199,8 @@ namespace Xamarin.Android.Tools
 
 		public Version TryParseVersion (string v)
 		{
-			Version version;
-			if (Version.TryParse (v, out version))
-				return version;
-			return null;
+			Version.TryParse (v, out Version version);
+			return version;
 		}
 
 		public IEnumerable<string> GetSortedToolDirectoryPaths (string topToolDirectory)
