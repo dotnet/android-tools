@@ -76,7 +76,7 @@ namespace Xamarin.Android.Tools
 			}
 
 			if (!string.IsNullOrEmpty (AndroidSdkPath)) {
-				AndroidToolsPath = Path.Combine (AndroidSdkPath, "tools");
+				AndroidToolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath(AndroidSdkPath);
 				AndroidToolsPathShort = GetShortFormPath (AndroidToolsPath);
 				AndroidPlatformToolsPath = Path.Combine (AndroidSdkPath, "platform-tools");
 				AndroidPlatformToolsPathShort = GetShortFormPath (AndroidPlatformToolsPath);
@@ -99,7 +99,7 @@ namespace Xamarin.Android.Tools
 			// google have a habbit of changing them.
 			Adb = GetExecutablePath (AndroidPlatformToolsPath, Adb);
 			Android = GetExecutablePath (AndroidToolsPath, Android);
-			Emulator = GetExecutablePath (AndroidToolsPath, Emulator);
+			Emulator = GetExecutablePath (Path.Combine (AndroidSdkPath, "emulator"), Emulator);
 			Monitor = GetExecutablePath (AndroidToolsPath, Monitor);
 			NdkStack = GetExecutablePath (AndroidNdkPath, NdkStack);
 		}

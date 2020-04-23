@@ -185,5 +185,18 @@ namespace Xamarin.Android.Tools
 			var sdk = CreateSdk (logger);
 			sdk.SetPreferredJavaSdkPath (latestJdk.HomePath);
 		}
+
+		public static string GetPreferredAndroidToolsPath(string androidSdkPath)
+		{
+			var toolsDir = Path.Combine (androidSdkPath, "cmdline-tools");
+			if (!Directory.Exists (toolsDir))
+				return toolsDir;
+
+			if (Directory.Exists (Path.Combine (toolsDir, "latest")))
+				return Path.Combine (toolsDir, "latest");
+
+			var latestToolsDir = Directory.GetDirectories (toolsDir).Max ();
+			return Path.Combine (toolsDir, latestToolsDir);
+		}
 	}
 }

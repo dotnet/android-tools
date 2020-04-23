@@ -180,14 +180,14 @@ namespace Xamarin.Android.Tools.Tests
 			Directory.CreateDirectory (ndk);
 			Directory.CreateDirectory (jdk);
 
-			CreateFauxAndroidSdkDirectory (sdk, "26.0.0");
+			CreateFauxAndroidSdkDirectory (sdk, "26.0.0", "1.0");
 			CreateFauxAndroidNdkDirectory (ndk);
 			CreateFauxJavaSdkDirectory (jdk, "1.8.0", out var _, out var _);
 		}
 
-		static void CreateFauxAndroidSdkDirectory (string androidSdkDirectory, string buildToolsVersion, ApiInfo [] apiLevels = null)
+		static void CreateFauxAndroidSdkDirectory (string androidSdkDirectory, string buildToolsVersion, string toolsVersion, ApiInfo [] apiLevels = null)
 		{
-			var androidSdkToolsPath             = Path.Combine (androidSdkDirectory, "tools");
+			var androidSdkToolsPath             = Path.Combine (androidSdkDirectory, "cmdline-tools", toolsVersion);
 			var androidSdkBinPath               = Path.Combine (androidSdkToolsPath, "bin");
 			var androidSdkPlatformToolsPath     = Path.Combine (androidSdkDirectory, "platform-tools");
 			var androidSdkPlatformsPath         = Path.Combine (androidSdkDirectory, "platforms");
