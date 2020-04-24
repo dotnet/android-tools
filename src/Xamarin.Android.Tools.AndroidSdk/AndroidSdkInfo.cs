@@ -189,8 +189,14 @@ namespace Xamarin.Android.Tools
 		public static string GetPreferredAndroidToolsPath(string androidSdkPath)
 		{
 			var toolsDir = Path.Combine (androidSdkPath, "cmdline-tools");
-			if (!Directory.Exists (toolsDir))
+			if (!Directory.Exists (toolsDir)) {
+				// Trying to fallback to "tools"
+				var oldToolsDir = Path.Combine (androidSdkPath, "tools");
+				if (Directory.Exists (oldToolsDir))
+					return oldToolsDir;
+
 				return toolsDir;
+			}
 
 			if (Directory.Exists (Path.Combine (toolsDir, "latest")))
 				return Path.Combine (toolsDir, "latest");
