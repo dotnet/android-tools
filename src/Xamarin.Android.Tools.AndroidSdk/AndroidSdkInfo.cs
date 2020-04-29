@@ -195,7 +195,7 @@ namespace Xamarin.Android.Tools
 				if (Directory.Exists (oldToolsDir))
 					return oldToolsDir;
 
-				return toolsDir;
+				return Path.Combine(toolsDir, "latest");
 			}
 
 			if (Directory.Exists (Path.Combine (toolsDir, "latest")))
