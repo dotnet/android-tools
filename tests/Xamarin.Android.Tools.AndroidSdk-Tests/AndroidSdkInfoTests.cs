@@ -170,8 +170,8 @@ namespace Xamarin.Android.Tools.Tests
 			var root                = CreateRoot ();
 			var sdk                 = Path.Combine (root, "sdk");
 			var latestToolsVersion  = "latest";
-			var toolsVersion        = "1.1";
-			var higherToolsVersion  = "1.2";
+			var toolsVersion        = "2.1";
+			var higherToolsVersion  = "11.2";
 			
 			Directory.CreateDirectory (sdk);
 			void recreateSdkDirectory () {

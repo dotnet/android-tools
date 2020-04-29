@@ -52,11 +52,7 @@ namespace Xamarin.Android.Tools
 				foreach (var d in preview)
 					yield return d;
 
-				var sorted = from p in Directory.EnumerateDirectories (buildTools)
-					let version = TryParseVersion (Path.GetFileName (p))
-						where version != null
-					orderby version descending
-					select p;
+				var sorted = SortedSubdirectoriesByVersion (buildTools);
 
 				foreach (var d in sorted)
 					yield return d;
@@ -64,6 +60,15 @@ namespace Xamarin.Android.Tools
 			var ptPath  = Path.Combine (AndroidSdkPath, "platform-tools");
 			if (Directory.Exists (ptPath))
 				yield return ptPath;
+		}
+
+		static IEnumerable<string> SortedSubdirectoriesByVersion (string dir)
+		{
+			return from p in Directory.EnumerateDirectories (dir)
+					let version = TryParseVersion (Path.GetFileName (p))
+						where version != null
+					orderby version descending
+					select p;
 		}
 
 		static Version TryParseVersion (string v)
@@ -189,20 +194,21 @@ namespace Xamarin.Android.Tools
 		public static string GetPreferredAndroidToolsPath(string androidSdkPath)
 		{
 			var toolsDir = Path.Combine (androidSdkPath, "cmdline-tools");
+			var defaultToolsPath = Path.Combine (toolsDir, "latest");
+
 			if (!Directory.Exists (toolsDir)) {
 				// Trying to fallback to "tools"
 				var oldToolsDir = Path.Combine (androidSdkPath, "tools");
 				if (Directory.Exists (oldToolsDir))
 					return oldToolsDir;
 
-				return Path.Combine(toolsDir, "latest");
+				return defaultToolsPath;
 			}
 
-			if (Directory.Exists (Path.Combine (toolsDir, "latest")))
-				return Path.Combine (toolsDir, "latest");
+			if (Directory.Exists (defaultToolsPath))
+				return defaultToolsPath;
 
-			var latestToolsDir = Directory.GetDirectories (toolsDir).Max ();
-			return Path.Combine (toolsDir, latestToolsDir);
+			return SortedSubdirectoriesByVersion (toolsDir).FirstOrDefault () ?? defaultToolsPath;
 		}
 	}
 }
