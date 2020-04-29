@@ -210,7 +210,7 @@ namespace Xamarin.Android.Tools.Tests
 			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: higherToolsVersion,    createOldToolsDir: false);
 
 			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", toolsVersion: higherToolsVersion), failureMessage);
+			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", higherToolsVersion), failureMessage);
 
 
 			failureMessage = "GetPreferredAndroidToolsPath should return \"tools\" if it is installed and \"cmdline-tools\" isn't";
@@ -271,7 +271,7 @@ namespace Xamarin.Android.Tools.Tests
 
 			if (createOldToolsDir) {
 				string androidSdkToolsPath    = Path.Combine (androidSdkDirectory, "tools");
-				string androidSDdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
+				string androidSdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
 
 				Directory.CreateDirectory (androidSdkToolsPath);
 				Directory.CreateDirectory (androidSdkToolsBinPath);
