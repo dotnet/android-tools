@@ -167,20 +167,20 @@ namespace Xamarin.Android.Tools.Tests
 		[Test]
 		public void Sdk_PreferredToolsPath ()
 		{
-			var root = CreateRoot ();
-			var sdk = Path.Combine (root, "sdk");
-			var latestToolsVersion = "latest";
-			var toolsVersion = "1.1";
-			var higherToolsVersion = "1.2";
+			var root                = CreateRoot ();
+			var sdk                 = Path.Combine (root, "sdk");
+			var latestToolsVersion  = "latest";
+			var toolsVersion        = "1.1";
+			var higherToolsVersion  = "1.2";
 			
 			Directory.CreateDirectory (sdk);
 			void recreateSdkDirectory () {
-				Directory.Delete (sdk, true);
+				Directory.Delete (sdk, recursive: true);
 				Directory.CreateDirectory (sdk);
 			}
 			
 			var failureMessage = "GetPreferredAndroidToolsPath should return \"cmdline-tools\" if it is installed";
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, toolsVersion, false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: toolsVersion, createOldToolsDir: false);
 
 			var toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
 			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", toolsVersion), failureMessage);
@@ -188,7 +188,7 @@ namespace Xamarin.Android.Tools.Tests
 			
 			failureMessage = "GetPreferredAndroidToolsPath should return \"cmdline-tools\", if both \"tools\" and \"cmdline-tools\" are installed";
 			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, latestToolsVersion, true);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: latestToolsVersion, createOldToolsDir: true);
 
 			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
 			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", latestToolsVersion), failureMessage);
@@ -196,9 +196,9 @@ namespace Xamarin.Android.Tools.Tests
 
 			failureMessage = "GetPreferredAndroidToolsPath should return \"<sdk>/cmdline-tools/latest\", if multiple versions are installed, including \"latest\"";
 			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, latestToolsVersion, false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, toolsVersion, false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, higherToolsVersion, false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: latestToolsVersion,   createOldToolsDir: false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: toolsVersion,         createOldToolsDir: false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: higherToolsVersion,   createOldToolsDir: false);
 
 			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
 			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", latestToolsVersion), failureMessage);
@@ -206,16 +206,16 @@ namespace Xamarin.Android.Tools.Tests
 
 			failureMessage = "GetPreferredAndroidToolsPath should return \"<sdk>/cmdline-tools/<max-version>\", if multiple versions are installed";
 			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, toolsVersion, false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, true, higherToolsVersion, false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: toolsVersion,          createOldToolsDir: false);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: higherToolsVersion,    createOldToolsDir: false);
 
 			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", higherToolsVersion), failureMessage);
+			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", toolsVersion: higherToolsVersion), failureMessage);
 
 
 			failureMessage = "GetPreferredAndroidToolsPath should return \"tools\" if it is installed and \"cmdline-tools\" isn't";
 			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, false, toolsVersion, true);
+			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: false, toolsVersion: toolsVersion,     createOldToolsDir: true);
 
 			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
 			Assert.AreEqual (toolsPath, Path.Combine (sdk, "tools"), failureMessage);
@@ -260,34 +260,34 @@ namespace Xamarin.Android.Tools.Tests
 		static void CreateFauxAndroidSdkToolsDirectory (string androidSdkDirectory, bool createToolsDir, string toolsVersion, bool createOldToolsDir)
 		{
 			if (createToolsDir) {
-				string androidSdkToolsPath = Path.Combine (androidSdkDirectory, "cmdline-tools", toolsVersion ?? "1.0");
-				var androidSDdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
+				string androidSdkToolsPath    = Path.Combine (androidSdkDirectory, "cmdline-tools", toolsVersion ?? "1.0");
+				string androidSdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
 				
 				Directory.CreateDirectory (androidSdkToolsPath);
-				Directory.CreateDirectory (androidSDdkToolsBinPath);
+				Directory.CreateDirectory (androidSdkToolsBinPath);
 				
-				File.WriteAllText (Path.Combine (androidSdkToolsPath, IsWindows ? "lint.bat" : "lint"), "");
+				File.WriteAllText (Path.Combine (androidSdkToolsBinPath, IsWindows ? "lint.bat" : "lint"), "");
 			}
 
 			if (createOldToolsDir) {
-				string androidSdkToolsPath = Path.Combine (androidSdkDirectory, "tools");
-				var androidSDdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
+				string androidSdkToolsPath    = Path.Combine (androidSdkDirectory, "tools");
+				string androidSDdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
 
 				Directory.CreateDirectory (androidSdkToolsPath);
-				Directory.CreateDirectory (androidSDdkToolsBinPath);
+				Directory.CreateDirectory (androidSdkToolsBinPath);
 			
-				File.WriteAllText (Path.Combine (androidSdkToolsPath, IsWindows ? "lint.bat" : "lint"), "");
+				File.WriteAllText (Path.Combine (androidSdkToolsBinPath, IsWindows ? "lint.bat" : "lint"), "");
 			}
 
 		}
 
 		static void CreateFauxAndroidSdkDirectory (
-			string androidSdkDirectory,
-			string buildToolsVersion,
-			bool createToolsDir = true,
-			string toolsVersion = null,
-			bool createOldToolsDir = false,
-			ApiInfo [] apiLevels = null)
+				string  androidSdkDirectory,
+				string  buildToolsVersion,
+				bool    createToolsDir = true,
+				string  toolsVersion = null,
+				bool    createOldToolsDir = false,
+				ApiInfo[]   apiLevels = null)
 		{
 			CreateFauxAndroidSdkToolsDirectory (androidSdkDirectory, createToolsDir, toolsVersion, createOldToolsDir);
 			
