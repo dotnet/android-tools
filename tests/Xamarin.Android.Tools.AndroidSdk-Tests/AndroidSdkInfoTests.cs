@@ -165,69 +165,58 @@ namespace Xamarin.Android.Tools.Tests
 		}
 
 		[Test]
-		public void Sdk_PreferredToolsPath ()
+		public void Sdk_GetCommandLineToolsPaths ()
 		{
-			var root                = CreateRoot ();
-			var sdk                 = Path.Combine (root, "sdk");
+			CreateSdks(out string root, out string jdk, out string ndk, out string sdk);
+
+			var cmdlineTools        = Path.Combine (sdk, "cmdline-tools");
 			var latestToolsVersion  = "latest";
 			var toolsVersion        = "2.1";
 			var higherToolsVersion  = "11.2";
 			
-			Directory.CreateDirectory (sdk);
-			void recreateSdkDirectory () {
-				Directory.Delete (sdk, recursive: true);
-				Directory.CreateDirectory (sdk);
+			void recreateCmdlineToolsDirectory () {
+				Directory.Delete (cmdlineTools, recursive: true);
+				Directory.CreateDirectory (cmdlineTools);
 			}
-			
-			var failureMessage = "GetPreferredAndroidToolsPath should return \"cmdline-tools\" if it is installed";
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: toolsVersion, createOldToolsDir: false);
 
-			var toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", toolsVersion), failureMessage);
-			
-			
-			failureMessage = "GetPreferredAndroidToolsPath should return \"cmdline-tools\", if both \"tools\" and \"cmdline-tools\" are installed";
-			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: latestToolsVersion, createOldToolsDir: true);
+			try {
+				var info = new AndroidSdkInfo (androidSdkPath: sdk);
 
-			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", latestToolsVersion), failureMessage);
+				// Test cmdline-tools path
+				recreateCmdlineToolsDirectory();
+				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: toolsVersion, createOldToolsDir: false);
+				var toolsPaths = info.GetCommandLineToolsPaths ();
 
+				Assert.AreEqual (toolsPaths.Count (), 1, "Incorrect number of elements");
+				Assert.AreEqual (toolsPaths.First (), Path.Combine (sdk, "cmdline-tools", toolsVersion), "Incorrect command line tools path");
+				
+				// Test that cmdline-tools is preferred over tools
+				recreateCmdlineToolsDirectory();
+				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: latestToolsVersion, createOldToolsDir: true);
+				toolsPaths = info.GetCommandLineToolsPaths ();
 
-			failureMessage = "GetPreferredAndroidToolsPath should return \"<sdk>/cmdline-tools/latest\", if multiple versions are installed, including \"latest\"";
-			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: latestToolsVersion,   createOldToolsDir: false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: toolsVersion,         createOldToolsDir: false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: higherToolsVersion,   createOldToolsDir: false);
+				Assert.AreEqual (toolsPaths.Count (), 2, "Incorrect number of elements");
+				Assert.AreEqual (toolsPaths.First (), Path.Combine (sdk, "cmdline-tools", latestToolsVersion), "Incorrect command line tools path");
+				Assert.AreEqual (toolsPaths.Last (), Path.Combine (sdk, "tools"), "Incorrect tools path");
 
-			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", latestToolsVersion), failureMessage);
+				// Test sorting
+				recreateCmdlineToolsDirectory ();
+				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: latestToolsVersion,   createOldToolsDir: false);
+				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: toolsVersion,         createOldToolsDir: false);
+				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true,  toolsVersion: higherToolsVersion,   createOldToolsDir: true);
+				toolsPaths = info.GetCommandLineToolsPaths ();
 
-
-			failureMessage = "GetPreferredAndroidToolsPath should return \"<sdk>/cmdline-tools/<max-version>\", if multiple versions are installed";
-			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: toolsVersion,          createOldToolsDir: false);
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: higherToolsVersion,    createOldToolsDir: false);
-
-			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", higherToolsVersion), failureMessage);
-
-
-			failureMessage = "GetPreferredAndroidToolsPath should return \"tools\" if it is installed and \"cmdline-tools\" isn't";
-			recreateSdkDirectory ();
-			CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: false, toolsVersion: toolsVersion,     createOldToolsDir: true);
-
-			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "tools"), failureMessage);
-
-
-			failureMessage = "GetPreferredAndroidToolsPath should return \"<sdk>/cmdline-tools/latest\" if both \"tools\" and \"cmdline-tools\" are not installed";
-			recreateSdkDirectory ();
-
-			toolsPath = AndroidSdkInfo.GetPreferredAndroidToolsPath (sdk);
-			Assert.AreEqual (toolsPath, Path.Combine (sdk, "cmdline-tools", latestToolsVersion), failureMessage);
-
-			Directory.Delete (root, recursive: true);
+				var toolsPathsList = toolsPaths.ToList ();
+				Assert.AreEqual (toolsPaths.Count (), 4, "Incorrect number of elements");
+				bool isOrderCorrect = toolsPathsList [0].Equals (Path.Combine (sdk, "cmdline-tools", latestToolsVersion), StringComparison.Ordinal)
+					&& toolsPathsList [1].Equals (Path.Combine (sdk, "cmdline-tools", higherToolsVersion), StringComparison.Ordinal)
+					&& toolsPathsList [2].Equals (Path.Combine (sdk, "cmdline-tools", toolsVersion), StringComparison.Ordinal)
+					&& toolsPathsList [3].Equals (Path.Combine (sdk, "tools"), StringComparison.Ordinal);
+				
+				Assert.IsTrue (isOrderCorrect, "Tools order is not descending");
+			} finally {
+				Directory.Delete (root, recursive: true);
+			}
 		}
 
 		static  bool    IsWindows   => OS.IsWindows;

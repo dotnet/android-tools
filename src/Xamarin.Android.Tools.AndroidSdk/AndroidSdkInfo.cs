@@ -191,24 +191,39 @@ namespace Xamarin.Android.Tools
 			sdk.SetPreferredJavaSdkPath (latestJdk.HomePath);
 		}
 
-		public static string GetPreferredAndroidToolsPath(string androidSdkPath)
+		public string TryGetCommandLineToolsPath ()
 		{
-			var toolsDir = Path.Combine (androidSdkPath, "cmdline-tools");
-			var defaultToolsPath = Path.Combine (toolsDir, "latest");
+			return GetCommandLineToolsPaths ("latest").FirstOrDefault ();
+		}
 
-			if (!Directory.Exists (toolsDir)) {
-				// Trying to fallback to "tools"
-				var oldToolsDir = Path.Combine (androidSdkPath, "tools");
-				if (Directory.Exists (oldToolsDir))
-					return oldToolsDir;
-
-				return defaultToolsPath;
+		public IEnumerable<string> GetCommandLineToolsPaths (string preferredCommandLineToolsVersion)
+		{
+			if (!string.IsNullOrEmpty (preferredCommandLineToolsVersion)) {
+				var preferredDir = Path.Combine (AndroidSdkPath, "cmdline-tools", preferredCommandLineToolsVersion);
+				if (Directory.Exists (preferredDir))
+					return new[] { preferredDir }.Concat (GetCommandLineToolsPaths ().Where (p => p != preferredDir));
 			}
+			return GetCommandLineToolsPaths ();
+		}
 
-			if (Directory.Exists (defaultToolsPath))
-				return defaultToolsPath;
-
-			return SortedSubdirectoriesByVersion (toolsDir).FirstOrDefault () ?? defaultToolsPath;
+		public IEnumerable<string> GetCommandLineToolsPaths ()
+		{
+			var cmdlineToolsDir = Path.Combine (AndroidSdkPath, "cmdline-tools");
+			if (Directory.Exists (cmdlineToolsDir)) {
+				var latestDir = Path.Combine (cmdlineToolsDir, "latest");
+				if (Directory.Exists (latestDir))
+					yield return latestDir;
+				foreach (var d in SortedSubdirectoriesByVersion (cmdlineToolsDir)) {
+					var version = Path.GetFileName (d);
+					if (version == "latest")
+						continue;
+					yield return d;
+				}
+			}
+			var toolsDir = Path.Combine (AndroidSdkPath, "tools");
+			if (Directory.Exists (toolsDir)) {
+				yield return toolsDir;
+			}
 		}
 	}
 }
