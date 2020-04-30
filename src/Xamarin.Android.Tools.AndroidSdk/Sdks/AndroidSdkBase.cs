@@ -41,9 +41,6 @@ namespace Xamarin.Android.Tools
 		public string AndroidPlatformToolsPathShort { get; private set; }
 
 		public virtual string Adb { get; protected set; } = "adb";
-		public virtual string Android { get; protected set; } = "android";
-		public virtual string Emulator { get; protected set; } = "emulator";
-		public virtual string Monitor { get; protected set; } = "monitor";
 		public virtual string ZipAlign { get; protected set; } = "zipalign";
 		public virtual string JarSigner { get; protected set; } = "jarsigner";
 		public virtual string KeyTool { get; protected set; } = "keytool";
@@ -92,7 +89,6 @@ namespace Xamarin.Android.Tools
 			// we need to look for extensions other than the default .exe|.bat
 			// google have a habbit of changing them.
 			Adb = GetExecutablePath (AndroidPlatformToolsPath, Adb);
-			Emulator = GetExecutablePath (Path.Combine (AndroidSdkPath, "emulator"), Emulator);
 			NdkStack = GetExecutablePath (AndroidNdkPath, NdkStack);
 		}
 
