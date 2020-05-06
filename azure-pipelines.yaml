@@ -23,10 +23,10 @@ jobs:
     displayName: Use .NET Core $(DotNetCoreVersion)
     inputs:
       version: $(DotNetCoreVersion)
-  - task: NuGetToolInstaller@1
+  - task: NuGetToolInstaller@0
     displayName: 'Install NuGet'
     inputs:
-      versionSpec: '5.4.x'
+      versionSpec: 5.x
   - task: NuGetCommand@2
     displayName: 'NuGet Restore'
     inputs:
