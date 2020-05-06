@@ -62,21 +62,19 @@ jobs:
     displayName: Use .NET Core $(DotNetCoreVersion)
     inputs:
       version: $(DotNetCoreVersion)
-  - task: NuGetToolInstaller@1
-    displayName: 'Install NuGet'
-    inputs:
-      versionSpec: '5.4.x'
-  - task: NuGetCommand@2
-    displayName: 'NuGet Restore'
-    inputs:
-      restoreSolution: Xamarin.Android.Tools.sln
-      restoreDirectory: 'packages'
-  - task: MSBuild@1
-    displayName: 'Build solution Xamarin.Android.Tools.sln'
-    inputs:
-      solution: Xamarin.Android.Tools.sln
-  - script: mono packages/nunit.consolerunner/3.9.0/tools/nunit3-console.exe bin/TestDebug/Xamarin.Android.Tools.AndroidSdk-Tests.dll
-    displayName: Run Tests
+  - script: |
+      dotnet tool install --global boots
+      boots https://download.mono-project.com/archive/6.4.0/macos-10-universal/MonoFramework-MDK-6.4.0.198.macos10.xamarin.universal.pkg
+    displayName: Install Mono 6.4
+  - script: make prepare CONFIGURATION=$(Build.Configuration)
+    displayName: make prepare
+
+  - script: make all CONFIGURATION=$(Build.Configuration)
+    displayName: make all
+
+  - script: make run-all-tests CONFIGURATION=$(Build.Configuration)
+    displayName: make run-all-tests
+
   - task: PublishTestResults@2
     condition: always()
     inputs:
