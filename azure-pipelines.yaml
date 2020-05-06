@@ -1,10 +1,28 @@
 name: Xamarin.Android.Tools $(Rev:r)
 
+trigger:
+  - master
+  - d16-*
+
+pr:
+  - master
+  - d16-*
+
+# Global variables
+variables:
+  DotNetCoreVersion: 3.1.100
+  HostedMac: Hosted Mac Internal
+  HostedWinVS2019: Hosted Windows 2019 with VS2019
+
 jobs:
 - job: windows
   displayName: windows
-  pool: Hosted VS2017
+  pool: $(HostedWinVS2019)
   steps:
+  - task: UseDotNet@2
+    displayName: Use .NET Core $(DotNetCoreVersion)
+    inputs:
+      version: $(DotNetCoreVersion)
   - task: NuGetToolInstaller@1
     displayName: 'Install NuGet'
     inputs:
@@ -38,8 +56,12 @@ jobs:
       pathtoPublish: $(Build.ArtifactStagingDirectory)
 - job: mac
   displayName: mac
-  pool: Hosted macOS
+  pool: $(HostedMac)
   steps:
+  - task: UseDotNet@2
+    displayName: Use .NET Core $(DotNetCoreVersion)
+    inputs:
+      version: $(DotNetCoreVersion)
   - task: NuGetToolInstaller@1
     displayName: 'Install NuGet'
     inputs:
