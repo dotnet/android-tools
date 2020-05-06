@@ -79,4 +79,4 @@ jobs:
     condition: always()
     inputs:
       testResultsFormat: NUnit
-      testResultsFiles: TestResult.xml
+      testResultsFiles: TestResult*.xml
