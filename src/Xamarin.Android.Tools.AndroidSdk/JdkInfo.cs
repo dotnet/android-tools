@@ -281,10 +281,10 @@ namespace Xamarin.Android.Tools
 		{
 			logger  = logger ?? AndroidSdkInfo.DefaultConsoleLogger;
 
-			return GetWindowsJdks (logger)
+			return GetJavaHomeEnvironmentJdks (logger)
+				.Concat (GetWindowsJdks (logger))
 				.Concat (GetConfiguredJdks (logger))
 				.Concat (GetMacOSMicrosoftJdks (logger))
-				.Concat (GetJavaHomeEnvironmentJdks (logger))
 				.Concat (GetPathEnvironmentJdks (logger))
 				.Concat (GetLibexecJdks (logger))
 				.Concat (GetJavaAlternativesJdks (logger))
