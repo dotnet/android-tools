@@ -67,9 +67,6 @@ namespace Xamarin.Android.Tools.Tests
 		[Test]
 		public void Ndk_PathInSdk()
 		{
-			if (!OS.IsWindows)
-				Assert.Ignore("This only works in Windows");
-
 			CreateSdks(out string root, out string jdk, out string ndk, out string sdk);
 
 			var logs = new StringWriter();
@@ -77,12 +74,16 @@ namespace Xamarin.Android.Tools.Tests
 				logs.WriteLine($"[{level}] {message}");
 			};
 
+			var oldPath = Environment.GetEnvironmentVariable ("PATH", EnvironmentVariableTarget.Process);
 			try
 			{
+				Environment.SetEnvironmentVariable ("PATH", "", EnvironmentVariableTarget.Process);
+
+				var extension = OS.IsWindows ? ".cmd" : "";
 				var ndkPath = Path.Combine(sdk, "ndk-bundle");
 				Directory.CreateDirectory(ndkPath);
 				Directory.CreateDirectory(Path.Combine(ndkPath, "toolchains"));
-				File.WriteAllText(Path.Combine(ndkPath, "ndk-stack.cmd"), "");
+				File.WriteAllText(Path.Combine(ndkPath, $"ndk-stack{extension}"), "");
 
 				var info = new AndroidSdkInfo(logger, androidSdkPath: sdk, androidNdkPath: null, javaSdkPath: jdk);
 				
@@ -90,6 +91,7 @@ namespace Xamarin.Android.Tools.Tests
 			}
 			finally
 			{
+				Environment.SetEnvironmentVariable ("PATH", oldPath, EnvironmentVariableTarget.Process);
 				Directory.Delete(root, recursive: true);
 			}
 		}

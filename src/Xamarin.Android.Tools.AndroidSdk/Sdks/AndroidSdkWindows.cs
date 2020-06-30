@@ -232,14 +232,20 @@ namespace Xamarin.Android.Tools
 			// Check for the "ndk-bundle" directory inside the SDK directories
 			string ndk;
 
-			var sdks = GetAllAvailableAndroidSdks().ToList();
-			if (!string.IsNullOrEmpty(AndroidSdkPath))
-				sdks.Add (AndroidSdkPath!);
-	
-			foreach(var sdk in sdks.Distinct())
-				if (Directory.Exists(ndk = Path.Combine(sdk, "ndk-bundle")))
-					if (ValidateAndroidNdkLocation(ndk))
+			if (!string.IsNullOrEmpty (AndroidSdkPath) &&
+					Directory.Exists (ndk = Path.Combine (AndroidSdkPath, "ndk-bundle"))) {
+				if (ValidateAndroidNdkLocation (ndk))
+					yield return ndk;
+			}
+
+			foreach (var sdk in GetAllAvailableAndroidSdks ()) {
+				if (sdk == AndroidSdkPath)
+					continue;
+				if (Directory.Exists (ndk = Path.Combine (sdk, "ndk-bundle"))) {
+					if (ValidateAndroidNdkLocation (ndk))
 						yield return ndk;
+				}
+			}
 
 			// Check for the key the user gave us in the VS/addin options
 			foreach (var root in roots)

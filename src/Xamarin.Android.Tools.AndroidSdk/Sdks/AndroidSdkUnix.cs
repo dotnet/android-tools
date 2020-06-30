@@ -115,6 +115,14 @@ namespace Xamarin.Android.Tools
 
 		protected override IEnumerable<string> GetAllAvailableAndroidNdks ()
 		{
+			string ndk;
+
+			if (!string.IsNullOrEmpty (AndroidSdkPath) &&
+				Directory.Exists (ndk = Path.Combine (AndroidSdkPath, "ndk-bundle"))) {
+				if (ValidateAndroidNdkLocation (ndk))
+					yield return ndk;
+			}
+
 			var preferedNdkPath = PreferedAndroidNdkPath;
 			if (!string.IsNullOrEmpty (preferedNdkPath))
 				yield return preferedNdkPath!;
@@ -124,6 +132,16 @@ namespace Xamarin.Android.Tools
 				var ndkDir  = Path.GetDirectoryName (ndkStack);
 				if (ValidateAndroidNdkLocation (ndkDir))
 					yield return ndkDir;
+			}
+
+			// Check for the "ndk-bundle" directory inside the SDK directories
+			foreach (var sdk in GetAllAvailableAndroidSdks ()) {
+				if (sdk == AndroidSdkPath)
+					continue;
+				if (Directory.Exists (ndk = Path.Combine (sdk, "ndk-bundle"))) {
+					if (ValidateAndroidNdkLocation (ndk))
+						yield return ndk;
+				}
 			}
 		}
 
