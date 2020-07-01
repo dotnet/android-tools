@@ -98,51 +98,15 @@ namespace Xamarin.Android.Tools
 				// Strip off "platform-tools"
 				var dir = Path.GetDirectoryName (path);
 
-				if (ValidateAndroidSdkLocation (dir))
-					yield return dir;
+				if (dir == null)
+					continue;
+
+				yield return dir;
 			}
 
 			// Check some hardcoded paths for good measure
 			var macSdkPath = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.Personal), "Library", "Android", "sdk");
-			if (ValidateAndroidSdkLocation (macSdkPath))
-				yield return macSdkPath;
-		}
-
-		protected override string? GetJavaSdkPath ()
-		{
-			return JdkInfo.GetKnownSystemJdkInfos (Logger).FirstOrDefault ()?.HomePath;
-		}
-
-		protected override IEnumerable<string> GetAllAvailableAndroidNdks ()
-		{
-			string ndk;
-
-			if (!string.IsNullOrEmpty (AndroidSdkPath) &&
-				Directory.Exists (ndk = Path.Combine (AndroidSdkPath, "ndk-bundle"))) {
-				if (ValidateAndroidNdkLocation (ndk))
-					yield return ndk;
-			}
-
-			var preferedNdkPath = PreferedAndroidNdkPath;
-			if (!string.IsNullOrEmpty (preferedNdkPath))
-				yield return preferedNdkPath!;
-
-			// Look in PATH
-			foreach (var ndkStack in ProcessUtils.FindExecutablesInPath (NdkStack)) {
-				var ndkDir  = Path.GetDirectoryName (ndkStack);
-				if (ValidateAndroidNdkLocation (ndkDir))
-					yield return ndkDir;
-			}
-
-			// Check for the "ndk-bundle" directory inside the SDK directories
-			foreach (var sdk in GetAllAvailableAndroidSdks ()) {
-				if (sdk == AndroidSdkPath)
-					continue;
-				if (Directory.Exists (ndk = Path.Combine (sdk, "ndk-bundle"))) {
-					if (ValidateAndroidNdkLocation (ndk))
-						yield return ndk;
-				}
-			}
+			yield return macSdkPath;
 		}
 
 		protected override string GetShortFormPath (string path)

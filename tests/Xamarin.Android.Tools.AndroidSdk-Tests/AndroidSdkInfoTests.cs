@@ -74,11 +74,8 @@ namespace Xamarin.Android.Tools.Tests
 				logs.WriteLine($"[{level}] {message}");
 			};
 
-			var oldPath = Environment.GetEnvironmentVariable ("PATH", EnvironmentVariableTarget.Process);
 			try
 			{
-				Environment.SetEnvironmentVariable ("PATH", "", EnvironmentVariableTarget.Process);
-
 				var extension = OS.IsWindows ? ".cmd" : "";
 				var ndkPath = Path.Combine(sdk, "ndk-bundle");
 				Directory.CreateDirectory(ndkPath);
@@ -91,7 +88,6 @@ namespace Xamarin.Android.Tools.Tests
 			}
 			finally
 			{
-				Environment.SetEnvironmentVariable ("PATH", oldPath, EnvironmentVariableTarget.Process);
 				Directory.Delete(root, recursive: true);
 			}
 		}
