@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <UsingTask TaskName="Generator" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <PropsFile ParameterType="System.String" Required="true" />
+            <OutputFile ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Reference Include="System.Xml"/>
+            <Reference Include="System.Xml.Linq"/>
+            <Using Namespace="System"/>
+            <Using Namespace="System.IO"/>
+            <Using Namespace="System.Xml"/>
+            <Using Namespace="System.Xml.XPath"/>
+            <Code Type="Fragment" Language="cs">
+<![CDATA[
+            var configuration = new XPathDocument (PropsFile);
+            XPathNavigator navigator = configuration.CreateNavigator ();
+            var ns = new XmlNamespaceManager (navigator.NameTable);
+            ns.AddNamespace("ms", "http://schemas.microsoft.com/developer/msbuild/2003");
+            string buildToolsVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidSdkBuildToolsVersion", ns)?.Value ?? string.Empty;
+            string commandLineToolsVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidCommandLineToolsVersion", ns)?.Value ?? string.Empty;
+            string platformToolsVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidSdkPlatformToolsVersion", ns)?.Value ?? string.Empty;
+            string toolsVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidSdkToolsVersion", ns)?.Value ?? string.Empty;
+            string emulatorVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidSdkEmulatorVersion", ns)?.Value ?? string.Empty;
+            string platformVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidSdkPlatformVersion", ns)?.Value ?? string.Empty;
+            string ndkVersion = navigator.SelectSingleNode ($"/ms:Project/ms:PropertyGroup/ms:AndroidNdkVersion", ns)?.Value ?? string.Empty;
+            File.WriteAllText (OutputFile, @"namespace Xamarin.Android.Tools.AndroidSdk
+{
+    public static partial class RequiredComponentVersions
+    {
+        public const string BuildToolsVersion = """ + buildToolsVersion + @""";
+        public const string CommandLineToolsVersion = """ + commandLineToolsVersion + @""";
+        public const string PlatformToolsVersion = """ + platformToolsVersion + @""";
+        public const string ToolsVersion = """ + toolsVersion + @""";
+        public const string EmulatorVersion = """ + emulatorVersion + @""";
+        public const string PlatformsVersion = """ + platformVersion + @""";
+        public const string NdkVersion = """ + ndkVersion + @""";
+    }
+}
+");
+]]>
+            </Code>
+        </Task>
+    </UsingTask>
+    <Target Name="SetupGenerateRequiredComponentVersions">
+        <PropertyGroup>
+            <XamarinAndroidToolsVersionsPropsFile>Xamarin.Android.Tools.Versions.props</XamarinAndroidToolsVersionsPropsFile>
+            <RequiredCompomentVersionsFile>$(IntermediateOutputPath)RequiredComponentVersions.cs</RequiredCompomentVersionsFile>
+        </PropertyGroup>
+    </Target>
+    <Target Name="GenerateRequiredComponentVersions" DependsOnTargets="SetupGenerateRequiredComponentVersions" BeforeTargets="CoreCompile" AfterTargets="BeforeBuild"
+            Inputs="$(XamarinAndroidToolsVersionsPropsFile)" Outputs="$(RequiredCompomentVersionsFile)">
+        <Generator PropsFile="$(XamarinAndroidToolsVersionsPropsFile)" OutputFile="$(RequiredCompomentVersionsFile)" />
+        <ItemGroup>
+            <Compile Include="$(RequiredCompomentVersionsFile)" />
+            <FileWrites Include="$(RequiredCompomentVersionsFile)" />
+        </ItemGroup>
+    </Target>
+</Project>
