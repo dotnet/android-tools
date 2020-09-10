@@ -6,6 +6,7 @@ using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.IO;
+using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {
@@ -33,7 +34,7 @@ namespace Xamarin.Android.Tools
 			this.doc = doc;
 			manifest = doc.Root;
 			if (manifest.Name != "manifest")
-				throw new ArgumentException ("App manifest does not have 'manifest' root element", nameof (doc));
+				throw new ArgumentException (Resources.ResourceManager.GetString ("XamarinAndroidTools_XAT0001"), nameof (doc));
 
 			application = manifest.Element ("application");
 			if (application == null)
@@ -49,7 +50,7 @@ namespace Xamarin.Android.Tools
 			if (packageNameOrAssemblyName == null)
 				throw new ArgumentNullException ("packageNameOrAssemblyName");
 			if (string.IsNullOrEmpty (packageNameOrAssemblyName = packageNameOrAssemblyName.Trim ()))
-				throw new ArgumentException ("Must specify a package name or assembly name", "packageNameOrAssemblyName");
+				throw new ArgumentException (Resources.ResourceManager.GetString ("XamarinAndroidTools_XAT0002"), "packageNameOrAssemblyName");
 
 			string[] packageParts = packageNameOrAssemblyName.Split (new[]{'.'}, StringSplitOptions.RemoveEmptyEntries);
 			for (int i = 0; i < packageParts.Length; ++i) {
