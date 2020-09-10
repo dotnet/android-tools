@@ -2,11 +2,35 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
   <file datatype="xml" source-language="en" target-language="fr" original="../Resources.resx">
     <body>
-      <trans-unit id="XamarinAndroidTools_XAT0000">
-        <source>Error: {0}.</source>
-        <target state="new">Error: {0}.</target>
-        <note>{0} - Error tmeplate
-In this message, text will be replaced with actual errors.</note>
+      <trans-unit id="XamarinAndroidTools_XAT0001">
+        <source>App manifest does not have 'manifest' root element</source>
+        <target state="new">App manifest does not have 'manifest' root element</target>
+        <note>App manifest does not have 'manifest' root element</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0002">
+        <source>Must specify a package name or assembly name</source>
+        <target state="new">Must specify a package name or assembly name</target>
+        <note>Must specify a package name or assembly name</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0003">
+        <source>Could not determine Android SDK location. Please provide {0}.</source>
+        <target state="new">Could not determine Android SDK location. Please provide {0}.</target>
+        <note>Could not determine Android SDK location. Please provide {0}.</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0004">
+        <source>Could not determine Java SDK location. Please provide {0}.</source>
+        <target state="new">Could not determine Java SDK location. Please provide {0}.</target>
+        <note>Could not determine Java SDK location. Please provide {0}.</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0005">
+        <source>Windows is not supported at this time.</source>
+        <target state="new">Windows is not supported at this time.</target>
+        <note>Windows is not supported at this time.</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0006">
+        <source>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</source>
+        <target state="new">No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</target>
+        <note>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</note>
       </trans-unit>
     </body>
   </file>

@@ -117,10 +117,51 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="XamarinAndroidTools_XAT0000" xml:space="preserve">
-    <value>Error: {0}.</value>
-    <comment>{0} - Error tmeplate
-In this message, text will be replaced with actual errors.</comment>
+  
+  
+  <data name="XamarinAndroidTools_XAT0001" xml:space="preserve">
+    <value>App manifest does not have 'manifest' root element</value>
+    <comment>App manifest does not have 'manifest' root element</comment>
+  </data>
+  <data name="XamarinAndroidTools_XAT0002" xml:space="preserve">
+    <value>Must specify a package name or assembly name</value>
+    <comment>Must specify a package name or assembly name</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0003" xml:space="preserve">
+    <value>Could not determine Android SDK location. Please provide {0}.</value>
+    <comment>Could not determine Android SDK location. Please provide {0}.</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0004" xml:space="preserve">
+    <value>Could not determine Java SDK location. Please provide {0}.</value>
+    <comment>Could not determine Java SDK location. Please provide {0}.</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0005" xml:space="preserve">
+    <value>Windows is not supported at this time.</value>
+    <comment>Windows is not supported at this time.</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0006" xml:space="preserve">
+    <value>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</value>
+    <comment>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</comment>
   </data>
 
+  <data name="XamarinAndroidTools_XAT0007" xml:space="preserve">
+    <value></value>
+    <comment></comment>
+  </data>
+
+  <data name="XamarinAndroidTools_XAT0008" xml:space="preserve">
+    <value></value>
+    <comment></comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0009" xml:space="preserve">
+    <value></value>
+    <comment></comment>
+  </data>
+  
+  
 </root>
