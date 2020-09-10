@@ -34,7 +34,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="XliffTasks" Version="1.0.0-beta.20420.1" />
+    <PackageReference Include="XliffTasks" Version="1.0.0-beta.20420.1" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
