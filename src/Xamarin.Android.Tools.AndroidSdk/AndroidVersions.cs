@@ -5,6 +5,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {
@@ -27,7 +28,7 @@ namespace Xamarin.Android.Tools
 
 			foreach (var d in frameworkDirectories) {
 				if (!Directory.Exists (d))
-					throw new ArgumentException ($"`{d}` must be a directory!", nameof (frameworkDirectories));
+					throw new ArgumentException (string.Format(Resources.ResourceManager.GetString ("XamarinAndroidTools_XAT0007"), d), nameof (frameworkDirectories));
 
 				var dp  = d.TrimEnd (Path.DirectorySeparatorChar);
 				var dn  = Path.GetFileName (dp);
