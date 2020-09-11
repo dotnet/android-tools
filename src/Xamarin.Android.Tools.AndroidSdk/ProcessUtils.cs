@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {
@@ -124,7 +125,7 @@ namespace Xamarin.Android.Tools
 				} else {
 					var errorMessage = !string.IsNullOrEmpty (errorOutput) ? errorOutput : output;
 
-					tcs.TrySetException (new InvalidOperationException (string.IsNullOrEmpty (errorMessage) ? exeName + " returned non-zero exit code" : string.Format ("{0} : {1}", t.Result, errorMessage)));
+					tcs.TrySetException (new InvalidOperationException (string.IsNullOrEmpty (errorMessage) ? exeName + Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0016") : string.Format ("{0} : {1}", t.Result, errorMessage)));
 				}
 			}, TaskContinuationOptions.ExecuteSynchronously);
 
