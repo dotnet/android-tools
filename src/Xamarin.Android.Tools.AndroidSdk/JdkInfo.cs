@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Xml;
 using System.Xml.Linq;
+using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {
@@ -45,7 +46,7 @@ namespace Xamarin.Android.Tools
 			if (homePath == null)
 				throw new ArgumentNullException (nameof (homePath));
 			if (!Directory.Exists (homePath))
-				throw new ArgumentException ("Not a directory", nameof (homePath));
+				throw new ArgumentException ("XamarinAndroidTools_XAT0008", nameof (homePath));
 
 			HomePath            = homePath;
 
@@ -108,7 +109,7 @@ namespace Xamarin.Android.Tools
 			var props   = javaProperties.Value;
 			if (props.TryGetValue (key, out var v)) {
 				if (v.Count > 1)
-					throw new InvalidOperationException ($"Requested to get one string value when property `{key}` contains `{v.Count}` values.");
+					throw new InvalidOperationException (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0010"), key, v.Count));
 				value   = v [0];
 				return true;
 			}
@@ -144,7 +145,7 @@ namespace Xamarin.Android.Tools
 		void ValidateFile (string name, string? path)
 		{
 			if (path == null || !File.Exists (path))
-				throw new ArgumentException ($"Could not find required file `{name}` within `{HomePath}`; is this a valid JDK?", "homePath");
+				throw new ArgumentException (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0010"), name, HomePath), "homePath");
 		}
 
 		static  Regex   NonDigitMatcher     = new Regex (@"[^\d]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -258,7 +259,7 @@ namespace Xamarin.Android.Tools
 						return;
 					if (e.Data.StartsWith (ContinuedValuePrefix, StringComparison.Ordinal)) {
 						if (curKey == null)
-							throw new InvalidOperationException ($"Unknown property key for value {e.Data}!");
+							throw new InvalidOperationException (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0011"), e.Data));
 						props [curKey].Add (e.Data.Substring (ContinuedValuePrefix.Length));
 						return;
 					}
@@ -322,7 +323,7 @@ namespace Xamarin.Android.Tools
 
 		static IEnumerable<string> GetMacOSMicrosoftJdkPaths ()
 		{
-			var jdks    = AppDomain.CurrentDomain.GetData ($"GetMacOSMicrosoftJdkPaths jdks override! {typeof (JdkInfo).AssemblyQualifiedName}")
+			var jdks    = AppDomain.CurrentDomain.GetData (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0012"), typeof (JdkInfo).AssemblyQualifiedName))
 				?.ToString ();
 			if (jdks == null) {
 				var home    = Environment.GetFolderPath (Environment.SpecialFolder.Personal);
@@ -341,7 +342,7 @@ namespace Xamarin.Android.Tools
 				jdk = new JdkInfo (path, locator);
 			}
 			catch (Exception e) {
-				logger (TraceLevel.Warning, $"The directory `{path}`, via locator `{locator}`, is not a valid JDK directory: {e.Message}");
+				logger (TraceLevel.Warning, string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0013"), path, locator, e.Message));
 				logger (TraceLevel.Verbose, e.ToString ());
 			}
 			return jdk;
