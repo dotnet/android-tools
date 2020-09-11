@@ -100,5 +100,47 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0009", resourceCulture);
             }
         }
+        
+        public static string XamarinAndroidTools_XAT0010 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0010", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0011 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0011", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0012 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0012", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0013 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0013", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0014 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0014", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0015 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0015", resourceCulture);
+            }
+        }
+        
+        public static string XamarinAndroidTools_XAT0016 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0016", resourceCulture);
+            }
+        }
     }
 }

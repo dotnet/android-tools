@@ -32,6 +32,56 @@
         <target state="new">No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</target>
         <note>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</note>
       </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0007">
+        <source>`{0}` must be a directory!</source>
+        <target state="new">`{0}` must be a directory!</target>
+        <note>`{0}` must be a directory!</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0008">
+        <source>Not a directory</source>
+        <target state="new">Not a directory</target>
+        <note>Not a directory</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0009">
+        <source>Requested to get one string value when property `{0}` contains `{1}` values.</source>
+        <target state="new">Requested to get one string value when property `{0}` contains `{1}` values.</target>
+        <note>Requested to get one string value when property `{0}` contains `{1}` values.</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0010">
+        <source>Could not find required file `{0}` within `{1}`; is this a valid JDK?</source>
+        <target state="new">Could not find required file `{0}` within `{1}`; is this a valid JDK?</target>
+        <note>Could not find required file `{0}` within `{1}`; is this a valid JDK?.</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0011">
+        <source>Unknown property key for value {0}!</source>
+        <target state="new">Unknown property key for value {0}!</target>
+        <note>Unknown property key for value {0}!</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0012">
+        <source>GetMacOSMicrosoftJdkPaths jdks override! {0}</source>
+        <target state="new">GetMacOSMicrosoftJdkPaths jdks override! {0}</target>
+        <note>GetMacOSMicrosoftJdkPaths jdks override! {0}</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0013">
+        <source>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</source>
+        <target state="new">The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</target>
+        <note>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0014">
+        <source>Could not open or create key</source>
+        <target state="new">Could not open or create key</target>
+        <note>Could not open or create key</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0015">
+        <source>Error {0} setting registry key '{1}{2}@{3}'='{4}'</source>
+        <target state="new">Error {0} setting registry key '{1}{2}@{3}'='{4}'</target>
+        <note>Error {0} setting registry key '{1}{2}@{3}'='{4}'</note>
+      </trans-unit>
+      <trans-unit id="XamarinAndroidTools_XAT0016">
+        <source> returned non-zero exit code</source>
+        <target state="new"> returned non-zero exit code</target>
+        <note> returned non-zero exit code</note>
+      </trans-unit>
     </body>
   </file>
 </xliff>

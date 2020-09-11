@@ -149,19 +149,54 @@
   </data>
 
   <data name="XamarinAndroidTools_XAT0007" xml:space="preserve">
-    <value></value>
-    <comment></comment>
+    <value>`{0}` must be a directory!</value>
+    <comment>`{0}` must be a directory!</comment>
   </data>
 
   <data name="XamarinAndroidTools_XAT0008" xml:space="preserve">
-    <value></value>
-    <comment></comment>
+    <value>Not a directory</value>
+    <comment>Not a directory</comment>
   </data>
   
   <data name="XamarinAndroidTools_XAT0009" xml:space="preserve">
-    <value></value>
-    <comment></comment>
+    <value>Requested to get one string value when property `{0}` contains `{1}` values.</value>
+    <comment>Requested to get one string value when property `{0}` contains `{1}` values.</comment>
+  </data>
+    
+  <data name="XamarinAndroidTools_XAT0010" xml:space="preserve">
+    <value>Could not find required file `{0}` within `{1}`; is this a valid JDK?</value>
+    <comment>Could not find required file `{0}` within `{1}`; is this a valid JDK?.</comment>
   </data>
   
+  <data name="XamarinAndroidTools_XAT0011" xml:space="preserve">
+    <value>Unknown property key for value {0}!</value>
+    <comment>Unknown property key for value {0}!</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0012" xml:space="preserve">
+    <value>GetMacOSMicrosoftJdkPaths jdks override! {0}</value>
+    <comment>GetMacOSMicrosoftJdkPaths jdks override! {0}</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0013" xml:space="preserve">
+    <value>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</value>
+    <comment>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0014" xml:space="preserve">
+    <value>Could not open or create key</value>
+    <comment>Could not open or create key</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0015" xml:space="preserve">
+    <value>Error {0} setting registry key '{1}{2}@{3}'='{4}'</value>
+    <comment>Error {0} setting registry key '{1}{2}@{3}'='{4}'</comment>
+  </data>
+  
+  <data name="XamarinAndroidTools_XAT0016" xml:space="preserve">
+    <value> returned non-zero exit code</value>
+    <comment> returned non-zero exit code</comment>
+  </data>
+   
   
 </root>
