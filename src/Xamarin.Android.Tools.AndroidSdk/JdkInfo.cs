@@ -162,7 +162,7 @@ namespace Xamarin.Android.Tools
 				version = GetParsableVersion (version);
 			}
 			if (string.IsNullOrEmpty (version))
-				throw new NotSupportedException ("Could not determine Java version.");
+				throw new NotSupportedException (Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0017"));
 			var normalizedVersion   = NonDigitMatcher.Replace (version, ".");
 			var versionParts        = normalizedVersion.Split (new[]{"."}, StringSplitOptions.RemoveEmptyEntries);
 

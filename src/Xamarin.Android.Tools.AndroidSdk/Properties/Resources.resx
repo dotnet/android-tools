@@ -198,5 +198,9 @@
     <comment> returned non-zero exit code</comment>
   </data>
    
+  <data name="XamarinAndroidTools_XAT0017" xml:space="preserve">
+    <value>Could not determine Java version.</value>
+    <comment>Could not determine Java version.</comment>
+  </data>
   
 </root>
