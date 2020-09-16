@@ -46,7 +46,7 @@ namespace Xamarin.Android.Tools
 			if (homePath == null)
 				throw new ArgumentNullException (nameof (homePath));
 			if (!Directory.Exists (homePath))
-				throw new ArgumentException ("XamarinAndroidTools_XAT0008", nameof (homePath));
+				throw new ArgumentException (Resources.ResourceManager.GetString ("XamarinAndroidTools_XAT0008"), nameof (homePath));
 
 			HomePath            = homePath;
 
