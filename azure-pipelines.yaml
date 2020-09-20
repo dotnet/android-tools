@@ -34,6 +34,11 @@ jobs:
       feedsToUse: config
       nugetConfigPath: NuGet.config
   - task: MSBuild@1
+    displayName: 'Update Xlf'
+    inputs:
+      solution: Xamarin.Android.Tools.sln
+      msbuildArguments: '/t:UpdateXlf'
+  - task: MSBuild@1
     displayName: 'Build solution Xamarin.Android.Tools.sln'
     inputs:
       solution: Xamarin.Android.Tools.sln
@@ -48,11 +53,6 @@ jobs:
       $majorMinor = Get-Content "nuget.version"
       $version = "$majorMinor.$commitsSinceVersionChange"
       Write-Host "##vso[task.setvariable variable=xat.nuget.version]$version"
-  - task: MSBuild@1
-    displayName: 'Update Xlf'
-    inputs:
-      solution: 'src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj'
-      msbuildArguments: '/t:UpdateXlf'
   - task: MSBuild@1
     displayName: 'Build NuGet'
     inputs:
