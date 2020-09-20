@@ -74,6 +74,8 @@ jobs:
       dotnet tool install --global boots
       boots https://download.mono-project.com/archive/6.4.0/macos-10-universal/MonoFramework-MDK-6.4.0.198.macos10.xamarin.universal.pkg
     displayName: Install Mono 6.4
+  - script: msbuild /t:UpdateXlf src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj
+    displayName: 'Update Xlf'
   - script: make prepare CONFIGURATION=$(Build.Configuration)
     displayName: make prepare
 
