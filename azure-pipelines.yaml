@@ -49,6 +49,11 @@ jobs:
       $version = "$majorMinor.$commitsSinceVersionChange"
       Write-Host "##vso[task.setvariable variable=xat.nuget.version]$version"
   - task: MSBuild@1
+    displayName: 'Update Xlf'
+    inputs:
+      solution: 'src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj'
+      msbuildArguments: '/t:UpdateXlf'
+  - task: MSBuild@1
     displayName: 'Build NuGet'
     inputs:
       solution: 'src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj'
