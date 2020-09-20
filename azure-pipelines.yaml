@@ -36,7 +36,7 @@ jobs:
   - task: MSBuild@1
     displayName: 'Update Xlf'
     inputs:
-      solution: Xamarin.Android.Tools.sln
+      solution: 'src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj'
       msbuildArguments: '/t:UpdateXlf'
   - task: MSBuild@1
     displayName: 'Build solution Xamarin.Android.Tools.sln'
