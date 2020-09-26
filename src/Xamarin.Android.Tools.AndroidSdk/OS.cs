@@ -170,7 +170,7 @@ namespace Xamarin.Android.Tools
 			uint options = (uint) Options.NonVolatile;
 			Disposition disposition;
 			if (RegCreateKeyEx (key, subkey, 0, "", options, sam, IntPtr.Zero, out regKeyHandle, out disposition) != 0) {
-				throw new Exception (Resources.XamarinAndroidTools_XAT0014);
+				throw new Exception ("Could not open or create key");
 			}
 
 			try {
@@ -178,7 +178,7 @@ namespace Xamarin.Android.Tools
 				uint lenBytesPlusNull = ((uint)value.Length + 1) * 2;
 				var result = RegSetValueExW (regKeyHandle, valueName, 0, type, value, lenBytesPlusNull);
 				if (result != 0)
-					throw new Exception (string.Format (Resources.XamarinAndroidTools_XAT0015,
+					throw new Exception (string.Format ("Error {0} setting registry key '{1}{2}@{3}'='{4}'",
 						result, key, subkey, valueName, value));
 			} finally {
 				RegCloseKey (regKeyHandle);

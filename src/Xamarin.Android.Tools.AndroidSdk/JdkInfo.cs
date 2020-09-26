@@ -46,7 +46,7 @@ namespace Xamarin.Android.Tools
 			if (homePath == null)
 				throw new ArgumentNullException (nameof (homePath));
 			if (!Directory.Exists (homePath))
-				throw new ArgumentException (Resources.XamarinAndroidTools_XAT0008, nameof (homePath));
+				throw new ArgumentException ("Not a directory", nameof (homePath));
 
 			HomePath            = homePath;
 
@@ -109,7 +109,7 @@ namespace Xamarin.Android.Tools
 			var props   = javaProperties.Value;
 			if (props.TryGetValue (key, out var v)) {
 				if (v.Count > 1)
-					throw new InvalidOperationException (string.Format (Resources.XamarinAndroidTools_XAT0009, key, v.Count));
+					throw new InvalidOperationException ($"Requested to get one string value when property `{key}` contains `{v.Count}` values.");
 				value   = v [0];
 				return true;
 			}
@@ -145,7 +145,7 @@ namespace Xamarin.Android.Tools
 		void ValidateFile (string name, string? path)
 		{
 			if (path == null || !File.Exists (path))
-				throw new ArgumentException (string.Format (Resources.XamarinAndroidTools_XAT0010, name, HomePath), "homePath");
+				throw new ArgumentException($"Could not find required file `{name}` within `{HomePath}`; is this a valid JDK?", "homePath");
 		}
 
 		static  Regex   NonDigitMatcher     = new Regex (@"[^\d]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -162,7 +162,7 @@ namespace Xamarin.Android.Tools
 				version = GetParsableVersion (version);
 			}
 			if (string.IsNullOrEmpty (version))
-				throw new NotSupportedException (Resources.XamarinAndroidTools_XAT0017);
+				throw new NotSupportedException ("Could not determine Java version.");
 			var normalizedVersion   = NonDigitMatcher.Replace (version, ".");
 			var versionParts        = normalizedVersion.Split (new[]{"."}, StringSplitOptions.RemoveEmptyEntries);
 
@@ -259,7 +259,7 @@ namespace Xamarin.Android.Tools
 						return;
 					if (e.Data.StartsWith (ContinuedValuePrefix, StringComparison.Ordinal)) {
 						if (curKey == null)
-							throw new InvalidOperationException (string.Format (Resources.XamarinAndroidTools_XAT0011, e.Data));
+							throw new InvalidOperationException ($"Unknown property key for value {e.Data}!");
 						props [curKey].Add (e.Data.Substring (ContinuedValuePrefix.Length));
 						return;
 					}
@@ -342,7 +342,7 @@ namespace Xamarin.Android.Tools
 				jdk = new JdkInfo (path, locator);
 			}
 			catch (Exception e) {
-				logger (TraceLevel.Warning, string.Format (Resources.XamarinAndroidTools_XAT0013, path, locator, e.Message));
+				logger (TraceLevel.Warning, string.Format (AndroidSdk.Properties.Resources.XamarinAndroidTools_XAT0013, path, locator, e.Message));
 				logger (TraceLevel.Verbose, e.ToString ());
 			}
 			return jdk;

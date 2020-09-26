@@ -28,7 +28,7 @@ namespace Xamarin.Android.Tools
 
 			foreach (var d in frameworkDirectories) {
 				if (!Directory.Exists (d))
-					throw new ArgumentException (string.Format (Resources.XamarinAndroidTools_XAT0007, d), nameof (frameworkDirectories));
+					throw new ArgumentException ($"`{d}` must be a directory!", nameof (frameworkDirectories));
 
 				var dp  = d.TrimEnd (Path.DirectorySeparatorChar);
 				var dn  = Path.GetFileName (dp);

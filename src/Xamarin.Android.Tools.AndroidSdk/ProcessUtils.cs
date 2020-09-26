@@ -125,7 +125,7 @@ namespace Xamarin.Android.Tools
 				} else {
 					var errorMessage = !string.IsNullOrEmpty (errorOutput) ? errorOutput : output;
 					errorMessage = string.IsNullOrEmpty (errorMessage)
-						? string.Format (Resources.XamarinAndroidTools_XAT0016, exeName)
+						? string.Format (" returned non-zero exit code", exeName)
 						: string.Format ("{0} : {1}", t.Result, errorMessage);
 
 					tcs.TrySetException (new InvalidOperationException (errorMessage));
