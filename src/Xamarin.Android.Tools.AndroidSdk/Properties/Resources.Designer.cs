@@ -16,7 +16,7 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
     [System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
     [System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public class Resources {
+    internal class Resources {
         
         private static System.Resources.ResourceManager resourceMan;
         
@@ -27,7 +27,7 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static System.Resources.ResourceManager ResourceManager {
+        internal static System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.Equals(null, resourceMan)) {
                     System.Resources.ResourceManager temp = new System.Resources.ResourceManager("Xamarin.Android.Tools.AndroidSdk.Properties.Resources", typeof(Resources).Assembly);
@@ -38,7 +38,7 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
         }
         
         [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public static System.Globalization.CultureInfo Culture {
+        internal static System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -47,103 +47,97 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
             }
         }
         
-        public static string XamarinAndroidTools_XAT0001 {
+        internal static string XamarinAndroidTools_XAT0001 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0001", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0002 {
+        internal static string XamarinAndroidTools_XAT0002 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0002", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0003 {
+        internal static string XamarinAndroidTools_XAT0003 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0003", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0004 {
+        internal static string XamarinAndroidTools_XAT0004 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0004", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0005 {
+        internal static string XamarinAndroidTools_XAT0005 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0005", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0006 {
+        internal static string XamarinAndroidTools_XAT0006 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0006", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0007 {
+        internal static string XamarinAndroidTools_XAT0007 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0007", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0008 {
+        internal static string XamarinAndroidTools_XAT0008 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0008", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0009 {
+        internal static string XamarinAndroidTools_XAT0009 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0009", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0010 {
+        internal static string XamarinAndroidTools_XAT0010 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0010", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0011 {
+        internal static string XamarinAndroidTools_XAT0011 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0011", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0012 {
-            get {
-                return ResourceManager.GetString("XamarinAndroidTools_XAT0012", resourceCulture);
-            }
-        }
-        
-        public static string XamarinAndroidTools_XAT0013 {
+        internal static string XamarinAndroidTools_XAT0013 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0013", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0014 {
+        internal static string XamarinAndroidTools_XAT0014 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0014", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0015 {
+        internal static string XamarinAndroidTools_XAT0015 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0015", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0016 {
+        internal static string XamarinAndroidTools_XAT0016 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0016", resourceCulture);
             }
         }
         
-        public static string XamarinAndroidTools_XAT0017 {
+        internal static string XamarinAndroidTools_XAT0017 {
             get {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0017", resourceCulture);
             }
