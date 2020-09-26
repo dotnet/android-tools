@@ -20,9 +20,9 @@ namespace Xamarin.Android.Tools
 
 			// shouldn't happen, in that sdk.Initialize() should throw instead
 			if (string.IsNullOrEmpty (AndroidSdkPath))
-				throw new InvalidOperationException (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0003"), nameof (androidSdkPath)));
+				throw new InvalidOperationException (string.Format (Resources.XamarinAndroidTools_XAT0003, nameof (androidSdkPath)));
 			if (string.IsNullOrEmpty (JavaSdkPath))
-				throw new InvalidOperationException (string.Format(Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0004"), nameof (javaSdkPath)));
+				throw new InvalidOperationException (string.Format (Resources.XamarinAndroidTools_XAT0004, nameof (javaSdkPath)));
 		}
 
 		static AndroidSdkBase CreateSdk (Action<TraceLevel, string> logger)
@@ -182,13 +182,13 @@ namespace Xamarin.Android.Tools
 		public static void DetectAndSetPreferredJavaSdkPathToLatest (Action<TraceLevel, string>? logger = null)
 		{
 			if (OS.IsWindows)
-				throw new NotImplementedException (Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0005"));
+				throw new NotImplementedException (Resources.XamarinAndroidTools_XAT0005);
 
 			logger          = logger ?? DefaultConsoleLogger;
 
 			var latestJdk   = JdkInfo.GetMacOSMicrosoftJdks (logger).FirstOrDefault ();
 			if (latestJdk == null)
-				throw new NotSupportedException (Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0006"));
+				throw new NotSupportedException (Resources.XamarinAndroidTools_XAT0006);
 
 			var sdk = CreateSdk (logger);
 			sdk.SetPreferredJavaSdkPath (latestJdk.HomePath);

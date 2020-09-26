@@ -124,8 +124,11 @@ namespace Xamarin.Android.Tools
 					tcs.TrySetResult (result != null ? result (output) : default (TResult)!);
 				} else {
 					var errorMessage = !string.IsNullOrEmpty (errorOutput) ? errorOutput : output;
+					errorMessage = string.IsNullOrEmpty (errorMessage)
+						? string.Format (Resources.XamarinAndroidTools_XAT0016, exeName)
+						: string.Format ("{0} : {1}", t.Result, errorMessage);
 
-					tcs.TrySetException (new InvalidOperationException (string.IsNullOrEmpty (errorMessage) ? exeName + Resources.ResourceManager.GetString("XamarinAndroidTools_XAT0016") : string.Format ("{0} : {1}", t.Result, errorMessage)));
+					tcs.TrySetException (new InvalidOperationException (errorMessage));
 				}
 			}, TaskContinuationOptions.ExecuteSynchronously);
 

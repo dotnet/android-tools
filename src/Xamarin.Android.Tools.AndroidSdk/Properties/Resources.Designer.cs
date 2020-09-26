@@ -142,5 +142,11 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
                 return ResourceManager.GetString("XamarinAndroidTools_XAT0016", resourceCulture);
             }
         }
+        
+        public static string XamarinAndroidTools_XAT0017 {
+            get {
+                return ResourceManager.GetString("XamarinAndroidTools_XAT0017", resourceCulture);
+            }
+        }
     }
 }
