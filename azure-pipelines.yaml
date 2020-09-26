@@ -34,11 +34,6 @@ jobs:
       feedsToUse: config
       nugetConfigPath: NuGet.config
   - task: MSBuild@1
-    displayName: 'Update Xlf'
-    inputs:
-      solution: 'src\Xamarin.Android.Tools.AndroidSdk\Xamarin.Android.Tools.AndroidSdk.csproj'
-      msbuildArguments: '/t:UpdateXlf'
-  - task: MSBuild@1
     displayName: 'Build solution Xamarin.Android.Tools.sln'
     inputs:
       solution: Xamarin.Android.Tools.sln
@@ -74,8 +69,6 @@ jobs:
       dotnet tool install --global boots
       boots https://download.mono-project.com/archive/6.4.0/macos-10-universal/MonoFramework-MDK-6.4.0.198.macos10.xamarin.universal.pkg
     displayName: Install Mono 6.4
-  - script: msbuild /restore /t:UpdateXlf src/Xamarin.Android.Tools.AndroidSdk/Xamarin.Android.Tools.AndroidSdk.csproj
-    displayName: 'Update Xlf'
   - script: make prepare CONFIGURATION=$(Build.Configuration)
     displayName: make prepare
 
