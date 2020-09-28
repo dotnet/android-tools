@@ -2,7 +2,6 @@
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Text;
-using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {

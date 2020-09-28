@@ -2,97 +2,13 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
   <file datatype="xml" source-language="en" target-language="de" original="../Resources.resx">
     <body>
-      <trans-unit id="XamarinAndroidTools_XAT0001">
-        <source>App manifest does not have 'manifest' root element</source>
-        <target state="new">App manifest does not have 'manifest' root element</target>
-        <note>The following are literal names and should not be translated: manifest</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0002">
-        <source>Must specify a package name or assembly name</source>
-        <target state="new">Must specify a package name or assembly name</target>
-        <note>"package name" refers to the Java programming language "package" concept.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0003">
-        <source>Could not determine Android SDK location. Please provide {0}.</source>
-        <target state="new">Could not determine Android SDK location. Please provide {0}.</target>
-        <note>The following are literal names and should not be translated: Android SD
-{0} - the name of the C# method parameter causing an exception to be thrown.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0004">
-        <source>Could not determine Java SDK location. Please provide {0}.</source>
-        <target state="new">Could not determine Java SDK location. Please provide {0}.</target>
-        <note>The following are literal names and should not be translated: Java SDK
-{0} - the name of the C# method parameter causing an exception to be thrown.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0005">
-        <source>Windows is not supported at this time.</source>
-        <target state="new">Windows is not supported at this time.</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0006">
-        <source>No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</source>
-        <target state="new">No Microsoft OpenJDK could be found.  Please re-run the Visual Studio installer or manually specify the JDK path in settings.</target>
-        <note>The following are literal names and should not be translated: OpenJDK</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0007">
-        <source>`{0}` must be a directory!</source>
-        <target state="new">`{0}` must be a directory!</target>
-        <note>{0} - the name of the C# method parameter causing an exception to be thrown.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0008">
-        <source>Not a directory</source>
-        <target state="new">Not a directory</target>
-        <note />
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0009">
-        <source>Requested to get one string value when property `{0}` contains `{1}` values.</source>
-        <target state="new">Requested to get one string value when property `{0}` contains `{1}` values.</target>
-        <note>{0} - a property name
-{1} - the number of values that {0} contains.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0010">
-        <source>Could not find required file `{0}` within `{1}`; is this a valid JDK?</source>
-        <target state="new">Could not find required file `{0}` within `{1}`; is this a valid JDK?</target>
-        <note>The following are literal names and should not be translated: JDK
-{0} - a file that is being looked.
-{1} - The directory where {0} is being looked for.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0011">
-        <source>Unknown property key for value {0}!</source>
-        <target state="new">Unknown property key for value {0}!</target>
-        <note>{0} - the value that is being processed, which is not understood.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0013">
+      <trans-unit id="InvalidJdkDirectory">
         <source>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</source>
         <target state="new">The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</target>
-        <note>{0} - a directory
-{1} - a "contextual" name for where {0} came from; from a config file? the registry? environment variable? etc.
+        <note>The following are literal names and should not be translated: JDK.
+{0} - a directory
+{1} - a "contextual" name for where {0} came from: `Preferred Registry` (Windows Registry), `OpenJDK`, `$JAVA_HOME` (environment variable), etc.
 {2} - the `Exception.Message` from the exception prompting us to show this message.</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0014">
-        <source>Could not open or create key</source>
-        <target state="new">Could not open or create key</target>
-        <note>"key" refers to a Windows Registry key</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0015">
-        <source>Error {0} setting registry key '{1}{2}@{3}'='{4}'</source>
-        <target state="new">Error {0} setting registry key '{1}{2}@{3}'='{4}'</target>
-        <note>"registry key" refers to a Windows Registry key
-{0} - The return value of a `RegSetValueExW()` call
-{1} - The Windows registry key we're trying to set
-{2} - A Windows registry "subkey"
-{3} - The Windows registry key name
-{4} - The value we were trying to set</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0016">
-        <source>The program `{0}` returned non-zero exit code.</source>
-        <target state="new">The program `{0}` returned non-zero exit code.</target>
-        <note>{0} - The name of the program which generated an error</note>
-      </trans-unit>
-      <trans-unit id="XamarinAndroidTools_XAT0017">
-        <source>Could not determine Java version.</source>
-        <target state="new">Could not determine Java version.</target>
-        <note />
       </trans-unit>
     </body>
   </file>

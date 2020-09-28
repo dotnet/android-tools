@@ -50,7 +50,7 @@ namespace Xamarin.Android.Tools
 			if (packageNameOrAssemblyName == null)
 				throw new ArgumentNullException ("packageNameOrAssemblyName");
 			if (string.IsNullOrEmpty (packageNameOrAssemblyName = packageNameOrAssemblyName.Trim ()))
-				throw new ArgumentException  ("Must specify a package name or assembly name", "packageNameOrAssemblyName");
+				throw new ArgumentException ("Must specify a package name or assembly name", "packageNameOrAssemblyName");
 
 			string[] packageParts = packageNameOrAssemblyName.Split (new[]{'.'}, StringSplitOptions.RemoveEmptyEntries);
 			for (int i = 0; i < packageParts.Length; ++i) {

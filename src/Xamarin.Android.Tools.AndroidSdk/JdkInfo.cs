@@ -145,7 +145,7 @@ namespace Xamarin.Android.Tools
 		void ValidateFile (string name, string? path)
 		{
 			if (path == null || !File.Exists (path))
-				throw new ArgumentException($"Could not find required file `{name}` within `{HomePath}`; is this a valid JDK?", "homePath");
+				throw new ArgumentException ($"Could not find required file `{name}` within `{HomePath}`; is this a valid JDK?", "homePath");
 		}
 
 		static  Regex   NonDigitMatcher     = new Regex (@"[^\d]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -342,7 +342,7 @@ namespace Xamarin.Android.Tools
 				jdk = new JdkInfo (path, locator);
 			}
 			catch (Exception e) {
-				logger (TraceLevel.Warning, string.Format (AndroidSdk.Properties.Resources.XamarinAndroidTools_XAT0013, path, locator, e.Message));
+				logger (TraceLevel.Warning, string.Format (AndroidSdk.Properties.Resources.InvalidJdkDirectory, path, locator, e.Message));
 				logger (TraceLevel.Verbose, e.ToString ());
 			}
 			return jdk;
