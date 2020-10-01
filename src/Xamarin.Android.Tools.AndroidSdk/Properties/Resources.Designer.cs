@@ -47,9 +47,21 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
             }
         }
         
-        internal static string InvalidJdkDirectory {
+        internal static string FailedToChangeFileSystemOwnership {
             get {
-                return ResourceManager.GetString("InvalidJdkDirectory", resourceCulture);
+                return ResourceManager.GetString("FailedToChangeFileSystemOwnership", resourceCulture);
+            }
+        }
+        
+        internal static string InvalidJdkDirectory_path_locator_message {
+            get {
+                return ResourceManager.GetString("InvalidJdkDirectory_path_locator_message", resourceCulture);
+            }
+        }
+        
+        internal static string InvalidMonodroidConfigFile_path_message {
+            get {
+                return ResourceManager.GetString("InvalidMonodroidConfigFile_path_message", resourceCulture);
             }
         }
     }
