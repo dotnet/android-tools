@@ -119,11 +119,11 @@
   </resheader>
   
   <data name="InvalidJdkDirectory" xml:space="preserve">
-    <value>The directory `{0}`, via locator `{1}`, is not a valid JDK directory: {2}</value>
-    <comment>The following are literal names and should not be translated: JDK.
-{0} - a directory
+    <value>An exception occurred while validating the Java SDK installation in '{0}' that was found while searching the paths from '{1}'. Ensure that the Android section of the Visual Studio options has a valid Java SDK directory configured. To use a custom SDK path for a command line build, set the 'JavaSdkDirectory' MSBuild property to the custom path. Exception: {2}</value>
+    <comment>The following are literal names and should not be translated: Java SDK.
+{0} - The path of the invalid installation
 {1} - a "contextual" name for where {0} came from: `Preferred Registry` (Windows Registry), `OpenJDK`, `$JAVA_HOME` (environment variable), etc.
-{2} - the `Exception.Message` from the exception prompting us to show this message.</comment>
+{2} - The exception message of the associated exception.</comment>
   </data>
 
 </root>
