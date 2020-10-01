@@ -6,7 +6,6 @@ using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.IO;
-using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {

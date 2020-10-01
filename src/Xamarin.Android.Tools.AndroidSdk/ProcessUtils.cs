@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Xamarin.Android.Tools.AndroidSdk.Properties;
 
 namespace Xamarin.Android.Tools
 {

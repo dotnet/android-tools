@@ -342,7 +342,7 @@ namespace Xamarin.Android.Tools
 				jdk = new JdkInfo (path, locator);
 			}
 			catch (Exception e) {
-				logger (TraceLevel.Warning, string.Format (AndroidSdk.Properties.Resources.InvalidJdkDirectory, path, locator, e.Message));
+				logger (TraceLevel.Warning, string.Format (Resources.InvalidJdkDirectory, path, locator, e.Message));
 				logger (TraceLevel.Verbose, e.ToString ());
 			}
 			return jdk;
