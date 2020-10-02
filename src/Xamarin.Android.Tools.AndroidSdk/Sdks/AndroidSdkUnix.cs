@@ -276,7 +276,7 @@ namespace Xamarin.Android.Tools
 			Task<int> chown_task = ProcessUtils.StartProcess (psi, stdout, stderr, System.Threading.CancellationToken.None);
 
 			if (chown_task.Result != 0) {
-				Logger (TraceLevel.Warning, Resources.FailedToChangeFileSystemOwnership);
+				Logger (TraceLevel.Warning, $"Failed to change ownership of filesystem object(s)");
 				Logger (TraceLevel.Verbose, $"standard output: {stdout}");
 				Logger (TraceLevel.Verbose, $"standard error: {stderr}");
 			}

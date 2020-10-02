@@ -117,12 +117,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="FailedToChangeFileSystemOwnership" xml:space="preserve">
-    <value>Failed to change ownership of filesystem object(s).</value>
-  </data>
+
   <data name="InvalidJdkDirectory_path_locator_message" xml:space="preserve">
     <value>An exception occurred while validating the Java SDK installation in '{0}' that was found while searching the paths from '{1}'. Ensure that the Android section of the Visual Studio options has a valid Java SDK directory configured. To use a custom SDK path for a command line build, set the 'JavaSdkDirectory' MSBuild property to the custom path. Exception: {2}</value>
-    <comment>The following are literal names and should not be translated: Java SDK.
+    <comment>
 {0} - The path of the invalid installation
 {1} - a "contextual" name for where {0} came from: `Preferred Registry` (Windows Registry), `OpenJDK`, `$JAVA_HOME` (environment variable), etc.
 {2} - The exception message of the associated exception.</comment>
