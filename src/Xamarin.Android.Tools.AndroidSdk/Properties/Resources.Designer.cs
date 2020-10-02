@@ -61,15 +61,6 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Failed to change ownership of filesystem object(s)..
-        /// </summary>
-        internal static string FailedToChangeFileSystemOwnership {
-            get {
-                return ResourceManager.GetString("FailedToChangeFileSystemOwnership", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to An exception occurred while validating the Java SDK installation in &apos;{0}&apos; that was found while searching the paths from &apos;{1}&apos;. Ensure that the Android section of the Visual Studio options has a valid Java SDK directory configured. To use a custom SDK path for a command line build, set the &apos;JavaSdkDirectory&apos; MSBuild property to the custom path. Exception: {2}.
         /// </summary>
         internal static string InvalidJdkDirectory_path_locator_message {
