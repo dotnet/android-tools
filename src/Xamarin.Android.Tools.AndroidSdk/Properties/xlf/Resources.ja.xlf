@@ -15,7 +15,7 @@
         <target state="new">An exception occurred while reading configuration file '{0}'. Exception: {1}</target>
         <note>
 {0} - The path of the file being read.
-{2} - The exception message of the associated exception.</note>
+{1} - The exception message of the associated exception.</note>
       </trans-unit>
     </body>
   </file>
