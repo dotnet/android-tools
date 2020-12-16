@@ -13,13 +13,6 @@ namespace Microsoft.Android.Build.Tasks
 {
 	public static class MSBuildExtensions
 	{
-		private static bool IsRunningInsideVS {
-			get { 
-				var vside = false;
-				return bool.TryParse(Environment.GetEnvironmentVariable("VSIDE"), out vside) && vside; 
-			}
-		}
-
 		public static void LogDebugMessage (this TaskLoggingHelper log, string message, params object[] messageArgs)
 		{
 			log.LogMessage (MessageImportance.Low, message, messageArgs);

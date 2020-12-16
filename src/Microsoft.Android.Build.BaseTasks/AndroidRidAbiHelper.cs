@@ -71,7 +71,7 @@ namespace Microsoft.Android.Build.Tasks
 		/// </summary>
 		public static string RuntimeIdentifierToAbi (string runtimeIdentifier)
 		{
-			if (string.IsNullOrEmpty (runtimeIdentifier)) {
+			if (string.IsNullOrEmpty (runtimeIdentifier) || !runtimeIdentifier.StartsWith ("android", StringComparison.OrdinalIgnoreCase)) {
 				return "";
 			}
 			if (runtimeIdentifier.EndsWith ("-arm64", StringComparison.OrdinalIgnoreCase)) {
