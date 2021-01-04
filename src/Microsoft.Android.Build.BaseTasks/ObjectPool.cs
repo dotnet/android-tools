@@ -10,7 +10,7 @@ namespace Microsoft.Android.Build.Tasks
 	/// https://docs.microsoft.com/dotnet/standard/collections/thread-safe/how-to-create-an-object-pool
 	/// https://docs.microsoft.com/dotnet/api/system.buffers.arraypool-1
 	/// </summary>
-	class ObjectPool<T>
+	public class ObjectPool<T>
 	{
 		readonly ConcurrentBag<T> bag = new ConcurrentBag<T>();
 		readonly Func<T> generator;

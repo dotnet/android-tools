@@ -7,7 +7,7 @@ using Xamarin.Build;
 
 namespace Microsoft.Android.Build.Tasks
 {
-	static class UnhandledExceptionLogger
+	public static class UnhandledExceptionLogger
 	{
 		public static void LogUnhandledException (this AsyncTask task, string prefix, Exception ex)
 		{

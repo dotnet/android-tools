@@ -10,7 +10,7 @@ namespace Microsoft.Android.Build.Tasks
 	/// https://docs.microsoft.com/dotnet/standard/collections/thread-safe/how-to-create-an-object-pool
 	/// https://docs.microsoft.com/dotnet/api/system.buffers.arraypool-1
 	/// </summary>
-	class MemoryStreamPool : ObjectPool<MemoryStream>
+	public class MemoryStreamPool : ObjectPool<MemoryStream>
 	{
 		public static readonly Encoding UTF8withoutBOM = new UTF8Encoding (encoderShouldEmitUTF8Identifier: false);
 

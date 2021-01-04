@@ -5,7 +5,7 @@ using Xamarin.Build;
 
 namespace Microsoft.Android.Build.Tasks
 {
-	static class AsyncTaskExtensions
+	public static class AsyncTaskExtensions
 	{
 		/// <summary>
 		/// Creates a collection of Task with proper CancellationToken and error handling and waits via Task.WhenAll
