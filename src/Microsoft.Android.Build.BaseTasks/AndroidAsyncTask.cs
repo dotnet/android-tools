@@ -24,6 +24,11 @@ namespace Microsoft.Android.Build.Tasks
 			}
 		}
 
+		/// <summary>
+		/// Typically `RunTaskAsync` will be the preferred method to override,
+		///  however this method can be overridden instead for Tasks that will
+		///  run quickly and do not need to be asynchronous.
+		/// </summary>
 		public virtual bool RunTask ()
 		{
 			Yield ();
