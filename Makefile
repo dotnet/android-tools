@@ -18,7 +18,7 @@ run-all-tests: run-nunit-tests
 # $(call RUN_NUNIT_TEST,filename,log-lref?)
 define RUN_NUNIT_TEST
 	dotnet test $(1) -l "console;verbosity=detailed" \
-		-l "trx;LogFileName=bin/Test$(CONFIGURATION)/TestOutput-$(basename $(notdir $(1))).txt"
+		-l "trx;LogFileName=bin/Test$(CONFIGURATION)/TestOutput-$(basename $(notdir $(1))).trx"
 endef
 
 NUNIT_TESTS = \
