@@ -12,3 +12,7 @@ clean:
 
 prepare:
 	nuget restore Xamarin.Android.Tools.sln
+
+run-all-tests:
+	dotnet test -l "console;verbosity=detailed" -l trx \
+		tests/Xamarin.Android.Tools.AndroidSdk-Tests/Xamarin.Android.Tools.AndroidSdk-Tests.csproj

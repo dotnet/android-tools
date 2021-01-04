@@ -12,5 +12,5 @@ bin
 **/obj
 packages/
 TestResult-*.xml
-TestResults/*
+**/TestResults/*.trx
 .vs/
