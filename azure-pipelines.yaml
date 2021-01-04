@@ -67,7 +67,7 @@ jobs:
     displayName: 'Run Tests'
     inputs:
       command: test
-      projects: bin/TestDebug/**/*-Tests.dll
+      projects: bin/TestDebug-net*/**/*-Tests.dll
       testRunTitle: Xamarin.Android.Tools Tests - $(vmImage)
 
   - powershell: |
