@@ -8,12 +8,6 @@ namespace Microsoft.Android.Build.Tasks
 {
 	public abstract class AndroidAsyncTask : AsyncTask
 	{
-		/// <summary>
-		/// A helper for non-async overrides of RunTaskAsync, etc.
-		/// </summary>
-		public static readonly System.Threading.Tasks.Task Done =
-			System.Threading.Tasks.Task.CompletedTask;
-
 		public abstract string TaskPrefix { get; }
 
 		public override bool Execute ()
@@ -51,6 +45,6 @@ namespace Microsoft.Android.Build.Tasks
 		/// * Yield / Reacquire is handled for you
 		/// * RunTaskAsync is already on a background thread
 		/// </summary>
-		public virtual System.Threading.Tasks.Task RunTaskAsync () => Done;
+		public virtual System.Threading.Tasks.Task RunTaskAsync () => System.Threading.Tasks.Task.CompletedTask;
 	}
 }
