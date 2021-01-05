@@ -14,8 +14,6 @@ namespace Microsoft.Android.Build.Tasks
 {
 	public static class Files
 	{
-		public static readonly Encoding UTF8withoutBOM = new UTF8Encoding (encoderShouldEmitUTF8Identifier: false);
-
 		/// <summary>
 		/// Windows has a MAX_PATH limit of 260 characters
 		/// See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
@@ -26,6 +24,9 @@ namespace Microsoft.Android.Build.Tasks
 		/// On Windows, we can opt into a long path with this prefix
 		/// </summary>
 		public const string LongPathPrefix = @"\\?\";
+
+		public static readonly Encoding UTF8withoutBOM = new UTF8Encoding (encoderShouldEmitUTF8Identifier: false);
+		readonly static byte[] Utf8Preamble = Encoding.UTF8.GetPreamble ();
 
 		/// <summary>
 		/// Converts a full path to a \\?\ prefixed path that works on all Windows machines when over 260 characters
@@ -50,6 +51,26 @@ namespace Microsoft.Android.Build.Tasks
 				File.SetAttributes (source, attributes & ~FileAttributes.ReadOnly);
 		}
 
+		public static void SetDirectoryWriteable (string directory)
+		{
+			if (!Directory.Exists (directory))
+				return;
+
+			var dirInfo = new DirectoryInfo (directory);
+			if ((dirInfo.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+				dirInfo.Attributes &= ~FileAttributes.ReadOnly;
+
+			foreach (var dir in Directory.EnumerateDirectories (directory, "*", SearchOption.AllDirectories)) {
+				dirInfo = new DirectoryInfo (dir);
+				if ((dirInfo.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+					dirInfo.Attributes &= ~FileAttributes.ReadOnly;
+			}
+
+			foreach (var file in Directory.EnumerateFiles (directory, "*", SearchOption.AllDirectories)) {
+				Files.SetWriteable (Path.GetFullPath (file));
+			}
+		}
+
 		public static bool Archive (string target, Action<string> archiver)
 		{
 			string newTarget = target + ".new";
@@ -66,7 +87,7 @@ namespace Microsoft.Android.Build.Tasks
 			return changed;
 		}
 
-		public static bool ArchiveZipUpdate(string target, Action<string> archiver)
+		public static bool ArchiveZipUpdate (string target, Action<string> archiver)
 		{
 			var lastWrite = File.Exists (target) ? File.GetLastWriteTimeUtc (target) : DateTime.MinValue;
 			archiver (target);
@@ -466,6 +487,41 @@ namespace Microsoft.Android.Build.Tasks
 			}
 			catch {
 				return false;
+			}
+		}
+
+		/// <summary>
+		/// Open a file given its path and remove the 3 bytes UTF-8 BOM if there is one
+		/// </summary>
+		public static void CleanBOM (string filePath)
+		{
+			if (string.IsNullOrEmpty (filePath) || !File.Exists (filePath))
+				return;
+
+			string temp = null;
+			try {
+				using (var input = File.OpenRead (filePath)) {
+					// Check if the file actually has a BOM
+					for (int i = 0; i < Utf8Preamble.Length; i++) {
+						var next = input.ReadByte ();
+						if (next == -1)
+							return;
+						if (Utf8Preamble [i] != (byte) next)
+							return;
+					}
+
+					temp = Path.GetTempFileName ();
+					using (var stream = File.OpenWrite (temp))
+						input.CopyTo (stream);
+				}
+
+				Files.SetWriteable (filePath);
+				File.Delete (filePath);
+				File.Copy (temp, filePath);
+			} finally {
+				if (temp != null) {
+					File.Delete (temp);
+				}
 			}
 		}
 	}
