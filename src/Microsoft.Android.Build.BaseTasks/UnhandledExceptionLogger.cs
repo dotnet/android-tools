@@ -1,3 +1,5 @@
+// https://github.com/xamarin/xamarin-android/blob/9fca138604c53989e1cff7fc0c2e939583b4da28/src/Xamarin.Android.Build.Tasks/Utilities/UnhandledExceptionLogger.cs
+
 using System;
 using System.Collections.Generic;
 using System.IO;

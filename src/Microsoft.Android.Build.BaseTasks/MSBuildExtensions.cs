@@ -1,4 +1,6 @@
-﻿using System;
+﻿// https://github.com/xamarin/xamarin-android/blob/307355f8d9bc9fc49f152e67efafd728c0ec0e2f/src/Xamarin.Android.Build.Tasks/Utilities/MSBuildExtensions.cs
+
+using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.IO;

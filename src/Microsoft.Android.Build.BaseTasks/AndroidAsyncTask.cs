@@ -1,3 +1,5 @@
+// https://github.com/xamarin/xamarin-android/blob/9fca138604c53989e1cff7fc0c2e939583b4da28/src/Xamarin.Android.Build.Tasks/Tasks/AndroidTask.cs#L27
+
 using System;
 using Xamarin.Build;
 using static System.Threading.Tasks.TaskExtensions;
