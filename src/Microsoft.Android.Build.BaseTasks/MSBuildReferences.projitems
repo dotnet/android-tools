@@ -38,6 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.1.11" />
     <PackageReference Include="Xamarin.Build.AsyncTask" Version="0.3.4" GeneratePathProperty="true" />
     <PackageReference Include="Xamarin.LibZipSharp" Version="$(LibZipSharpVersion)" GeneratePathProperty="true" />
     <PackageReference Include="Mono.Posix.NETStandard" Version="5.20.1-preview" GeneratePathProperty="true" PrivateAssets="all" />
