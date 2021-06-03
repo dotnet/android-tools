@@ -19,13 +19,28 @@ namespace Microsoft.Android.Build.Tasks
 		public static string GetNativeLibraryAbi (string lib)
 		{
 			// The topmost directory the .so file is contained within
-			var dir = Path.GetFileName (Path.GetDirectoryName (lib)).ToLowerInvariant ();
-			if (dir.StartsWith ("interpreter-", StringComparison.Ordinal)) {
-				dir = dir.Substring (12);
+			var dir = Directory.GetParent (lib);
+			var dirName = dir.Name;
+			if (dirName.StartsWith ("interpreter-", StringComparison.OrdinalIgnoreCase)) {
+				dirName = dirName.Substring (12);
 			}
-			if (ValidAbis.Contains (dir)) {
-				return dir;
+			dirName = dirName.ToLowerInvariant ();
+			if (ValidAbis.Contains (dirName)) {
+				return dirName;
 			}
+
+			// Look for a directory with a RID as a name, such as:
+			// android-arm64/libfoo.so
+			var abi = RuntimeIdentifierToAbi (dirName);
+			if (!string.IsNullOrEmpty (abi))
+				return abi;
+
+			// Try one directory higher, such as:
+			// packages/sqlitepclraw.lib.e_sqlite3.android/1.1.11/runtimes/android-arm64/native/libe_sqlite3.so
+			abi = RuntimeIdentifierToAbi (dir.Parent.Name);
+			if (!string.IsNullOrEmpty (abi))
+				return abi;
+
 			return null;
 		}
 
