@@ -24,7 +24,6 @@ namespace Microsoft.Android.Build.Tasks
 			if (dirName.StartsWith ("interpreter-", StringComparison.Ordinal)) {
 				dirName = dirName.Substring ("interpreter-".Length);
 			}
-			dirName = dirName;
 			if (ValidAbis.Contains (dirName)) {
 				return dirName;
 			}
@@ -56,8 +55,7 @@ namespace Microsoft.Android.Build.Tasks
 			// First, try nominal "Link" path.
 			var link = lib.GetMetadata ("Link");
 			if (!string.IsNullOrWhiteSpace (link)) {
-				var linkdirs = link.ToLowerInvariant ().Split ('/', '\\');
-				lib_abi = ValidAbis.Where (p => linkdirs.Contains (p)).FirstOrDefault ();
+				lib_abi = GetNativeLibraryAbi (link);
 			}
 
 			// Check for a RuntimeIdentifier

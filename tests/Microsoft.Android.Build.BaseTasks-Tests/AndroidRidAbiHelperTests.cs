@@ -84,7 +84,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			},
 			new object [] {
 				/* input */
-				new TaskItem("libfoo.so", new Dictionary<string,string> {
+				new TaskItem("libabi.so", new Dictionary<string,string> {
 					{ "Abi", "armeabi-v7a" }
 				}),
 				/* expected */
@@ -92,7 +92,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			},
 			new object [] {
 				/* input */
-				new TaskItem("libfoo.so", new Dictionary<string,string> {
+				new TaskItem("librid.so", new Dictionary<string,string> {
 					{ "RuntimeIdentifier", "android-arm" }
 				}),
 				/* expected */
@@ -100,8 +100,32 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			},
 			new object [] {
 				/* input */
-				new TaskItem("libfoo.so", new Dictionary<string,string> {
+				new TaskItem("liblink.so", new Dictionary<string,string> {
 					{ "Link", "armeabi-v7a/libfoo.so" }
+				}),
+				/* expected */
+				"armeabi-v7a"
+			},
+			new object [] {
+				/* input */
+				new TaskItem("liblink.so", new Dictionary<string,string> {
+					{ "Link", "x86/libfoo.so" }
+				}),
+				/* expected */
+				"x86"
+			},
+			new object [] {
+				/* input */
+				new TaskItem("liblink.so", new Dictionary<string,string> {
+					{ "Link", "x86_64/libfoo.so" }
+				}),
+				/* expected */
+				"x86_64"
+			},
+			new object [] {
+				/* input */
+				new TaskItem("libridlink.so", new Dictionary<string,string> {
+					{ "Link", "android-arm/libfoo.so" }
 				}),
 				/* expected */
 				"armeabi-v7a"
