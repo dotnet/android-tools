@@ -20,11 +20,11 @@ namespace Microsoft.Android.Build.Tasks
 		{
 			// The topmost directory the .so file is contained within
 			var dir = Directory.GetParent (lib);
-			var dirName = dir.Name;
-			if (dirName.StartsWith ("interpreter-", StringComparison.OrdinalIgnoreCase)) {
-				dirName = dirName.Substring (12);
+			var dirName = dir.Name.ToLowerInvariant ();
+			if (dirName.StartsWith ("interpreter-", StringComparison.Ordinal)) {
+				dirName = dirName.Substring ("interpreter-".Length);
 			}
-			dirName = dirName.ToLowerInvariant ();
+			dirName = dirName;
 			if (ValidAbis.Contains (dirName)) {
 				return dirName;
 			}
@@ -37,7 +37,7 @@ namespace Microsoft.Android.Build.Tasks
 
 			// Try one directory higher, such as:
 			// packages/sqlitepclraw.lib.e_sqlite3.android/1.1.11/runtimes/android-arm64/native/libe_sqlite3.so
-			abi = RuntimeIdentifierToAbi (dir.Parent.Name);
+			abi = RuntimeIdentifierToAbi (dir.Parent.Name.ToLowerInvariant ());
 			if (!string.IsNullOrEmpty (abi))
 				return abi;
 
