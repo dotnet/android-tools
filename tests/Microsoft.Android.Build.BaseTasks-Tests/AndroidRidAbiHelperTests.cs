@@ -166,7 +166,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 					{ "Link", "android-arm64\\libfoo.so" },
 				}),
 				/* expected */
-				"x86_64",
+				"arm64-v8a",
 			},
 		};
 
