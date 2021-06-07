@@ -160,6 +160,14 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 				/* expected */
 				"x86_64"
 			},
+			new object [] {
+				/* input */
+				new TaskItem("liblinkwin.so", new Dictionary<string,string> {
+					{ "Link", "android-arm64\\libfoo.so" },
+				}),
+				/* expected */
+				"x86_64",
+			},
 		};
 
 		[Test]
