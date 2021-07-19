@@ -9,6 +9,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateResxSource>true</GenerateResxSource>
     <UpdateXlfOnBuild Condition=" '$(RunningOnCI)' != 'true' ">true</UpdateXlfOnBuild>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\product.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
