@@ -118,7 +118,7 @@ namespace Microsoft.Android.Build.Tasks
 			return pair.ConcurrentScheduler;
 		}
 
-		static int DefaultMaxConcurrencyLevel => Environment.ProcessorCount;
+		static int DefaultMaxConcurrencyLevel => Math.Max (1, Environment.ProcessorCount - 1);
 
 		static void LogErrorAndCancel (AsyncTask asyncTask, Exception exc)
 		{
