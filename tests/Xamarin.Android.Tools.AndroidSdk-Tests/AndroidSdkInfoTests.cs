@@ -94,7 +94,7 @@ namespace Xamarin.Android.Tools.Tests
 				"22.1.7171670",
 				"23.1.7779620",
 			};
-			string expectedVersion = "21.3.6528147";
+			string expectedVersion = "23.1.7779620";
 			string expectedNdkPath = Path.Combine (sdk, "ndk", expectedVersion);
 
 			try {
