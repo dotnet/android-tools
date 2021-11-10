@@ -71,7 +71,7 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			// Must match like-named constants in AndroidSdkBase
 			const int MinimumCompatibleNDKMajorVersion = 16;
-			const int MaximumCompatibleNDKMajorVersion = 21;
+			const int MaximumCompatibleNDKMajorVersion = 22;
 
 			CreateSdks(out string root, out string jdk, out string ndk, out string sdk);
 
@@ -91,6 +91,7 @@ namespace Xamarin.Android.Tools.Tests
 				"21.2.6472646",
 				"21.3.6528147",
 				"22.0.7026061",
+				"22.1.7171670",
 			};
 			string expectedVersion = "21.3.6528147";
 			string expectedNdkPath = Path.Combine (sdk, "ndk", expectedVersion);
@@ -137,7 +138,7 @@ namespace Xamarin.Android.Tools.Tests
 				File.WriteAllText(Path.Combine(ndkPath, $"ndk-stack{extension}"), "");
 
 				var info = new AndroidSdkInfo(logger, androidSdkPath: sdk, androidNdkPath: null, javaSdkPath: jdk);
-				
+
 				Assert.AreEqual(ndkPath, info.AndroidNdkPath, "AndroidNdkPath not found inside sdk!");
 			}
 			finally
@@ -308,7 +309,7 @@ namespace Xamarin.Android.Tools.Tests
 			var latestToolsVersion  = "latest";
 			var toolsVersion        = "2.1";
 			var higherToolsVersion  = "11.2";
-			
+
 			void recreateCmdlineToolsDirectory () {
 				Directory.Delete (cmdlineTools, recursive: true);
 				Directory.CreateDirectory (cmdlineTools);
@@ -324,7 +325,7 @@ namespace Xamarin.Android.Tools.Tests
 
 				Assert.AreEqual (toolsPaths.Count (), 1, "Incorrect number of elements");
 				Assert.AreEqual (toolsPaths.First (), Path.Combine (sdk, "cmdline-tools", toolsVersion), "Incorrect command line tools path");
-				
+
 				// Test that cmdline-tools is preferred over tools
 				recreateCmdlineToolsDirectory();
 				CreateFauxAndroidSdkToolsDirectory (sdk, createToolsDir: true, toolsVersion: latestToolsVersion, createOldToolsDir: true);
@@ -347,7 +348,7 @@ namespace Xamarin.Android.Tools.Tests
 					&& toolsPathsList [1].Equals (Path.Combine (sdk, "cmdline-tools", higherToolsVersion), StringComparison.Ordinal)
 					&& toolsPathsList [2].Equals (Path.Combine (sdk, "cmdline-tools", toolsVersion), StringComparison.Ordinal)
 					&& toolsPathsList [3].Equals (Path.Combine (sdk, "tools"), StringComparison.Ordinal);
-				
+
 				Assert.IsTrue (isOrderCorrect, "Tools order is not descending");
 			} finally {
 				Directory.Delete (root, recursive: true);
@@ -386,10 +387,10 @@ namespace Xamarin.Android.Tools.Tests
 			if (createToolsDir) {
 				string androidSdkToolsPath    = Path.Combine (androidSdkDirectory, "cmdline-tools", toolsVersion ?? "1.0");
 				string androidSdkToolsBinPath = Path.Combine (androidSdkToolsPath, "bin");
-				
+
 				Directory.CreateDirectory (androidSdkToolsPath);
 				Directory.CreateDirectory (androidSdkToolsBinPath);
-				
+
 				File.WriteAllText (Path.Combine (androidSdkToolsBinPath, IsWindows ? "lint.bat" : "lint"), "");
 			}
 
@@ -399,7 +400,7 @@ namespace Xamarin.Android.Tools.Tests
 
 				Directory.CreateDirectory (androidSdkToolsPath);
 				Directory.CreateDirectory (androidSdkToolsBinPath);
-			
+
 				File.WriteAllText (Path.Combine (androidSdkToolsBinPath, IsWindows ? "lint.bat" : "lint"), "");
 			}
 
@@ -414,7 +415,7 @@ namespace Xamarin.Android.Tools.Tests
 				ApiInfo[]   apiLevels = null)
 		{
 			CreateFauxAndroidSdkToolsDirectory (androidSdkDirectory, createToolsDir, toolsVersion, createOldToolsDir);
-			
+
 			var androidSdkPlatformToolsPath     = Path.Combine (androidSdkDirectory, "platform-tools");
 			var androidSdkPlatformsPath         = Path.Combine (androidSdkDirectory, "platforms");
 			var androidSdkBuildToolsPath        = Path.Combine (androidSdkDirectory, "build-tools", buildToolsVersion);
