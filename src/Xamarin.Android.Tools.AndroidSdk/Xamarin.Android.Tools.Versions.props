@@ -13,7 +13,7 @@
     <AndroidCommandLineToolsVersion Condition=" '$(AndroidCommandLineToolsVersion)' == '' ">5.0</AndroidCommandLineToolsVersion>
     <AndroidSdkPlatformToolsVersion Condition="'$(AndroidSdkPlatformToolsVersion)' == ''">31.0.3</AndroidSdkPlatformToolsVersion>
     <AndroidSdkEmulatorVersion Condition="'$(AndroidSdkEmulatorVersion)' == ''"></AndroidSdkEmulatorVersion>
-    <AndroidSdkPlatformVersion Condition="'$(AndroidSdkPlatformVersion)' == ''">android-31</AndroidSdkPlatformVersion>
+    <AndroidSdkPlatformVersion Condition="'$(AndroidSdkPlatformVersion)' == ''">android-32</AndroidSdkPlatformVersion>
     <AndroidNdkVersion Condition="'$(AndroidNdkVersion)' == ''">22.1.7171670</AndroidNdkVersion>
 
     <!-- obsolete; should consider removing eventually -->
