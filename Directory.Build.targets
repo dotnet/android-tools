@@ -16,6 +16,16 @@
 
   <Import
       Project="$([System.IO.Path]::GetDirectoryName($(MSBuildThisFileDirectory))).override.targets"
-      Condition=" Exists('$([System.IO.Path]::GetDirectoryName($(MSBuildThisFileDirectory))).override.targets') "
-  />
+      Condition=" Exists('$([System.IO.Path]::GetDirectoryName($(MSBuildThisFileDirectory))).override.targets') "/>
+    
+  <!--
+  By creating this target, we can ensure SignNugetFiles will run before SignFiles.
+  This ensures the output files (signed by SignFiles) will still look "more recent" than
+  the nuget files (signed by SignNugetFiles), which are considered inputs to the project.
+  If we don't do this and SignNugetFiles runs first, the inputs look more recent than the outputs and the
+  project will be rebuilt unnecessarily.
+  -->
+  <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'$(MicroBuild_SigningEnabled)' == 'true' and @(NuGetFilesToSign)' != ''" BeforeTargets="SignFiles" DependsOnTargets="SignNugetFiles">
+      <Message Text="Enforing NuGet signing before output signing..." />
+  </Target>
 </Project>
