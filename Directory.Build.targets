@@ -25,7 +25,7 @@
   If we don't do this and SignNugetFiles runs first, the inputs look more recent than the outputs and the
   project will be rebuilt unnecessarily.
   -->
-  <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'$(MicroBuild_SigningEnabled)' == 'true' and @(NuGetFilesToSign)' != ''" BeforeTargets="SignFiles" DependsOnTargets="SignNugetFiles">
+  <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'$(MicroBuild_SigningEnabled)' == 'true' and '@(NuGetFilesToSign)' != ''" BeforeTargets="SignFiles" DependsOnTargets="SignNugetFiles">
       <Message Text="Enforing NuGet signing before output signing..." />
   </Target>
 </Project>
