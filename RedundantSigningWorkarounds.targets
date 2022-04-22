@@ -48,6 +48,6 @@
 
   <Target Name="AddSignedIndicatorFileForNuget" AfterTargets="SignNuGetFiles">
     <!-- Create a text file next to each Nuget dll, which we will later use to determine that we already signed that NuGet -->
-    <WriteLinesToFile File="%(NuGetFilesToSign.Identity).txt" Lines="NuGet Signed"/>
+    <WriteLinesToFile File="%(NuGetFilesToSign.Identity).txt" Lines="NuGet Signed" Condition="'@(NuGetFilesToSign)' != ''"/>
   </Target>
 </Project>
