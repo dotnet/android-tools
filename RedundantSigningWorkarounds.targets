@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <SigningCompleteFile>$(OutDir)\signing-completed.txt</SigningCompleteFile>
+  </PropertyGroup>
+
+  <!--
+    RemoveRedundantSigning and AddSignedIndicatorFile ensure we don't sign build output multiple times.
+    Once signing is complete, we add a temp file.
+    If the temp file is already present, we skip signing.
+    -->
+  <Target Name="RemoveRedundantSigning" BeforeTargets="SignFiles" Condition="Exists($(SigningCompleteFile))">
+    <Message Text="Removing all FilesToSign, signing has already happened" Importance="High" />
+    <ItemGroup>
+      <FilesToSign Remove="@(FilesToSign)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="AddSignedIndicatorFile" AfterTargets="SignFiles">
+      <WriteLinesToFile File="$(SigningCompleteFile)" Lines="@(FilesToSign)"/>
+  </Target>
+
+  <!--
+  By creating this target, we can ensure SignNugetFiles will run before CoreCompile.
+  This ordering ensures the build's output files will still look "more recent" than the nuget files.
+  Without it, signing "updates" the nuget files and makes them look newer than the output, and since
+  the nuget dlls are considered an input, MSBuild sees that update and thinks it needs to rebuild unnecessarily.
+  -->
+  <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'@(NuGetFilesToSign)' != ''" BeforeTargets="CoreCompile" DependsOnTargets="SignNugetFiles">
+      <Message Text="Enforing NuGet signing before core compile..." />
+  </Target>
+
+  <Target Name="RemoveRedundantNugetSigning" BeforeTargets="SignNugetFiles">
+    <Message Text="Removing NugetFilesToSign where signing has already happened" />
+
+    <!-- Clear NuGetFilesToSign -->
+    <ItemGroup>
+      <TempNugetFilesToSign Include="@(NuGetFilesToSign)" />
+      <NuGetFilesToSign Remove="@(NuGetFilesToSign)" />
+    </ItemGroup>
+
+    <!-- Repopulate NuGetFilesToSign only with nugets that do not already have the signing-complete indicator file -->
+    <ItemGroup>
+      <NugetFilesToSign Include="@(TempNugetFilesToSign)" Condition="!Exists('%(TempNugetFilesToSign.Identity).txt')" />
+      <TempNugetFilesToSign Remove="@(TempNugetFilesToSign)"/>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="AddSignedIndicatorFileForNuget" AfterTargets="SignNuGetFiles">
+    <!-- Create a text file next to each Nuget dll, which we will later use to determine that we already signed that NuGet -->
+    <WriteLinesToFile File="%(NuGetFilesToSign.Identity).txt" Lines="NuGet Signed"/>
+  </Target>
+</Project>
