@@ -1,13 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+<!--
+
+  This file contains a series of workarounds to reduce the amount of redundant compiling and signing we perform as a result of MicroBuild signing during the build.
+
+  Here is a scenario (without these workarounds) to walk through what issues this addresses:
+  1. Project A references Nuget dll 1
+      a. Meaning Nuget dll 1 is considered an *input* to Project A
+  2. Project A is built
+  3. Project A's output dlls are signed (SignFiles target)
+  4. Project A's Nuget dll 1 is signed (SignNugetFiles target)
+      a. *Important note: this updates the file in the global packages folder. It is now "more recent" than Project A's output files.*
+  5. Later in the build, another project references Project A, so Project A is built again
+  6. Normally, MSBuild would see that Project A has already been built and skip compile
+  7. In reality, however, MSBuild sees that the Nuget dll 1 input file is more recent than the Project A's output files, so it thinks it needs to build again:
+      a. i.e. Input file "/Users/runner/work/1/s/packages/guilabs.language.xml/1.2.46/lib/netstandard2.0/Microsoft.Language.Xml.dll" is newer than output file "obj/Release/netstandard2.0/Xamarin.AndroidDesigner.dll"
+  8. As a result, compile runs, so signing runs, so we end up wasting a significant amount of time building & signing when we didn't need to…
+
+  In order to workaround this issue, we can:
+  1. Ensure SignNugetFiles runs *before* CoreCompile. This way, the compiled output will still appear "more recent" than the signed nuget files.
+      See targets: EnforceNugetSigningBeforeOutputSigning
+  2. When signing files, drop a temp file next to it that tells us the file has been signed. If that temp file alread exists, prevent re-signing the file.
+      See targets: AddSignedIndicatorFile, RemoveRedundantSigning, AddSignedIndicatorFileForNuget, RemoveRedundantSigningForNuget
+
+  Workaround #2 could be done differently, by disabling signing altogether until CoreCompile runs, but that breaks workaround #1, hence the temp file approach, instead.
+
+-->
+
   <PropertyGroup>
     <SigningCompleteFile>$(OutDir)\signing-completed.txt</SigningCompleteFile>
+    
+    <TargetsTriggeredByCompilation>
+        $(TargetsTriggeredByCompilation);
+        ClearSigningTempFileIfCompileRuns
+    </TargetsTriggeredByCompilation>
   </PropertyGroup>
 
   <!--
     RemoveRedundantSigning and AddSignedIndicatorFile ensure we don't sign build output multiple times.
-    Once signing is complete, we add a temp file.
-    If the temp file is already present, we skip signing.
+    Once signing is complete, we add a temp file. If the temp file is already present, we skip signing.
     -->
   <Target Name="RemoveRedundantSigning" BeforeTargets="SignFiles" Condition="Exists($(SigningCompleteFile))">
     <Message Text="Removing all FilesToSign, signing has already happened" Importance="High" />
@@ -22,15 +54,12 @@
 
   <!--
   By creating this target, we can ensure SignNugetFiles will run before CoreCompile.
-  This ordering ensures the build's output files will still look "more recent" than the nuget files.
-  Without it, signing "updates" the nuget files and makes them look newer than the output, and since
-  the nuget dlls are considered an input, MSBuild sees that update and thinks it needs to rebuild unnecessarily.
   -->
   <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'@(NuGetFilesToSign)' != ''" BeforeTargets="CoreCompile" DependsOnTargets="SignNugetFiles">
       <Message Text="Enforing NuGet signing before core compile..." />
   </Target>
 
-  <Target Name="RemoveRedundantNugetSigning" BeforeTargets="SignNugetFiles">
+  <Target Name="RemoveRedundantSigningForNuget" BeforeTargets="SignNugetFiles">
     <Message Text="Removing NugetFilesToSign where signing has already happened" />
 
     <!-- Clear NuGetFilesToSign -->
@@ -49,5 +78,14 @@
   <Target Name="AddSignedIndicatorFileForNuget" AfterTargets="SignNuGetFiles">
     <!-- Create a text file next to each Nuget dll, which we will later use to determine that we already signed that NuGet -->
     <WriteLinesToFile File="%(NuGetFilesToSign.Identity).txt" Lines="NuGet Signed" Condition="'@(NuGetFilesToSign)' != ''"/>
+  </Target>
+
+  <!--
+    If CoreCompile does run, we need to clear the output dll signing file since the dll will get overwritten with an unsigned file.
+    We do *not* need to clear the nuget signing files, though. Those dlls should not get overwritten.
+  -->
+  <Target Name="ClearSigningTempFileIfCompileRuns">
+    <Message Text="Removing signing complete indicator file because CoreCompile ran..." />
+    <Delete Files="$(SigningCompleteFile)" />
   </Target>
 </Project>
