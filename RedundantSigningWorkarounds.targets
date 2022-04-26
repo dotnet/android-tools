@@ -3,28 +3,13 @@
 
 <!--
 
-  This file contains a series of workarounds to reduce the amount of redundant compiling and signing we perform as a result of MicroBuild signing during the build.
+  This file contains a workaround to reduce the amount of redundant signing we perform as a result of MicroBuild signing during the build.
+  
+  When Project A attempts to build a dependent Project B, MSBuild will usually check to see if Project B has already been built and no-op the compile if it has.
+  However, signing will still run on the outputs, which means we end up re-signing files that have already been signed.
+  To avoid this, we can drop a temp file next to the signed output, which tells us the file has been signed. Then, we skip signing if the file already exists.
 
-  Here is a scenario (without these workarounds) to walk through the issues this addresses:
-  1. Project A references Nuget dll 1
-      a. Meaning Nuget dll 1 is considered an *input* to Project A
-  2. Project A is built
-  3. Project A's output dlls are signed (SignFiles target)
-  4. Project A's Nuget dll 1 is signed (SignNugetFiles target)
-      a. *Important note: this updates the file in the global packages folder. It is now "more recent" than Project A's output files.*
-  5. Later in the build, another project references Project A, so Project A is built again
-  6. Normally, MSBuild would see that Project A has already been built and skip compile
-  7. In reality, however, MSBuild sees that the Nuget dll 1 input file is more recent than the Project A's output files, so it thinks it needs to build again:
-      a. i.e. Input file "/Users/runner/work/1/s/packages/guilabs.language.xml/1.2.46/lib/netstandard2.0/Microsoft.Language.Xml.dll" is newer than output file "obj/Release/netstandard2.0/Xamarin.AndroidDesigner.dll"
-  8. As a result, compile runs, so signing runs, so we end up wasting a significant amount of time building & signing when we didn't need to…
-
-  In order to workaround these issues, we can:
-  1. Ensure SignNugetFiles runs *before* CoreCompile. This way, the compiled output will still appear "more recent" than the signed nuget files.
-      See targets: EnforceNugetSigningBeforeOutputSigning
-  2. When signing files, drop a temp file next to it that tells us the file has been signed. If that temp file alread exists, prevent re-signing the file.
-      See targets: AddSignedIndicatorFile, RemoveRedundantSigning, AddSignedIndicatorFileForNuget, RemoveRedundantSigningForNuget
-
-  Workaround #2 could be done differently for build output by disabling signing altogether until CoreCompile runs, but that breaks workaround #1, hence the temp file approach.
+  Another approach would be to disable signing altogether unless CoreCompile runs, but that breaks additional workarounds used in projects that have this as a submodule, hence the temp file approach.
 
 -->
 
@@ -50,24 +35,6 @@
 
   <Target Name="AddSignedIndicatorFile" AfterTargets="SignFiles">
       <WriteLinesToFile File="$(SigningCompleteFile)" Lines="@(FilesToSign)"/>
-  </Target>
-
-  <!-- Ensure SignNugetFiles will run before CoreCompile. -->
-  <Target Name="EnforceNugetSigningBeforeOutputSigning" Condition="'@(NuGetFilesToSign)' != ''" BeforeTargets="CoreCompile" DependsOnTargets="SignNugetFiles">
-      <Message Text="Enforing NuGet signing before core compile..." />
-  </Target>
-
-  <!-- Do not sign NuGet files that have already been signed. -->
-  <Target Name="RemoveRedundantSigningForNuget" BeforeTargets="SignNugetFiles">
-    <Message Text="Removing NugetFilesToSign where signing has already happened" />
-    <ItemGroup>
-      <NuGetFilesToSign Remove="@(NuGetFilesToSign)" Condition="Exists('%(NuGetFilesToSign.Identity).txt')" />
-    </ItemGroup>
-  </Target>
-
-  <!-- Create a temp file next to each Nuget dll, which indicates that we already signed the file -->
-  <Target Name="AddSignedIndicatorFileForNuget" AfterTargets="SignNuGetFiles">
-    <WriteLinesToFile File="%(NuGetFilesToSign.Identity).txt" Lines="NuGet Signed" Condition="'@(NuGetFilesToSign)' != ''"/>
   </Target>
 
   <!--
