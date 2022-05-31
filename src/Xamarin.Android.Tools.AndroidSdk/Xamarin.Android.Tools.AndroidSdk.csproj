@@ -25,17 +25,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudioEng.MicroBuild.Core" Version="0.4.1">
+    <PackageReference Include="Microsoft.VisualStudioEng.MicroBuild.Core" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <FilesToSign Include="$(OutDir)\Xamarin.Android.Tools.AndroidSdk.dll">
-      <Authenticode>Microsoft400</Authenticode>
-    </FilesToSign>
-  </ItemGroup>
+  <Target Name="GetFilesToSign" BeforeTargets="SignFiles" Condition=" '$(Configuration)' == 'Release' Or '$(Configuration)' == 'ReleaseWindows'">
+    <ItemGroup>
+      <FilesToSign Include="$(OutDir)\$(AssemblyName).dll">
+        <Authenticode>Microsoft400</Authenticode>
+      </FilesToSign>
+      <FilesToSign Include="$(OutDir)\**\$(AssemblyName).resources.dll">
+        <Authenticode>Microsoft400</Authenticode>
+      </FilesToSign>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <None Update="Xamarin.Android.Tools.Versions.props">
