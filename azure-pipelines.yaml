@@ -11,7 +11,6 @@ pr:
 # Global variables
 variables:
   DotNetCoreVersion: 3.1.100
-  HostedMac: Hosted Mac Internal
   HostedWinVS2019: Hosted Windows 2019 with VS2019
 
 jobs:
@@ -59,7 +58,8 @@ jobs:
       pathtoPublish: $(Build.ArtifactStagingDirectory)
 - job: mac
   displayName: mac
-  pool: $(HostedMac)
+  pool:
+    vmImage: macOS-10.15
   steps:
   - task: UseDotNet@2
     displayName: Use .NET Core $(DotNetCoreVersion)
