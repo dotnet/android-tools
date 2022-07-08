@@ -41,3 +41,4 @@ jobs:
     inputs:
       PathtoPublish: $(Build.StagingDirectory)/loc
       ArtifactName: Loc
+    condition: succeededOrFailed()
