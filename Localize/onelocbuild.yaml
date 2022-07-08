@@ -31,6 +31,7 @@ jobs:
       isCreatePrSelected: true
       repoType: gitHub
       gitHubPatVariable: $(github--pat--vs-mobiletools-engineering-service2)
+      prSourceBranchPrefix: locfiles
       isShouldReusePrSelected: true
       isAutoCompletePrSelected: false
       isUseLfLineEndingsSelected: true
