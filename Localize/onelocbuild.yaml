@@ -1,4 +1,6 @@
-name: Xamarin.Android.Tools OneLocBuild $(Rev:r)
+# xamarin-android-tools - OneLocBuild
+
+name: $(Build.SourceBranchName)-$(Build.SourceVersion)-$(Rev:r)
 
 trigger:
   - main
@@ -24,6 +26,8 @@ jobs:
     inputs:
       locProj: Localize/LocProject.json
       outDir: $(Build.StagingDirectory)
+      packageSourceAuth: patAuth
+      patVariable: $(OneLocBuild--PAT)
       isCreatePrSelected: true
       repoType: gitHub
       gitHubPatVariable: $(github--pat--vs-mobiletools-engineering-service2)
