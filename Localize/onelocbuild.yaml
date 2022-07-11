@@ -28,7 +28,7 @@ jobs:
       outDir: $(Build.StagingDirectory)
       packageSourceAuth: patAuth
       patVariable: $(OneLocBuild--PAT)
-      isCreatePrSelected: true
+      isCreatePrSelected: false
       repoType: gitHub
       gitHubPatVariable: $(github--pat--vs-mobiletools-engineering-service2)
       prSourceBranchPrefix: locfiles
