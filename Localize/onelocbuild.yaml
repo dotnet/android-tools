@@ -8,7 +8,7 @@ trigger:
 jobs:
 - job: OneLocBuild
   displayName: OneLocBuild
-  condition: and(eq(variables['System.TeamProject'], 'DevDiv'), or(eq(variables['Build.SourceBranch'], 'refs/heads/main'), eq(variables['Build.SourceBranch'], 'refs/heads/dev/pjc/oneloc'))) #TODO Revert testing
+  condition: and(eq(variables['System.TeamProject'], 'DevDiv'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   pool: VSEngSS-MicroBuild2022-1ES
   timeoutInMinutes: 30
   variables:
