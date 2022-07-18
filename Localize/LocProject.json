@@ -5,12 +5,12 @@
         {
           "OutputPath": ".\\src\\Microsoft.Android.Build.BaseTasks\\Properties\\xlf\\",
           "CopyOption": "LangIDOnName",
-          "SourceFile": ".\\src\\Microsoft.Android.Build.BaseTasks\\Properties\\xlf\\Resources.xlf"
+          "SourceFile": ".\\src\\Microsoft.Android.Build.BaseTasks\\Properties\\Resources.resx"
         },
         {
           "OutputPath": ".\\src\\Xamarin.Android.Tools.AndroidSdk\\Properties\\xlf\\",
           "CopyOption": "LangIDOnName",
-          "SourceFile": ".\\src\\Xamarin.Android.Tools.AndroidSdk\\Properties\\xlf\\Resources.xlf"
+          "SourceFile": ".\\src\\Xamarin.Android.Tools.AndroidSdk\\Properties\\Resources.resx"
         }
       ],
       "LanguageSet": "VS_Main_Languages"

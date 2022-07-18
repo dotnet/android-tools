@@ -3,7 +3,9 @@
 name: $(Build.SourceBranchName)-$(Build.SourceVersion)-$(Rev:r)
 
 trigger:
-  - main
+- main
+
+pr: none 
 
 jobs:
 - job: OneLocBuild
