@@ -223,8 +223,7 @@ namespace Xamarin.Android.Tools
 			get {
 				var p   = AppDomain.CurrentDomain.GetData (GetUnixConfigDirOverrideName)?.ToString ();
 				if (string.IsNullOrEmpty (p)) {
-					p   = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".config");
-					p   = Path.Combine (p, "xbuild");
+					p   = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".config", "xbuild");
 				}
 				return Path.Combine (p, "monodroid-config.xml");
 			}
