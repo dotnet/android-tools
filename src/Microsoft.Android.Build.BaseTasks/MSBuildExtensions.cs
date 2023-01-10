@@ -260,7 +260,7 @@ namespace Microsoft.Android.Build.Tasks
 		/// </summary>
 		[Obsolete ("Use RegisterTaskObjectAssemblyLocal (engine, key, value, allowEarlyCollection, lifetime, flags) instead.")]
 		public static void RegisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, object value, RegisteredTaskObjectLifetime lifetime, bool allowEarlyCollection = false) =>
-			RegisterTaskObjectAssemblyLocal (engine, key, value, lifetime, allowEarlyCollection: false, flags: RegisterTaskObjectKeyFlags.None);
+			RegisterTaskObjectAssemblyLocal (engine, key, value, lifetime, allowEarlyCollection: false, flags: RegisterTaskObjectKeyFlags.IncludeProjectFile);
 
 		/// <summary>
 		/// IBuildEngine4.RegisterTaskObject, but adds the current assembly path into the key
