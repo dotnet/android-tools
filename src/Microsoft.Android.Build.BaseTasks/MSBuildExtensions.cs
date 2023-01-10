@@ -13,6 +13,12 @@ using Xamarin.Build;
 
 namespace Microsoft.Android.Build.Tasks
 {
+	[Flags]
+	public enum RegisterTaskObjectKeyFlags {
+		None = 0,
+		IncludeProjectFile = 1 << 0,
+	}
+
 	public static class MSBuildExtensions
 	{
 		public static void LogDebugMessage (this TaskLoggingHelper log, string message, params object[] messageArgs)
@@ -252,69 +258,80 @@ namespace Microsoft.Android.Build.Tasks
 		/// <summary>
 		/// IBuildEngine4.RegisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		[Obsolete ("Use RegisterTaskObjectAssemblyLocal (engine, key, value, allowEarlyCollection, lifetime, projectSpecific) instead.")]
+		[Obsolete ("Use RegisterTaskObjectAssemblyLocal (engine, key, value, allowEarlyCollection, lifetime, flags) instead.")]
 		public static void RegisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, object value, RegisteredTaskObjectLifetime lifetime, bool allowEarlyCollection = false) =>
-			RegisterTaskObjectAssemblyLocal (engine, key, value, lifetime, allowEarlyCollection: false, projectSpecific: true);
+			RegisterTaskObjectAssemblyLocal (engine, key, value, lifetime, allowEarlyCollection: false, flags: RegisterTaskObjectKeyFlags.None);
 
 		/// <summary>
 		/// IBuildEngine4.RegisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		public static void RegisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, object value, RegisteredTaskObjectLifetime lifetime, bool allowEarlyCollection = false, bool projectSpecific = true) =>
-			engine.RegisterTaskObject ((AssemblyLocation, key, (projectSpecific ? engine.ProjectFileOfTaskNode : string.Empty)), value, lifetime, allowEarlyCollection);
+		public static void RegisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, object value, RegisteredTaskObjectLifetime lifetime, bool allowEarlyCollection = false, RegisterTaskObjectKeyFlags flags = RegisterTaskObjectKeyFlags.IncludeProjectFile) =>
+			engine.RegisterTaskObject (engine.GetKey (AssemblyLocation, key, flags), value, lifetime, allowEarlyCollection);
 
 		/// <summary>
 		/// IBuildEngine4.GetRegisteredTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		[Obsolete ("Use GetRegisteredTaskObjectAssemblyLocal (engine, key, lifetime, projectSpecific) instead.")]
+		[Obsolete ("Use GetRegisteredTaskObjectAssemblyLocal (engine, key, lifetime, flags) instead.")]
 		public static object GetRegisteredTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime) =>
-			GetRegisteredTaskObjectAssemblyLocal (engine, key, lifetime, projectSpecific: true);
+			GetRegisteredTaskObjectAssemblyLocal (engine, key, lifetime, flags: RegisterTaskObjectKeyFlags.IncludeProjectFile);
 
 		/// <summary>
 		/// IBuildEngine4.GetRegisteredTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		public static object GetRegisteredTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, bool projectSpecific = true) =>
-			engine.GetRegisteredTaskObject ((AssemblyLocation, key, (projectSpecific ? engine.ProjectFileOfTaskNode : string.Empty)), lifetime);
+		public static object GetRegisteredTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, RegisterTaskObjectKeyFlags flags = RegisterTaskObjectKeyFlags.IncludeProjectFile) =>
+			engine.GetRegisteredTaskObject (engine.GetKey (AssemblyLocation, key, flags), lifetime);
 
 
 		/// <summary>
 		/// Generic version of IBuildEngine4.GetRegisteredTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		[Obsolete ("Use GetRegisteredTaskObjectAssemblyLocal<T> (engine, key, lifetime, projectSpecific) instead.")]
+		[Obsolete ("Use GetRegisteredTaskObjectAssemblyLocal<T> (engine, key, lifetime, flags) instead.")]
 		public static T GetRegisteredTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime)
-			where T : class => GetRegisteredTaskObjectAssemblyLocal<T> (engine, key, lifetime, projectSpecific: true);
+			where T : class => GetRegisteredTaskObjectAssemblyLocal<T> (engine, key, lifetime, flags: RegisterTaskObjectKeyFlags.IncludeProjectFile);
 
 		/// <summary>
 		/// Generic version of IBuildEngine4.GetRegisteredTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		public static T GetRegisteredTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, bool projectSpecific = true)
+		public static T GetRegisteredTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, RegisterTaskObjectKeyFlags flags = RegisterTaskObjectKeyFlags.IncludeProjectFile)
 			where T : class =>
-			engine.GetRegisteredTaskObject ((AssemblyLocation, key, (projectSpecific ? engine.ProjectFileOfTaskNode : string.Empty)), lifetime) as T;
+			engine.GetRegisteredTaskObject (engine.GetKey (AssemblyLocation, key, flags), lifetime) as T;
 
 		/// <summary>
 		/// IBuildEngine4.UnregisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		[Obsolete ("Use UnregisterTaskObjectAssemblyLocal (engine, key, lifetime, projectSpecific) instead.")]
+		[Obsolete ("Use UnregisterTaskObjectAssemblyLocal (engine, key, lifetime, flags) instead.")]
 		public static object UnregisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime) =>
-			UnregisterTaskObjectAssemblyLocal (engine, key, lifetime, projectSpecific: true);
+			UnregisterTaskObjectAssemblyLocal (engine, key, lifetime, flags: RegisterTaskObjectKeyFlags.IncludeProjectFile);
 
 		/// <summary>
 		/// IBuildEngine4.UnregisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		public static object UnregisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, bool projectSpecific = true) =>
-			engine.UnregisterTaskObject ((AssemblyLocation, key, (projectSpecific ? engine.ProjectFileOfTaskNode : string.Empty)), lifetime);
+		public static object UnregisterTaskObjectAssemblyLocal (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, RegisterTaskObjectKeyFlags flags = RegisterTaskObjectKeyFlags.IncludeProjectFile) =>
+			engine.UnregisterTaskObject (engine.GetKey (AssemblyLocation, key, flags), lifetime);
 
 		/// <summary>
 		/// Generic version of IBuildEngine4.UnregisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		[Obsolete ("Use UnregisterTaskObjectAssemblyLocal<T> (engine, key, lifetime, projectSpecific) instead.")]
+		[Obsolete ("Use UnregisterTaskObjectAssemblyLocal<T> (engine, key, lifetime, flags) instead.")]
 		public static T UnregisterTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime)
-			where T : class => UnregisterTaskObjectAssemblyLocal<T> (engine, key, lifetime, projectSpecific: true);
+			where T : class => UnregisterTaskObjectAssemblyLocal<T> (engine, key, lifetime, flags: RegisterTaskObjectKeyFlags.IncludeProjectFile);
 
 		/// <summary>
 		/// Generic version of IBuildEngine4.UnregisterTaskObject, but adds the current assembly path into the key
 		/// </summary>
-		public static T UnregisterTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, bool projectSpecific = true)
+		public static T UnregisterTaskObjectAssemblyLocal<T> (this IBuildEngine4 engine, object key, RegisteredTaskObjectLifetime lifetime, RegisterTaskObjectKeyFlags flags = RegisterTaskObjectKeyFlags.IncludeProjectFile)
 			where T : class =>
-			engine.UnregisterTaskObject ((AssemblyLocation, key, (projectSpecific ? engine.ProjectFileOfTaskNode : string.Empty)), lifetime) as T;
+			engine.UnregisterTaskObject (engine.GetKey (AssemblyLocation, key, flags), lifetime) as T;
+
+		/// <summary>
+		/// Method to calculate the key for the RegisterTaskObject. This is based on the
+		/// RegisterTaskObjectKeyFlags which are passed.
+		/// </summary>
+		static object GetKey (this IBuildEngine4 engine, string location, object key, RegisterTaskObjectKeyFlags flags)
+		{
+			return ((flags & RegisterTaskObjectKeyFlags.IncludeProjectFile) != 0)
+				? (location, key, engine.ProjectFileOfTaskNode)
+				: (location, key, string.Empty);
+		}
 	}
 }
