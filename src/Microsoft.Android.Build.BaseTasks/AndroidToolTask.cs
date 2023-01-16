@@ -31,7 +31,7 @@ namespace Microsoft.Android.Build.Tasks
 		// just expect the base to be called
 		public virtual bool RunTask () => base.Execute ();
 
-		protected object ProjectSpecificTaskObjectKey (object key){
+		protected (object, string) ProjectSpecificTaskObjectKey (object key){
 			return (key, WorkingDirectory);
 		}
 	}
