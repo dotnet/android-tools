@@ -19,7 +19,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			public bool ProjectSpecific { get; set; } = false;
 			public override bool RunTask ()
 			{
-				var key = ProjectSpecific ? ProjectSpecificTaskObjectKey (Key) : Key;
+				var key = ProjectSpecific ? ProjectSpecificTaskObjectKey (Key) : (Key, string.Empty);
 				BuildEngine4.RegisterTaskObjectAssemblyLocal (key, Value, RegisteredTaskObjectLifetime.Build);
 				return true;
 			}
@@ -34,7 +34,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			public string Value { get; set; }
 			public override bool RunTask ()
 			{
-				var key = ProjectSpecific ? ProjectSpecificTaskObjectKey (Key) : Key;
+				var key = ProjectSpecific ? ProjectSpecificTaskObjectKey (Key) : (Key, string.Empty);
 				Value = BuildEngine4.GetRegisteredTaskObjectAssemblyLocal<string> (key, RegisteredTaskObjectLifetime.Build);
 				return true;
 			}
