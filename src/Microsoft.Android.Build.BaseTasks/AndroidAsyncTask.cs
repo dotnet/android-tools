@@ -47,8 +47,6 @@ namespace Microsoft.Android.Build.Tasks
 		/// </summary>
 		public virtual System.Threading.Tasks.Task RunTaskAsync () => System.Threading.Tasks.Task.CompletedTask;
 
-		protected (object, string) ProjectSpecificTaskObjectKey (object key){
-			return (key, WorkingDirectory);
-		}
+		protected object ProjectSpecificTaskObjectKey (object key) => (key, WorkingDirectory);
 	}
 }

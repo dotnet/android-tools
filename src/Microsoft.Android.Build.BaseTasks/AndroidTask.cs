@@ -31,8 +31,6 @@ namespace Microsoft.Android.Build.Tasks
 
 		public abstract bool RunTask ();
 
-		protected (object, string) ProjectSpecificTaskObjectKey (object key){
-			return (key, WorkingDirectory);
-		}
+		protected object ProjectSpecificTaskObjectKey (object key) => (key, WorkingDirectory);
 	}
 }
