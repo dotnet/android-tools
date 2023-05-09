@@ -20,6 +20,10 @@ namespace Xamarin.Android.Tools {
 		static IEnumerable<string> GetUnixConfiguredJdkPaths (Action<TraceLevel, string> logger)
 		{
 			var config = AndroidSdkUnix.GetUnixConfigFile (logger);
+
+			if (config.Root is null)
+				throw new InvalidOperationException ("Unix config file root is missing");
+
 			foreach (var java_sdk in config.Root.Elements ("java-sdk")) {
 				var path    = (string?) java_sdk.Attribute ("path");
 				if (path != null && !string.IsNullOrEmpty (path)) {

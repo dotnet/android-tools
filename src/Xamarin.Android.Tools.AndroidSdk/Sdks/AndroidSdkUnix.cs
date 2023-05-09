@@ -46,7 +46,7 @@ namespace Xamarin.Android.Tools
 		public override string? PreferedAndroidSdkPath {
 			get {
 				var config_file = GetUnixConfigFile (Logger);
-				var androidEl = config_file.Root.Element ("android-sdk");
+				var androidEl = config_file.Root?.Element ("android-sdk");
 
 				if (androidEl != null) {
 					var path = (string?)androidEl.Attribute ("path");
@@ -61,7 +61,7 @@ namespace Xamarin.Android.Tools
 		public override string? PreferedAndroidNdkPath {
 			get {
 				var config_file = GetUnixConfigFile (Logger);
-				var androidEl = config_file.Root.Element ("android-ndk");
+				var androidEl = config_file.Root?.Element ("android-ndk");
 
 				if (androidEl != null) {
 					var path = (string?)androidEl.Attribute ("path");
@@ -76,7 +76,7 @@ namespace Xamarin.Android.Tools
 		public override string? PreferedJavaSdkPath {
 			get {
 				var config_file = GetUnixConfigFile (Logger);
-				var javaEl = config_file.Root.Element ("java-sdk");
+				var javaEl = config_file.Root?.Element ("java-sdk");
 
 				if (javaEl != null) {
 					var path = (string?)javaEl.Attribute ("path");
@@ -126,6 +126,10 @@ namespace Xamarin.Android.Tools
 			path = NullIfEmpty (path);
 
 			var doc = GetUnixConfigFile (Logger);
+
+			if (doc.Root is null)
+				throw new InvalidOperationException ("Unix config file root is missing");
+
 			var androidEl = doc.Root.Element ("android-sdk");
 
 			if (androidEl == null) {
@@ -142,6 +146,10 @@ namespace Xamarin.Android.Tools
 			path = NullIfEmpty (path);
 
 			var doc = GetUnixConfigFile (Logger);
+
+			if (doc.Root is null)
+				throw new InvalidOperationException ("Unix config file root is missing");
+
 			var javaEl = doc.Root.Element ("java-sdk");
 
 			if (javaEl == null) {
@@ -158,6 +166,10 @@ namespace Xamarin.Android.Tools
 			path = NullIfEmpty (path);
 
 			var doc = GetUnixConfigFile (Logger);
+
+			if (doc.Root is null)
+				throw new InvalidOperationException ("Unix config file root is missing");
+
 			var androidEl = doc.Root.Element ("android-ndk");
 
 			if (androidEl == null) {

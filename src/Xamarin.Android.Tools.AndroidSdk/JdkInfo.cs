@@ -21,9 +21,9 @@ namespace Xamarin.Android.Tools
 
 		public      string?                             Locator                     {get;}
 
-		public      string                              JarPath                     {get;}
-		public      string                              JavaPath                    {get;}
-		public      string                              JavacPath                   {get;}
+		public      string?                             JarPath                     {get;}
+		public      string?                             JavaPath                    {get;}
+		public      string?                             JavacPath                   {get;}
 		public      string                              JdkJvmPath                  {get;}
 		public      ReadOnlyCollection<string>          IncludePath                 {get;}
 
@@ -400,12 +400,12 @@ namespace Xamarin.Android.Tools
 				yield break;
 			}
 			foreach (var info in plist.Elements ("array").Elements ("dict")) {
-				var JVMHomePath = (XNode) info.Elements ("key").FirstOrDefault (e => e.Value == "JVMHomePath");
+				var JVMHomePath = (XNode?) info.Elements ("key").FirstOrDefault (e => e.Value == "JVMHomePath");
 				if (JVMHomePath == null)
 					continue;
-				while (JVMHomePath.NextNode.NodeType != XmlNodeType.Element)
-					JVMHomePath = JVMHomePath.NextNode;
-				var strElement  = (XElement) JVMHomePath.NextNode;
+				while (JVMHomePath.NextNode!.NodeType != XmlNodeType.Element)
+					JVMHomePath = JVMHomePath.NextNode!;
+				var strElement  = (XElement) JVMHomePath.NextNode!;
 				var path        = strElement.Value;
 				yield return path;
 			}
