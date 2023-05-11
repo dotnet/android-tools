@@ -21,9 +21,9 @@ namespace Xamarin.Android.Tools
 
 		public      string?                             Locator                     {get;}
 
-		public      string?                             JarPath                     {get;}
-		public      string?                             JavaPath                    {get;}
-		public      string?                             JavacPath                   {get;}
+		public      string                              JarPath                     {get;}
+		public      string                              JavaPath                    {get;}
+		public      string                              JavacPath                   {get;}
 		public      string                              JdkJvmPath                  {get;}
 		public      ReadOnlyCollection<string>          IncludePath                 {get;}
 
@@ -61,18 +61,15 @@ namespace Xamarin.Android.Tools
 			this.logger         = logger ?? AndroidSdkInfo.DefaultConsoleLogger;
 
 			var binPath         = Path.Combine (HomePath, "bin");
-			JarPath             = ProcessUtils.FindExecutablesInDirectory (binPath, "jar").FirstOrDefault ();
-			JavaPath            = ProcessUtils.FindExecutablesInDirectory (binPath, "java").FirstOrDefault ();
-			JavacPath           = ProcessUtils.FindExecutablesInDirectory (binPath, "javac").FirstOrDefault ();
+			JarPath             = RequireExecutableInDirectory (binPath, "jar");
+			JavaPath            = RequireExecutableInDirectory (binPath, "java");
+			JavacPath           = RequireExecutableInDirectory (binPath, "javac");
 
 			string? jdkJvmPath  = GetJdkJvmPath ();
 
-			ValidateFile ("jar",    JarPath);
-			ValidateFile ("java",   JavaPath);
-			ValidateFile ("javac",  JavacPath);
 			ValidateFile ("jvm",    jdkJvmPath);
 
-			JdkJvmPath          = jdkJvmPath!;
+			JdkJvmPath          = jdkJvmPath;
 
 			var includes        = new List<string> ();
 			var jdkInclude      = Path.Combine (HomePath, "include");
@@ -153,10 +150,19 @@ namespace Xamarin.Android.Tools
 			return Directory.EnumerateFiles (dir, library, SearchOption.AllDirectories);
 		}
 
-		void ValidateFile (string name, string? path)
+		void ValidateFile (string name, [NotNull]string? path)
 		{
 			if (path == null || !File.Exists (path))
 				throw new ArgumentException ($"Could not find required file `{name}` within `{HomePath}`; is this a valid JDK?", "homePath");
+		}
+
+		string RequireExecutableInDirectory (string binPath, string fileName)
+		{
+			var file = ProcessUtils.FindExecutablesInDirectory (binPath, fileName).FirstOrDefault ();
+
+			ValidateFile (fileName, file);
+
+			return file;
 		}
 
 		static  Regex   NonDigitMatcher     = new Regex (@"[^\d]", RegexOptions.Compiled | RegexOptions.CultureInvariant);
