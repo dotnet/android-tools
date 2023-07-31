@@ -239,14 +239,13 @@ class ProcessRunner
 	/// <summary>
 	/// Run a process synchronously, waiting for it to exit. The <paramref name="runOptions"/> parameter specifies the `ProcessRunner`
 	/// behavior while executing the process.  Arguments are assumed to be properly quoted, see <seealso cref="QuoteArgument(string)"/>.
-	/// On return, the underlying process instance is disposed and another process can be run.
 	/// </summary>
 	public ProcessExitState Run (ProcessRunOptions runOptions, string executablePath, params string[] arguments)
 	{
 		return RunInner (runOptions, executablePath, arguments);
 	}
 
-	public ProcessExitState Run (ProcessRunOptions runOptions, string executablePath, ICollection<string> arguments)
+	public ProcessExitState Run (ProcessRunOptions runOptions, string executablePath, ICollection<string>? arguments)
 	{
 		return RunInner (runOptions, executablePath, arguments);
 	}
@@ -499,17 +498,14 @@ class ProcessRunner
 		}
 	}
 
-	public string QuoteArgument (string argument)
+	public static string QuoteArgument (string argument)
 	{
 		if (String.IsNullOrEmpty (argument)) {
 			return argument;
 		}
 
 		var sb = new StringBuilder (argument);
-		if (argument.IndexOf ('"') >= 0) {
-			sb.Replace ("\"", "\\\"");
-		}
-
+		sb.Replace ("\"", "\\\"");
 		sb.Insert (0, '"');
 		sb.Append ('"');
 		return sb.ToString ();

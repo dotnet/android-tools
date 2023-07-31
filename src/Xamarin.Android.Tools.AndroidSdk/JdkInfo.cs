@@ -259,57 +259,58 @@ namespace Xamarin.Android.Tools
 
 		static Dictionary<string, List<string>> GetJavaProperties (Action<TraceLevel, string> logger, string java)
 		{
-			var javaProps   = new ProcessStartInfo {
-				FileName    = java,
-				Arguments   = "-XshowSettings:properties -version",
-			};
-
 			var     props   = new Dictionary<string, List<string>> ();
 			string? curKey  = null;
 			bool    foundPS = false;
-			var     output  = new StringBuilder ();
 
 			if (!AnySystemJavasInstalled () && (java == "/usr/bin/java" || java == "java"))
 				return props;
 
 			const string PropertySettings = "Property settings:";
-
-			ProcessUtils.Exec (javaProps, (o, e) => {
+			using var outputWriter = new ProcessStringWriter {
+				OnLineReceived = (string? line) => {
 					const string ContinuedValuePrefix   = "        ";
 					const string NewValuePrefix         = "    ";
 					const string NameValueDelim         = " = ";
-					output.AppendLine (e.Data);
-					if (string.IsNullOrEmpty (e.Data))
-						return;
-					if (e.Data.StartsWith (PropertySettings, StringComparison.Ordinal)) {
+					if (string.IsNullOrEmpty (line)) {
+						return false;
+					}
+					if (line!.StartsWith (PropertySettings, StringComparison.Ordinal)) {
 						foundPS = true;
-						return;
+						return true;
 					}
 					if (!foundPS) {
-						return;
+						return true;
 					}
-					if (e.Data.StartsWith (ContinuedValuePrefix, StringComparison.Ordinal)) {
+					if (line.StartsWith (ContinuedValuePrefix, StringComparison.Ordinal)) {
 						if (curKey == null) {
-							logger (TraceLevel.Error, $"No Java property previously seen for continued value `{e.Data}`.");
-							return;
+							logger (TraceLevel.Error, $"No Java property previously seen for continued value `{line}`.");
+							return true;
 						}
-						props [curKey].Add (e.Data.Substring (ContinuedValuePrefix.Length));
-						return;
+						props [curKey].Add (line.Substring (ContinuedValuePrefix.Length));
+						return true;
 					}
-					if (e.Data.StartsWith (NewValuePrefix, StringComparison.Ordinal)) {
-						var delim = e.Data.IndexOf (NameValueDelim, StringComparison.Ordinal);
-						if (delim <= 0)
-							return;
-						curKey      = e.Data.Substring (NewValuePrefix.Length, delim - NewValuePrefix.Length);
-						var value   = e.Data.Substring (delim + NameValueDelim.Length);
+					if (line.StartsWith (NewValuePrefix, StringComparison.Ordinal)) {
+						var delim = line.IndexOf (NameValueDelim, StringComparison.Ordinal);
+						if (delim <= 0) {
+							return true;
+						}
+						curKey      = line.Substring (NewValuePrefix.Length, delim - NewValuePrefix.Length);
+						var value   = line.Substring (delim + NameValueDelim.Length);
 						List<string>? values;
-						if (!props.TryGetValue (curKey!, out values))
+						if (!props.TryGetValue (curKey!, out values)) {
 							props.Add (curKey, values = new List<string> ());
+						}
 						values.Add (value);
 					}
-			});
+
+					return true;
+				},
+			};
+			ProcessUtils.Exec (stdoutWriter: outputWriter, stderrWriter: outputWriter, java, "-XshowSettings:properties", "-version");
+
 			if (!foundPS) {
-				logger (TraceLevel.Warning, $"No Java properties found; did not find `{PropertySettings}` in `{java} -XshowSettings:properties -version` output: ```{output.ToString ()}```");
+				logger (TraceLevel.Warning, $"No Java properties found; did not find `{PropertySettings}` in `{java} -XshowSettings:properties -version` output: ```{outputWriter.ToString ()}```");
 			}
 
 			return props;
@@ -387,22 +388,24 @@ namespace Xamarin.Android.Tools
 			if (!File.Exists (java_home)) {
 				yield break;
 			}
-			var jhp = new ProcessStartInfo {
-				FileName    = java_home,
-				Arguments   = "-X",
+			using var xmlWriter = new ProcessStringWriter {
+				OnLineReceived = (string? line) => {
+					if (string.IsNullOrEmpty (line)) {
+						return false;
+					}
+
+					return true;
+				},
 			};
-			var xml = new StringBuilder ();
-			ProcessUtils.Exec (jhp, (o, e) => {
-					if (string.IsNullOrEmpty (e.Data))
-						return;
-					xml.Append (e.Data);
-			}, includeStderr: false);
+
+			ICollection<string> args = new string[] { "-X" };
+			ProcessUtils.Exec (stdoutWriter: xmlWriter, java_home, args);
 
 			XElement plist;
 			try {
-				plist = XElement.Parse (xml.ToString ());
+				plist = XElement.Parse (xmlWriter.ToString ());
 			} catch (XmlException e) {
-				logger (TraceLevel.Warning, string.Format (Resources.InvalidXmlLibExecJdk_path_args_message, jhp.FileName, jhp.Arguments, e.Message));
+				logger (TraceLevel.Warning, string.Format (Resources.InvalidXmlLibExecJdk_path_args_message, java_home, String.Join (" ", args), e.Message));
 				yield break;
 			}
 			foreach (var info in plist.Elements ("array").Elements ("dict")) {
@@ -433,21 +436,25 @@ namespace Xamarin.Android.Tools
 			if (!File.Exists (alternatives))
 				return Enumerable.Empty<string> ();
 
-			var psi     = new ProcessStartInfo {
-				FileName    = alternatives,
-				Arguments   = "-l",
-			};
+			var alternativesSplit = new[]{ ' ' };
 			var paths   = new List<string> ();
-			ProcessUtils.Exec (psi, (o, e) => {
-					if (string.IsNullOrWhiteSpace (e.Data))
-						return;
+			var outputWriter = new NoProcesssOutputWriter {
+				OnLineReceived = (string? line) => {
+					if (string.IsNullOrWhiteSpace (line)) {
+						return false;
+					}
+
 					// Example line:
 					//  java-1.8.0-openjdk-amd64       1081       /usr/lib/jvm/java-1.8.0-openjdk-amd64
-					var columns = e.Data.Split (new[]{ ' ' }, StringSplitOptions.RemoveEmptyEntries);
-					if (columns.Length <= 2)
-						return;
-					paths.Add (columns [2]);
-			});
+					var columns = line!.Split (alternativesSplit, StringSplitOptions.RemoveEmptyEntries);
+					if (columns.Length > 2) {
+						paths.Add (columns [2]);
+					}
+					return true;
+				},
+			};
+
+			ProcessUtils.Exec (stdoutWriter: outputWriter, alternatives, "-l");
 			return paths;
 		}
 

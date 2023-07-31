@@ -262,34 +262,29 @@ namespace Xamarin.Android.Tools
 
 		void FixOwnership (List<string>? paths)
 		{
-			if (!need_chown || paths == null || paths.Count == 0)
+			if (!need_chown || paths == null || paths.Count == 0) {
 				return;
+			}
 
 			var stdout = new StringWriter ();
 			var stderr = new StringWriter ();
 			var args = new List <string> {
-				QuoteString (sudo_user!)
+				ProcessRunner.QuoteArgument (sudo_user!)
 			};
 
-			foreach (string p in paths)
-				args.Add (QuoteString (p));
+			foreach (string p in paths) {
+				args.Add (ProcessRunner.QuoteArgument (p));
+			}
 
-			var psi = new ProcessStartInfo (OS.IsMac ? "/usr/sbin/chown" : "/bin/chown") {
-				CreateNoWindow = true,
-				Arguments = String.Join (" ", args),
-			};
-			Logger (TraceLevel.Verbose, $"Changing filesystem object ownership: {psi.FileName} {psi.Arguments}");
-			Task<int> chown_task = ProcessUtils.StartProcess (psi, stdout, stderr, System.Threading.CancellationToken.None);
+			string chown = OS.IsMac ? "/usr/sbin/chown" : "/bin/chown";
+			string arguments = String.Join (" ", args);
+			Logger (TraceLevel.Verbose, $"Changing filesystem object ownership: {chown} {arguments}");
 
-			if (chown_task.Result != 0) {
+			int retval = ProcessUtils.Exec (stdoutWriter: stdout, stderrWriter: stderr, OS.IsMac ? "/usr/sbin/chown" : "/bin/chown", args);
+			if (retval != 0) {
 				Logger (TraceLevel.Warning, $"Failed to change ownership of filesystem object(s)");
 				Logger (TraceLevel.Verbose, $"standard output: {stdout}");
 				Logger (TraceLevel.Verbose, $"standard error: {stderr}");
-			}
-
-			string QuoteString (string p)
-			{
-				return $"\"{p}\"";
 			}
 		}
 

@@ -19,6 +19,7 @@ namespace Xamarin.Android.Tools
 			ExecutableFileExtensions    = pathExts;
 		}
 
+		[Obsolete ("Please port your code to use Xamarin.Android.Tools.AsyncProcessRunner")]
 		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
 		{
 			cancellationToken.ThrowIfCancellationRequested ();
@@ -89,6 +90,7 @@ namespace Xamarin.Android.Tools
 		/// <summary>
 		/// Executes an Android Sdk tool and returns a result. The result is based on a function of the command output.
 		/// </summary>
+		[Obsolete ("Please port your code to use Xamarin.Android.Tools.AsyncProcessRunner", error: true)]
 		public static Task<TResult> ExecuteToolAsync<TResult> (string exe, Func<string, TResult> result, CancellationToken token, Action<Process>? onStarted = null)
 		{
 			var tcs = new TaskCompletionSource<TResult> ();
@@ -134,29 +136,52 @@ namespace Xamarin.Android.Tools
 			return tcs.Task;
 		}
 
-		internal static void Exec (ProcessStartInfo processStartInfo, DataReceivedEventHandler output, bool includeStderr = true)
+		internal static int Exec (string program, params string[] args)
 		{
-			processStartInfo.UseShellExecute         = false;
-			processStartInfo.RedirectStandardInput   = false;
-			processStartInfo.RedirectStandardOutput  = true;
-			processStartInfo.RedirectStandardError   = true;
-			processStartInfo.CreateNoWindow          = true;
-			processStartInfo.WindowStyle             = ProcessWindowStyle.Hidden;
+			return Exec (stdoutWriter: null, stderrWriter: null, program, (ICollection<string>)args);
+		}
 
-			var p = new Process () {
-				StartInfo   = processStartInfo,
-			};
-			p.OutputDataReceived    += output;
-			if (includeStderr) {
-				p.ErrorDataReceived   += output;
+		internal static int Exec (string program, ICollection<string>? args)
+		{
+			return Exec (stdoutWriter: null, stderrWriter: null, program, args);
+		}
+
+		internal static int Exec (TextWriter? stdoutWriter, string program, params string[] args)
+		{
+			return Exec (stdoutWriter, stderrWriter: null, program, (ICollection<string>)args);
+		}
+
+		internal static int Exec (TextWriter? stdoutWriter, string program, ICollection<string>? args)
+		{
+			return Exec (stdoutWriter, stderrWriter: null, program, args);
+		}
+
+		internal static int Exec (TextWriter? stdoutWriter, TextWriter? stderrWriter, string program, params string[] args)
+		{
+			return Exec (stdoutWriter, stderrWriter: stderrWriter, program, (ICollection<string>)args);
+		}
+
+		internal static int Exec (TextWriter? stdoutWriter, TextWriter? stderrWriter, string program, ICollection<string>? arguments)
+		{
+			var runner = new ProcessRunner ();
+			var options = runner.CreateDefaultRunOptions ();
+			options.StdoutSink = stdoutWriter;
+			options.StderrSink = stderrWriter;
+
+			ProcessExitState exitState = runner.Run (options, program, arguments);
+			if (exitState.ExitReason == ProcessExitReason.Finished) {
+				return exitState.ExitCode;
 			}
 
-			using (p) {
-				p.Start ();
-				p.BeginOutputReadLine ();
-				p.BeginErrorReadLine ();
-				p.WaitForExit ();
+			if (exitState.ExitReason == ProcessExitReason.Exception) {
+				throw new InvalidOperationException ($"Attempt to run program '{program}' failed with an exception", exitState.Exception);
 			}
+
+			if (exitState.ExitReason == ProcessExitReason.TimedOut) {
+				throw new InvalidOperationException ($"Program '{program}' timed out");
+			}
+
+			return Int32.MinValue;
 		}
 
 		internal static IEnumerable<string> FindExecutablesInPath (string executable)
@@ -200,4 +225,3 @@ namespace Xamarin.Android.Tools
 		}
 	}
 }
-
