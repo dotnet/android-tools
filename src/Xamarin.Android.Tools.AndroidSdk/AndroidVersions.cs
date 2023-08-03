@@ -192,7 +192,7 @@ namespace Xamarin.Android.Tools
 				AlternateIds = new[]{ "T" },
 			},
 			new AndroidVersion (34, "14.0") {
-				AlternateIds = new[]{ "Upside Down Cake" },
+				AlternateIds = new[]{ "U", "UpsideDownCake", "Upside Down Cake" },
 			},
 		};
 	}
