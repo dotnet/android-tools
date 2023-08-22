@@ -3,6 +3,7 @@
   <!-- Note: MUST be imported *after* $(Configuration) is set! -->
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <Import
       Project="$(MSBuildThisFileDirectory)Configuration.Override.props"
