@@ -107,7 +107,7 @@ jobs:
     displayName: Collect Files for APIScan
     inputs:
       Contents: |
-        $(Build.SourcesDirectory)\$(Build.Configuration)$(NetCoreTargetFrameworkPathSuffix)\**\?(*.dll|*.exe|*.pdb)
+        $(Build.SourcesDirectory)\**\?(*.dll|*.exe|*.pdb)
         !$(Build.SourcesDirectory)\**\ls-jdks.*
       TargetFolder: $(Build.StagingDirectory)\apiscan
       OverWrite: true
