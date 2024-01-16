@@ -14,8 +14,6 @@ pr:
 variables:
   - name: DotNetCoreVersion
     value: 6.0.x
-  - name: Codeql.Enabled
-    value: True
 
 jobs:
 - job: build
@@ -29,6 +27,7 @@ jobs:
         vmImage: macOS-12
       windows:
         vmImage: windows-2022
+        Codeql.Enabled: true
 
   pool:
     vmImage: $(vmImage)
