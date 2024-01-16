@@ -10,6 +10,10 @@ pr:
   - d16-*
   - d17-*
 
+parameters:
+- name: ApiScanSourceBranch
+  default: 'refs/heads/main'
+
 # Global variables
 variables:
   - name: DotNetCoreVersion
@@ -40,6 +44,9 @@ jobs:
   - checkout: self
     clean: true
 
+  - powershell:  'gci env: | format-table -autosize -wrap'
+    displayName:  dump environment
+
   - task: UseDotNet@2
     displayName: Use .NET Core $(DotNetCoreVersion)
     inputs:
@@ -67,8 +74,74 @@ jobs:
     condition: and(succeeded(), eq(variables['agent.os'], 'Windows_NT'))
 
   - task: PublishPipelineArtifact@1
+    displayName: Upload Build Output
+    inputs:
+      path: bin/Debug
+      artifactName: Output - $(Agent.JobName)
+
+  - task: PublishPipelineArtifact@1
     displayName: Upload Artifacts
     inputs:
       path: $(Build.ArtifactStagingDirectory)
-      artifactName: $(vmImage)
+      artifactName: Artifacts - $(Agent.JobName)
     condition: always()
+
+- job: api_scan
+  displayName: API Scan
+  dependsOn: windows
+  condition: and(eq(dependencies.windows.result, 'Succeeded'), eq(variables['Build.SourceBranch'], '${{ parameters.ApiScanSourceBranch }}'))
+  pool:
+    name: Azure Pipelines
+    vmImage: windows-2022
+  timeoutInMinutes: 480
+  workspace:
+    clean: all
+  steps:
+  - task: DownloadPipelineArtifact@2
+    displayName: Download build artifacts
+    inputs:
+      artifactName: Output - windows
+      downloadPath: $(Build.StagingDirectory)
+
+  - task: ExtractFiles@1
+    displayName: Extract nuget
+    inputs:
+      archiveFilePatterns: $(Build.StagingDirectory)\**\*.nupkg
+      destinationFolder: $(Build.StagingDirectory)\apiscan
+
+  - powershell: Get-ChildItem -Path "$(Build.StagingDirectory)\apiscan" -Recurse
+    displayName: List Files for APIScan
+
+  - task: APIScan@2
+    displayName: Run APIScan
+    inputs:
+      softwareFolder: $(Build.StagingDirectory)\apiscan
+      symbolsFolder: 'SRV*http://symweb;$(Build.StagingDirectory)\apiscan'
+      softwareName: $(ApiScanName)
+      softwareVersionNum: $(Build.SourceBranchName)-$(Build.SourceVersion)$(System.JobAttempt)
+      isLargeApp: true
+      toolVersion: Latest
+    env:
+      AzureServicesAuthConnectionString: runAs=App;AppId=$(ApiScanClientId);TenantId=$(ApiScanTenant);AppKey=$(ApiScanSecret)
+
+  - task: SdtReport@2
+    displayName: Guardian Export - Security Report
+    inputs:
+      GdnExportAllTools: false
+      GdnExportGdnToolApiScan: true
+      GdnExportOutputSuppressionFile: source.gdnsuppress
+
+  - task: PublishSecurityAnalysisLogs@3
+    displayName: Publish Guardian Artifacts
+    inputs:
+      ArtifactName: APIScan Logs
+      ArtifactType: Container
+      AllTools: false
+      APIScan: true
+      ToolLogsNotFoundAction: Warning
+
+  - task: PostAnalysis@2
+    displayName: Fail Build on Guardian Issues
+    inputs:
+      GdnBreakAllTools: false
+      GdnBreakGdnToolApiScan: true
