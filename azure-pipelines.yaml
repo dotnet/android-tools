@@ -77,19 +77,19 @@ jobs:
     displayName: Upload Build Output
     inputs:
       path: bin/Debug
-      artifactName: Output - $(Agent.JobName)
+      artifactName: Output - $(System.JobName)
 
   - task: PublishPipelineArtifact@1
     displayName: Upload Artifacts
     inputs:
       path: $(Build.ArtifactStagingDirectory)
-      artifactName: Artifacts - $(Agent.JobName)
+      artifactName: Artifacts - $(System.JobName)
     condition: always()
 
 - job: api_scan
   displayName: API Scan
-  dependsOn: build.windows
-  condition: and(eq(dependencies.build.windows.result, 'Succeeded'), eq(variables['Build.SourceBranch'], '${{ parameters.ApiScanSourceBranch }}'))
+  dependsOn: build
+  condition: and(eq(dependencies.build.result, 'Succeeded'), eq(variables['Build.SourceBranch'], '${{ parameters.ApiScanSourceBranch }}'))
   pool:
     name: Azure Pipelines
     vmImage: windows-2022
