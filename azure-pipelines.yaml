@@ -103,14 +103,24 @@ jobs:
       artifactName: Output - windows
       downloadPath: $(Build.StagingDirectory)
 
-  - powershell: Get-ChildItem -Path "$(Build.StagingDirectory)" -Recurse
+  - task: CopyFiles@2
+    displayName: Collect Files for APIScan
+    inputs:
+      Contents: |
+        $(Build.SourcesDirectory)\$(Build.Configuration)$(NetCoreTargetFrameworkPathSuffix)\**\?(*.dll|*.exe|*.pdb)
+        !$(Build.SourcesDirectory)\**\ls-jdks.*
+      TargetFolder: $(Build.StagingDirectory)\apiscan
+      OverWrite: true
+      flattenFolders: true
+
+  - powershell: Get-ChildItem -Path "$(Build.StagingDirectory)\apiscan" -Recurse
     displayName: List Files for APIScan
 
   - task: APIScan@2
     displayName: Run APIScan
     inputs:
-      softwareFolder: $(Build.StagingDirectory)
-      symbolsFolder: 'SRV*http://symweb;$(Build.StagingDirectory)'
+      softwareFolder: $(Build.StagingDirectory)\apiscan
+      symbolsFolder: 'SRV*http://symweb;$(Build.StagingDirectory)\apiscan'
       softwareName: $(ApiScanName)
       softwareVersionNum: $(Build.SourceBranchName)-$(Build.SourceVersion)$(System.JobAttempt)
       isLargeApp: true
