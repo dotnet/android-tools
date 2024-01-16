@@ -88,7 +88,7 @@ jobs:
 
 - job: api_scan
   displayName: API Scan
-  dependsOn: windows
+  #dependsOn: windows
   condition: and(eq(dependencies.windows.result, 'Succeeded'), eq(variables['Build.SourceBranch'], '${{ parameters.ApiScanSourceBranch }}'))
   pool:
     name: Azure Pipelines
