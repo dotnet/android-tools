@@ -101,7 +101,7 @@ jobs:
     displayName: Download build artifacts
     inputs:
       artifactName: Output - windows
-      downloadPath: $(Build.StagingDirectory)
+      downloadPath: $(Build.SourcesDirectory)
 
   - task: CopyFiles@2
     displayName: Collect Files for APIScan
