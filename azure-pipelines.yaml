@@ -44,9 +44,6 @@ jobs:
   - checkout: self
     clean: true
 
-  - powershell:  'gci env: | format-table -autosize -wrap'
-    displayName:  dump environment
-
   - task: UseDotNet@2
     displayName: Use .NET Core $(DotNetCoreVersion)
     inputs:
