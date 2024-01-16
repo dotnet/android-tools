@@ -103,20 +103,14 @@ jobs:
       artifactName: Output - windows
       downloadPath: $(Build.StagingDirectory)
 
-  - task: ExtractFiles@1
-    displayName: Extract nuget
-    inputs:
-      archiveFilePatterns: $(Build.StagingDirectory)\**\*.nupkg
-      destinationFolder: $(Build.StagingDirectory)\apiscan
-
-  - powershell: Get-ChildItem -Path "$(Build.StagingDirectory)\apiscan" -Recurse
+  - powershell: Get-ChildItem -Path "$(Build.StagingDirectory)" -Recurse
     displayName: List Files for APIScan
 
   - task: APIScan@2
     displayName: Run APIScan
     inputs:
-      softwareFolder: $(Build.StagingDirectory)\apiscan
-      symbolsFolder: 'SRV*http://symweb;$(Build.StagingDirectory)\apiscan'
+      softwareFolder: $(Build.StagingDirectory)
+      symbolsFolder: 'SRV*http://symweb;$(Build.StagingDirectory)'
       softwareName: $(ApiScanName)
       softwareVersionNum: $(Build.SourceBranchName)-$(Build.SourceVersion)$(System.JobAttempt)
       isLargeApp: true
