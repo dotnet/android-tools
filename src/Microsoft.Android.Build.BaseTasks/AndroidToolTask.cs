@@ -27,7 +27,7 @@ namespace Microsoft.Android.Build.Tasks
 			try {
 				bool taskResult = RunTask ();
 				if (!taskResult && !string.IsNullOrEmpty (toolOutput?.ToString ())) {
-					Log.LogError (toolOutput.ToString ().Trim ());
+					Log.LogUnhandledToolError (TaskPrefix, toolOutput.ToString ().Trim ());
 				}
 				toolOutput.Clear ();
 				return taskResult;

@@ -134,6 +134,10 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 				Assert.IsEmpty (errors, "Successful task should not have any errors.");
 			} else {
 				Assert.IsNotEmpty (errors, "Task expected to fail should have errors.");
+				Assert.AreEqual ("MSB6006", errors [0].Code,
+					$"Expected error code MSB6006 but got {errors [0].Code}");
+				Assert.AreEqual ("XADTOT0000", errors [1].Code,
+					$"Expected error code XADTOT0000 but got {errors [1].Code}");
 				Assert.IsTrue (errors.Any (e => e.Message.Contains (expectedErrorText)),
 					"Task expected to fail should contain expected error text.");
 			}
