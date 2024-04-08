@@ -37,7 +37,7 @@ namespace Microsoft.Android.Build.Tasks
 			}
 		}
 
-		protected override void LogEventsFromTextOutput(string singleLine, MessageImportance messageImportance)
+		protected override void LogEventsFromTextOutput (string singleLine, MessageImportance messageImportance)
 		{
 			base.LogEventsFromTextOutput (singleLine, messageImportance);
 			toolOutput.AppendLine (singleLine);
