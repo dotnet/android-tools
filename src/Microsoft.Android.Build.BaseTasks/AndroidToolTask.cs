@@ -26,10 +26,10 @@ namespace Microsoft.Android.Build.Tasks
 		{
 			try {
 				bool taskResult = RunTask ();
-				if (!taskResult && !string.IsNullOrEmpty (toolOutput?.ToString ())) {
+				if (!taskResult && !string.IsNullOrEmpty (toolOutput.ToString ())) {
 					Log.LogUnhandledToolError (TaskPrefix, toolOutput.ToString ().Trim ());
 				}
-				toolOutput?.Clear ();
+				toolOutput.Clear ();
 				return taskResult;
 			} catch (Exception ex) {
 				Log.LogUnhandledException (TaskPrefix, ex);
