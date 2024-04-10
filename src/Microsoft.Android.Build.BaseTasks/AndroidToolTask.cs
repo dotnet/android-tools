@@ -29,7 +29,7 @@ namespace Microsoft.Android.Build.Tasks
 				if (!taskResult && !string.IsNullOrEmpty (toolOutput?.ToString ())) {
 					Log.LogUnhandledToolError (TaskPrefix, toolOutput.ToString ().Trim ());
 				}
-				toolOutput.Clear ();
+				toolOutput?.Clear ();
 				return taskResult;
 			} catch (Exception ex) {
 				Log.LogUnhandledException (TaskPrefix, ex);
