@@ -108,6 +108,10 @@ namespace Xamarin.Android.Tools
 			foreach (var basePath in paths)
 				if (Directory.Exists (basePath))
 					yield return basePath;
+
+			// check for environment variables last.
+			foreach (string dir in GetSdkFromEnvironmentVariables ())
+				yield return dir;
 		}
 
 		protected override IEnumerable<string> GetAllAvailableAndroidNdks ()
