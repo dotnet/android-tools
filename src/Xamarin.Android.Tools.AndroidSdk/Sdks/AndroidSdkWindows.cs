@@ -93,6 +93,9 @@ namespace Xamarin.Android.Tools
 				if (CheckRegistryKeyForExecutable (root, ANDROID_INSTALLER_PATH, ANDROID_INSTALLER_KEY, wow, "platform-tools", Adb))
 					yield return RegistryEx.GetValueString (root, ANDROID_INSTALLER_PATH, ANDROID_INSTALLER_KEY, wow) ?? "";
 
+			foreach (string dir in GetSdkFromEnvironmentVariables ())
+				yield return dir;
+
 			// Check some hardcoded paths for good measure
 			var paths = new string [] {
 				Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Xamarin", "MonoAndroid", "android-sdk-windows"),
@@ -108,10 +111,6 @@ namespace Xamarin.Android.Tools
 			foreach (var basePath in paths)
 				if (Directory.Exists (basePath))
 					yield return basePath;
-
-			// check for environment variables last.
-			foreach (string dir in GetSdkFromEnvironmentVariables ())
-				yield return dir;
 		}
 
 		protected override IEnumerable<string> GetAllAvailableAndroidNdks ()
