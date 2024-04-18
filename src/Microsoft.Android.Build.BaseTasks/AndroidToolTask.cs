@@ -14,12 +14,11 @@ namespace Microsoft.Android.Build.Tasks
 
 		protected string WorkingDirectory { get; private set; }
 
-		StringBuilder toolOutput;
+		StringBuilder toolOutput = new StringBuilder ();
 
 		public AndroidToolTask ()
 		{
 			WorkingDirectory = Directory.GetCurrentDirectory();
-			toolOutput = new StringBuilder ();
 		}
 
 		public override bool Execute ()
