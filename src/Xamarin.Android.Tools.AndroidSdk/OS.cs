@@ -115,7 +115,7 @@ namespace Xamarin.Android.Tools
 		}
 	}
 
-	internal static class RegistryEx
+	public static class RegistryEx
 	{
 		const string ADVAPI = "advapi32.dll";
 
