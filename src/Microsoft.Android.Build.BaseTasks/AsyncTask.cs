@@ -1,7 +1,9 @@
 // https://github.com/xamarin/Xamarin.Build.AsyncTask/blob/db4ce14dacfef47435c238b1b681c124e60ea1a0/Xamarin.Build.AsyncTask/AsyncTask.cs
 
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Microsoft.Build.Utilities;
 using Microsoft.Build.Framework;
 using System.Threading;
@@ -145,6 +147,45 @@ namespace Microsoft.Android.Build.Tasks
         public void LogError(string message) => LogCodedError(code: null, message: message, file: null, lineNumber: 0);
 
         public void LogError(string message, params object[] messageArgs) => LogCodedError(code: null, message: string.Format(message, messageArgs));
+
+        public void LogErrorFromException(Exception exception)
+        {
+            if (uiThreadId == Thread.CurrentThread.ManagedThreadId)
+            {
+#pragma warning disable 618
+                Log.LogErrorFromException(exception);
+                return;
+#pragma warning restore 618
+            }
+
+            StackFrame exceptionFrame = null;
+            try
+            {
+                exceptionFrame = new StackTrace(exception, true)?.GetFrames()?.FirstOrDefault();
+            }
+            catch { }
+
+            lock (errorMessageQueue.SyncRoot)
+            {
+                errorMessageQueue.Enqueue(new BuildErrorEventArgs(
+                    subcategory: null,
+                    code: null,
+                    file: exceptionFrame?.GetFileName(),
+                    lineNumber: exceptionFrame?.GetFileLineNumber() ?? 0,
+                    columnNumber: exceptionFrame?.GetFileColumnNumber() ?? 0,
+                    endLineNumber: 0,
+                    endColumnNumber: 0,
+                    message: exception.Message,
+                    helpKeyword: null,
+                    senderName: null
+                ));
+                lock (eventlock)
+                {
+                    if (isRunning)
+                        errorDataAvailable.Set();
+                }
+            }
+        }
 
         public void LogCodedError(string code, string message) => LogCodedError(code: code, message: message, file: null, lineNumber: 0);
 
