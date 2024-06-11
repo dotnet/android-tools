@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Android.Build.Tasks;
 using NUnit.Framework;
-using Xamarin.Build;
 
 namespace Microsoft.Android.Build.BaseTasks.Tests
 {
