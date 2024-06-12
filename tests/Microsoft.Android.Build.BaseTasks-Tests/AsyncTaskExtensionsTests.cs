@@ -10,11 +10,13 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 	{
 		const int Iterations = 32;
 
+		class TestAsyncTask : AsyncTask { }
+
 		[Test]
 		public async Task RunTask ()
 		{
 			bool set = false;
-			await new AsyncTask ().RunTask (delegate { set = true; }); // delegate { } has void return type
+			await new TestAsyncTask ().RunTask (delegate { set = true; }); // delegate { } has void return type
 			Assert.IsTrue (set);
 		}
 
@@ -22,7 +24,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		public async Task RunTaskOfT ()
 		{
 			bool set = false;
-			Assert.IsTrue (await new AsyncTask ().RunTask (() => set = true), "RunTask should return true");
+			Assert.IsTrue (await new TestAsyncTask ().RunTask (() => set = true), "RunTask should return true");
 			Assert.IsTrue (set);
 		}
 
@@ -30,7 +32,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		public async Task WhenAll ()
 		{
 			bool set = false;
-			await new AsyncTask ().WhenAll (new [] { 0 }, _ => set = true);
+			await new TestAsyncTask ().WhenAll (new [] { 0 }, _ => set = true);
 			Assert.IsTrue (set);
 		}
 
@@ -39,7 +41,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		{
 			var input = new int [Iterations];
 			var output = new List<int> ();
-			await new AsyncTask ().WhenAllWithLock (input, (i, l) => {
+			await new TestAsyncTask ().WhenAllWithLock (input, (i, l) => {
 				lock (l) output.Add (i);
 			});
 			Assert.AreEqual (Iterations, output.Count);
@@ -49,7 +51,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		public void ParallelForEach ()
 		{
 			bool set = false;
-			new AsyncTask ().ParallelForEach (new [] { 0 }, _ => set = true);
+			new TestAsyncTask ().ParallelForEach (new [] { 0 }, _ => set = true);
 			Assert.IsTrue (set);
 		}
 
@@ -58,7 +60,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		{
 			var input = new int [Iterations];
 			var output = new List<int> ();
-			new AsyncTask ().ParallelForEachWithLock (input, (i, l) => {
+			new TestAsyncTask ().ParallelForEachWithLock (input, (i, l) => {
 				lock (l) output.Add (i);
 			});
 			Assert.AreEqual (Iterations, output.Count);

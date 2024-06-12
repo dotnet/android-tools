@@ -17,7 +17,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		MockBuildEngine engine;
 
 		[SetUp]
-		public void TestSetup()
+		public void TestSetup ()
 		{
 			errors = new List<BuildErrorEventArgs> ();
 			warnings = new List<BuildWarningEventArgs> ();
@@ -29,18 +29,22 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		{
 			public string Text { get; set; }
 
-			public override bool Execute()
+			public override bool Execute ()
 			{
-				Task.Run(async () =>
-				{
-					await Task.Delay(5000);
-					LogMessage(Text);
-					Complete();
+				Task.Run (async () => {
+					await Task.Delay (5000);
+					LogMessage (Text);
+					Complete ();
 				});
 
-				LogTelemetry("Test", new System.Collections.Generic.Dictionary<string, string> () {{"Property", "Value"}});
+				LogTelemetry ("Test", new Dictionary<string, string> () { { "Property", "Value" } });
 
-				return base.Execute();
+				return base.Execute ();
+			}
+
+			public override Task RunTaskAsync ()
+			{
+				return base.RunTaskAsync ();
 			}
 		}
 
