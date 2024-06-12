@@ -41,11 +41,6 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 
 				return base.Execute ();
 			}
-
-			public override Task RunTaskAsync ()
-			{
-				return base.RunTaskAsync ();
-			}
 		}
 
 		[Test]
@@ -59,6 +54,22 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			var taskSucceeded = task.Execute ();
 			Assert.IsTrue (messages.Any (e => e.Message.Contains (message)),
 				$"Task did not contain expected message text: '{message}'.");
+		}
+
+
+		public class TestAAT : AndroidAsyncTask
+		{
+			public override string TaskPrefix => "TEST";
+		}
+
+		[Test]
+		public void AndroidAsyncTaskWithRunOverride ()
+		{
+			var task = new TestAAT () {
+				BuildEngine = engine,
+			};
+
+			Assert.IsTrue (task.Execute (), "Empty AndroidAsyncTask should have ran successfully.");
 		}
 
 	}

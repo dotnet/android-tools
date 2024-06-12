@@ -288,12 +288,17 @@ namespace Microsoft.Android.Build.Tasks
 			EnqueueMessage (customMessageQueue, e, customDataAvailable);
 		}
 
-		public override bool Execute ()
+		bool ExecuteWaitForCompletion ()
 		{
 			WaitForCompletion ();
 #pragma warning disable 618
 			return !Log.HasLoggedErrors;
 #pragma warning restore 618
+		}
+
+		public override bool Execute ()
+		{
+			return ExecuteWaitForCompletion ();
 		}
 
 		/// <summary>
@@ -310,7 +315,7 @@ namespace Microsoft.Android.Build.Tasks
 					.ContinueWith (Complete);
 
 				// This blocks on Execute, until Complete is called
-				return Execute ();
+				return ExecuteWaitForCompletion ();
 			} finally {
 				Reacquire ();
 			}
