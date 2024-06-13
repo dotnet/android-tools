@@ -2,9 +2,13 @@
 
 name: $(Build.SourceBranchName)-$(Build.SourceVersion)-$(Rev:r)
 
-trigger: none
+trigger:
+- main
+- release/*
 
-pr: none
+pr:
+- main
+- release/*
 
 schedules:
 - cron: "0 6 * * *"
