@@ -1,4 +1,4 @@
-name: Android.Tools $(Rev:r)
+name: android-tools $(Rev:r)
 
 trigger:
 - main
@@ -47,7 +47,7 @@ jobs:
       version: $(DotNetCoreVersion)
 
   - script: dotnet build Xamarin.Android.Tools.sln -bl:$(Build.ArtifactStagingDirectory)/build.binlog
-    displayName: Build solution Xamarin.Android.Tools.sln
+    displayName: 'Build solution Xamarin.Android.Tools.sln'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run Tests'
