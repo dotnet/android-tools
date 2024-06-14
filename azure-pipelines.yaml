@@ -44,7 +44,7 @@ jobs:
   - task: DotNetCoreCLI@2
     displayName: Build solution Xamarin.Android.Tools.sln
     inputs:
-      projects: Xamarin.Android.sln
+      projects: Xamarin.Android.Tools.sln
       arguments: -bl:$(Build.ArtifactStagingDirectory)/build.binlog
 
   - task: DotNetCoreCLI@2
