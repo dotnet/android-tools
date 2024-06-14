@@ -66,7 +66,8 @@ jobs:
     inputs:
       command: custom
       projects: src/Xamarin.Android.Tools.AndroidSdk/Xamarin.Android.Tools.AndroidSdk.csproj
-      custom: pack -p:Version=$(xat.nuget.version) -p:PackageOutputPath=$(Build.ArtifactStagingDirectory) -bl:$(Build.ArtifactStagingDirectory)/pack.binlog
+      custom: pack
+      arguments: -p:Version=$(xat.nuget.version) -p:PackageOutputPath=$(Build.ArtifactStagingDirectory) -bl:$(Build.ArtifactStagingDirectory)/pack.binlog
     condition: and(succeeded(), eq(variables['agent.os'], 'Windows_NT'))
 
   - task: PublishPipelineArtifact@1
