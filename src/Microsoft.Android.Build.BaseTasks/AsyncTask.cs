@@ -1,3 +1,4 @@
+// https://github.com/xamarin/xamarin-android/blob/9fca138604c53989e1cff7fc0c2e939583b4da28/src/Xamarin.Android.Build.Tasks/Tasks/AndroidTask.cs#L27
 // https://github.com/xamarin/Xamarin.Build.AsyncTask/blob/db4ce14dacfef47435c238b1b681c124e60ea1a0/Xamarin.Build.AsyncTask/AsyncTask.cs
 
 using System;
@@ -14,11 +15,13 @@ using System.Collections.Generic;
 namespace Microsoft.Android.Build.Tasks
 {
 	/// <summary>
-	/// Base class for tasks that need long-running cancellable asynchronous tasks 
+	/// Base class for tasks that need long-running cancellable asynchronous tasks
 	/// that don't block the UI thread in the IDE.
 	/// </summary>
 	public abstract class AsyncTask : Task, ICancelableTask
 	{
+		public abstract string TaskPrefix { get; }
+
 		readonly CancellationTokenSource cts = new CancellationTokenSource ();
 		readonly Queue logMessageQueue = new Queue ();
 		readonly Queue warningMessageQueue = new Queue ();
@@ -296,44 +299,6 @@ namespace Microsoft.Android.Build.Tasks
 #pragma warning restore 618
 		}
 
-		public override bool Execute ()
-		{
-			return ExecuteWaitForCompletion ();
-		}
-
-		/// <summary>
-		/// Typically `RunTaskAsync` will be the preferred method to override,
-		///  however this method can be overridden instead for Tasks that will
-		///  run quickly and do not need to be asynchronous.
-		/// </summary>
-		public virtual bool RunTask ()
-		{
-			Yield ();
-			try {
-				this.RunTask (() => RunTaskAsync ())
-					.Unwrap ()
-					.ContinueWith (Complete);
-
-				// This blocks on Execute, until Complete is called
-				return ExecuteWaitForCompletion ();
-			} finally {
-				Reacquire ();
-			}
-		}
-
-		/// <summary>
-		/// Override this method for simplicity of AsyncTask usage:
-		/// <list type="bullet">
-		/// <item>
-		/// <description>Yield / Reacquire is handled for you</description>
-		/// </item>
-		/// <item>
-		/// <description>RunTaskAsync is already on a background thread</description>
-		/// </item>
-		/// </list>
-		/// </summary>
-		public virtual System.Threading.Tasks.Task RunTaskAsync () => System.Threading.Tasks.Task.CompletedTask;
-
 		void EnqueueMessage (Queue queue, object item, ManualResetEvent resetEvent)
 		{
 			lock (queue.SyncRoot) {
@@ -446,6 +411,51 @@ namespace Microsoft.Android.Build.Tasks
 
 			}
 		}
+
+		public override bool Execute ()
+		{
+			try {
+				return RunTask ();
+			} catch (Exception ex) {
+				this.LogUnhandledException (TaskPrefix, ex);
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Typically `RunTaskAsync` will be the preferred method to override,
+		///  however this method can be overridden instead for Tasks that will
+		///  run quickly and do not need to be asynchronous.
+		/// </summary>
+		public virtual bool RunTask ()
+		{
+			Yield ();
+			try {
+				this.RunTask (() => RunTaskAsync ())
+					.Unwrap ()
+					.ContinueWith (Complete);
+
+				// This blocks on Execute, until Complete is called
+				return ExecuteWaitForCompletion ();
+			} finally {
+				Reacquire ();
+			}
+		}
+
+		/// <summary>
+		/// Override this method for simplicity of AsyncTask usage:
+		/// <list type="bullet">
+		/// <item>
+		/// <description>Yield / Reacquire is handled for you</description>
+		/// </item>
+		/// <item>
+		/// <description>RunTaskAsync is already on a background thread</description>
+		/// </item>
+		/// </list>
+		/// </summary>
+		public virtual System.Threading.Tasks.Task RunTaskAsync () => System.Threading.Tasks.Task.CompletedTask;
+
+		protected object ProjectSpecificTaskObjectKey (object key) => (key, WorkingDirectory);
 
 		private enum WaitHandleIndex
 		{

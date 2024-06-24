@@ -10,7 +10,10 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 	{
 		const int Iterations = 32;
 
-		class TestAsyncTask : AsyncTask { }
+		class TestAsyncTask : AsyncTask
+		{
+			public override string TaskPrefix => "TEST";
+		}
 
 		[Test]
 		public async Task RunTask ()

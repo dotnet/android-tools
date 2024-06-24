@@ -27,6 +27,8 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 
 		public class AsyncMessage : AsyncTask
 		{
+			public override string TaskPrefix => "TEST";
+
 			public string Text { get; set; }
 
 			public override bool Execute ()
@@ -44,7 +46,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		}
 
 		[Test]
-		public void RunAsyncMessage ()
+		public void RunAsyncMessageExecOverride ()
 		{
 			var message = "Hello Async World!";
 			var task = new AsyncMessage () {
@@ -57,13 +59,13 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		}
 
 
-		public class TestAAT : AndroidAsyncTask
+		class TestAAT : AsyncTask
 		{
 			public override string TaskPrefix => "TEST";
 		}
 
 		[Test]
-		public void AndroidAsyncTaskWithRunOverride ()
+		public void RunAndroidAsyncTask ()
 		{
 			var task = new TestAAT () {
 				BuildEngine = engine,
