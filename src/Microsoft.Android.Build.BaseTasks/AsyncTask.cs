@@ -75,7 +75,7 @@ namespace Microsoft.Android.Build.Tasks
 		{
 			if (task.Exception != null) {
 				var ex = task.Exception.GetBaseException ();
-				LogError (ex.Message + Environment.NewLine + ex.StackTrace);
+				this.LogUnhandledException (TaskPrefix, ex);
 			}
 			Complete ();
 		}
@@ -156,40 +156,6 @@ namespace Microsoft.Android.Build.Tasks
 
 		public void LogError (string message, params object [] messageArgs)
 			=> LogCodedError (code: null, message: string.Format (message, messageArgs));
-
-		public void LogErrorFromException (Exception exception)
-		{
-			if (uiThreadId == Thread.CurrentThread.ManagedThreadId) {
-#pragma warning disable 618
-				Log.LogErrorFromException (exception);
-				return;
-#pragma warning restore 618
-			}
-
-			StackFrame exceptionFrame = null;
-			if (exception != null) {
-				exceptionFrame = new StackTrace (exception, true)?.GetFrames ()?.FirstOrDefault ();
-			}
-
-			lock (errorMessageQueue.SyncRoot) {
-				errorMessageQueue.Enqueue (new BuildErrorEventArgs (
-						subcategory: null,
-						code: null,
-						file: exceptionFrame?.GetFileName (),
-						lineNumber: exceptionFrame?.GetFileLineNumber () ?? 0,
-						columnNumber: exceptionFrame?.GetFileColumnNumber () ?? 0,
-						endLineNumber: 0,
-						endColumnNumber: 0,
-						message: exception.Message,
-						helpKeyword: null,
-						senderName: null
-				));
-				lock (eventlock) {
-					if (isRunning)
-						errorDataAvailable.Set ();
-				}
-			}
-		}
 
 		public void LogCodedError (string code, string message)
 			=> LogCodedError (code: code, message: message, file: null, lineNumber: 0);
