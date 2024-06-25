@@ -1,29 +1,16 @@
-# xamarin-android-tools
+# android-tools
+[![Build Status](https://dev.azure.com/devdiv/DevDiv/_apis/build/status%2FXamarin%2FAndroid%2Fandroid-tools?branchName=main)](https://dev.azure.com/devdiv/DevDiv/_build/latest?definitionId=22338&branchName=main)
 
-**xamarin-android-tools** is a repo to easily share code between the
-[xamarin-android][x-a] repo and the Xamarin.Android commercial tooling,
+**android-tools** is a repo to easily share code between the
+[xamarin-android][android] repo and the .NET for Android commercial tooling,
 such as IDE extensions, without requiring that the IDE extensions
-submodule the entire **xamarin-android** repo, which is gigantic.
+submodule the entire **android** repo, which is gigantic.
 
-[x-a]: https://github.com/xamarin/xamarin-android
-
-# Build Status
-
-| Platform              | Status |
-|-----------------------|--------|
-| **macOS**             | [![macOS Build Status][azure-macOS-icon]][azure-macOS-status] |
-| **Windows**           | [![Windows Build Status][azure-Windows-icon]][azure-Windows-status] |
-
-
-[azure-macOS-icon]: https://dev.azure.com/xamarin/public/_apis/build/status/xamarin-android-tools
-[azure-macOS-status]: https://dev.azure.com/xamarin/public/_build/latest?definitionId=3
-[azure-Windows-icon]: https://dev.azure.com/xamarin/public/_apis/build/status/xamarin-android-tools
-[azure-Windows-status]: https://dev.azure.com/xamarin/public/_build/latest?definitionId=3
-
+[android]: https://github.com/xamarin/xamarin-android
 
 # Build Requirements
 
-**xamarin-android-tools** requires Mono 4.8 or later and `nuget`.
+**-android-tools** requires .NET 6 or later.
 
 # Build Configuration
 
@@ -38,18 +25,11 @@ The default `make all` target accepts the following optional
 
 # Build
 
-To build **xamarin-android-tools**:
+To build **android-tools**:
 
-	msbuild /restore Xamarin.Android.Tools.sln
+	dotnet build Xamarin.Android.Tools.sln
 
-Alternatively, first prepare the project:
-
-	make prepare
-
-This will perform `nuget restore` and any other pre-build tasks
-that need to be performed.
-
-Next, run `make`:
+Alternatively run `make`:
 
 	make
 
@@ -71,20 +51,14 @@ e.g. `bin\TestDebug`, contains unit tests and related files.
 * `bin\$(Configuration)`: redistributable build artifacts.
 * `bin\Test$(Configuration)`: Unit tests and related files.
 
-# Contributing
+# Distribution
 
 Package versioning follows [Semantic Versioning 2.0.0](https://semver.org/).
 The major version in the `nuget.version` file should be updated when a breaking change is introduced.
 The minor version should be updated when new functionality is added.
 The patch version will be automatically determined by the number of commits since the last version change.
 
-This project has adopted the code of conduct defined by the Contributor Covenant
-to clarify expected behavior in our community. For more information, see the
-[.NET Foundation Code of Conduct](http://www.dotnetfoundation.org/code-of-conduct).
-
-# Distribution
-
-Xamarin.Android.Tools.AndroidSdk nupkg files are produced for every build which occurrs on [Azure Devops](https://dev.azure.com/xamarin/Xamarin/_build?definitionId=2&_a=summary).
+Xamarin.Android.Tools.AndroidSdk nupkg files are produced for every build which occurrs on [Azure Devops](https://devdiv.visualstudio.com/DevDiv/_build?definitionId=22338).
 To download one of these packages, navigate to the build you are interested in and click on the `Artifacts` button.
 
 Alternatively, "unofficial" releases are currently hosted on the [Xamarin.Android](https://dev.azure.com/xamarin/public/_packaging?_a=feed&feed=Xamarin.Android) feed.
@@ -98,8 +72,6 @@ Add the feed to your project's `NuGet.config` to reference these packages:
 </configuration>
 ```
 
-An Azure Pipelines [Release ](https://dev.azure.com/xamarin/public/_release?view=mine&_a=releases&definitionId=12) can be manually triggered to push a new version to this feed.
-
 # Mailing Lists
 
 To discuss this project, and participate in the design, we use the
@@ -111,4 +83,4 @@ We use [Mono's Coding Guidelines](http://www.mono-project.com/community/contribu
 
 # Reporting Bugs
 
-We use [GitHub](https://github.com/xamarin/xamarin-android-tools/issues) to track issues.
+We use [GitHub](https://github.com/dotnet/android-tools/issues) to track issues.
