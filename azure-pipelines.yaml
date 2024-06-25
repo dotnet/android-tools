@@ -48,6 +48,11 @@ jobs:
     inputs:
       version: $(DotNetCoreVersion)
 
+  - task: UseDotNet@2
+    displayName: Use .NET Core 8.0.x
+    inputs:
+      version: 8.0.x
+
   - script: dotnet build Xamarin.Android.Tools.sln -bl:$(Build.ArtifactStagingDirectory)/build.binlog
     displayName: 'Build solution Xamarin.Android.Tools.sln'
 
