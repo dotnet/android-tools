@@ -8,17 +8,15 @@ namespace Microsoft.Build.Utilities;
 
 static class NativeMethodsShared
 {
-    private static bool? _isWindows;
+	private static bool? _isWindows;
 
-    /// <summary>
-    /// Gets a flag indicating if we are running under some version of Windows
-    /// </summary>
-    internal static bool IsWindows
-    {
-        get
-        {
-            _isWindows ??= RuntimeInformation.IsOSPlatform (OSPlatform.Windows);
-            return _isWindows.Value;
-        }
-    }
+	/// <summary>
+	/// Gets a flag indicating if we are running under some version of Windows
+	/// </summary>
+	internal static bool IsWindows {
+		get {
+			_isWindows ??= RuntimeInformation.IsOSPlatform (OSPlatform.Windows);
+			return _isWindows.Value;
+		}
+	}
 }
