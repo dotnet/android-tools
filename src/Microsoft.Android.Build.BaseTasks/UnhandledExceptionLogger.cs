@@ -80,25 +80,30 @@ namespace Microsoft.Android.Build.Tasks
 				logCodedError (prefix + "7027", ex.ToString ());
 			else if (ex is FileNotFoundException)		// IOException
 				logCodedError (prefix + "7028", ex.ToString ());
-			else if (ex is IOException) {
-				// If we find a file path in the message, and the file exists, check if it's locked
-				// en-US message is:
-				// The process cannot access the file 'D:\temp\tmpw5mhqp.tmp' because it is being used by another process.
-				var match = Regex.Match (ex.Message, @"'([^']+)'");
-				if (match.Success) {
-					string path = match.Groups [1].Value;
-					if (File.Exists (path)) {
-						string processes = LockCheck.GetLockedFileMessage (path);
-						if (!string.IsNullOrEmpty (processes)) {
-							logCodedError (prefix + "7024", $"{processes}{Environment.NewLine}{ex}");
-							return;
-						}
-					}
-				}
-
-				logCodedError (prefix + "7024", ex.ToString ());
-			} else
+			else if (ex is IOException ioex)
+				logCodedError (prefix + "7024", GetIOExceptionMessage (ioex));
+			else
 				logCodedError (prefix + "7000", ex.ToString ());
+		}
+
+		static string GetIOExceptionMessage (IOException ex)
+		{
+			// If we find a file path in the message, and the file exists, check if it's locked
+			// en-US message is:
+			// The process cannot access the file 'D:\temp\tmpw5mhqp.tmp' because it is being used by another process.
+			var matches = Regex.Match (ex.Message, @"'([^']+)'");
+			for (int i = 0; i < matches.Count; ++i) {
+				string path = matches [i].Groups [1].Value;
+				if (!File.Exists (path)) {
+					continue;
+				}
+				string processes = LockCheck.GetLockedFileMessage (path);
+				if (string.IsNullOrEmpty (processes)) {
+					continue;
+				}
+				return $"{processes}{Environment.NewLine}{ex.ToString ()}";
+			}
+			return ex.ToString ();
 		}
 
 		public static void LogUnhandledToolError (this TaskLoggingHelper log, string prefix, string toolOutput)
