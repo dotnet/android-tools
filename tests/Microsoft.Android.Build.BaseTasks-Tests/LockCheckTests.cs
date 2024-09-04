@@ -70,16 +70,20 @@ public class LockCheckTests
 	[Test]
 	public void LockCheck_FileLocked ()
 	{
-		if (!OperatingSystem.IsWindows ())
-			Assert.Ignore ("Test only valid on Windows");
-
 		string actual = LockCheck.GetLockedFileMessage (tempFile);
-		AssertFileLocked (actual);
+		if (OperatingSystem.IsWindows ()) {
+			AssertFileLocked (actual);
+		} else {
+			Assert.IsEmpty (actual);
+		}
 	}
 
 	[Test]
 	public void LockCheck_AndroidTask ()
 	{
+		if (!OperatingSystem.IsWindows ())
+			Assert.Ignore ("Test only valid on Windows");
+
 		var task = new MyTask {
 			BuildEngine = engine,
 			Path = tempFile,
