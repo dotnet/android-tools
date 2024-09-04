@@ -61,15 +61,6 @@ namespace Microsoft.Android.Build.Tasks.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to The file &quot;{0}&quot; is locked by: &quot;{1}&quot;.
-        /// </summary>
-        internal static string LockCheck_FileLocked {
-            get {
-                return ResourceManager.GetString("LockCheck.FileLocked", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Unhandled exception: {0}.
         /// </summary>
         internal static string XA0000_Exception {

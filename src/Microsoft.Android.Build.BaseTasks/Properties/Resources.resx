@@ -102,7 +102,4 @@
     <value>Unhandled exception: {0}</value>
     <comment>{0} - The exception message of the associated exception</comment>
   </data>
-  <data name="LockCheck.FileLocked" xml:space="preserve">
-    <value>The file "{0}" is locked by: "{1}"</value>
-  </data>
 </root>

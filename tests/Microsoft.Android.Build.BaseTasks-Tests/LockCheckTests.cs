@@ -61,9 +61,7 @@ public class LockCheckTests
 	void AssertFileLocked (string actual)
 	{
 		Assert.IsNotEmpty (actual);
-
-		var expected = $"The file \"{tempFile}\" is locked by:";
-		StringAssert.StartsWith (expected, actual);
+		StringAssert.StartsWith ("The file is locked by:", actual);
 		StringAssert.IsMatch (@"\d+", actual, "Should contain a PID!");
 	}
 
@@ -90,7 +88,7 @@ public class LockCheckTests
 		};
 		task.Execute ();
 
-		// error XAMYT7024: The file "D:\temp\tmphkqpda.tmp" is locked by: "testhost (22040)"
+		// error XAMYT7024: The file is locked by: "testhost (22040)"
 		// System.IO.IOException: The process cannot access the file 'D:\temp\tmphkqpda.tmp' because it is being used by another process.
 		//    at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile (String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
 		// ... rest of stacktrace
