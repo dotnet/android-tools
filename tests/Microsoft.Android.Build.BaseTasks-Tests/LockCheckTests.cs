@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net.NetworkInformation;
 using Microsoft.Android.Build.BaseTasks.Tests.Utilities;
 using Microsoft.Android.Build.Tasks;
 using Microsoft.Build.Framework;
-using Microsoft.Build.Tasks;
 using Microsoft.Build.Utilities;
 using NUnit.Framework;
 
@@ -44,15 +42,10 @@ public class LockCheckTests
 	{
 		public string Path { get; set; }
 
-		public Exception Throws { get; set; }
-
 		public override string TaskPrefix => "MYT";
 
 		public override bool RunTask ()
 		{
-			if (Throws is not null)
-				throw Throws;
-
 			using var stream = File.Create (Path);
 			return false;
 		}
