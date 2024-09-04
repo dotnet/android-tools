@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Build.Utilities;
 
@@ -79,9 +80,24 @@ namespace Microsoft.Android.Build.Tasks
 				logCodedError (prefix + "7027", ex.ToString ());
 			else if (ex is FileNotFoundException)		// IOException
 				logCodedError (prefix + "7028", ex.ToString ());
-			else if (ex is IOException) 
+			else if (ex is IOException) {
+				// If we find a file path in the message, and the file exists, check if it's locked
+				// en-US message is:
+				// The process cannot access the file 'D:\temp\tmpw5mhqp.tmp' because it is being used by another process.
+				var match = Regex.Match (ex.Message, @"'([^']+)'");
+				if (match.Success) {
+					string path = match.Groups [1].Value;
+					if (File.Exists (path)) {
+						string processes = LockCheck.GetLockedFileMessage (path);
+						if (!string.IsNullOrEmpty (processes)) {
+							logCodedError (prefix + "7024", $"{processes}{Environment.NewLine}{ex}");
+							return;
+						}
+					}
+				}
+
 				logCodedError (prefix + "7024", ex.ToString ());
-			else
+			} else
 				logCodedError (prefix + "7000", ex.ToString ());
 		}
 
