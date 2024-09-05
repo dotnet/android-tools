@@ -101,7 +101,7 @@ namespace Microsoft.Android.Build.Tasks
 				if (string.IsNullOrEmpty (processes)) {
 					continue;
 				}
-				return $"The file '{path}' is locked by: {processes}.{Environment.NewLine}{ex.ToString ()}";
+				return $"{processes}.{Environment.NewLine}{ex.ToString ()}";
 			}
 			return ex.ToString ();
 		}
