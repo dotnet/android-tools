@@ -91,7 +91,7 @@ namespace Microsoft.Android.Build.Tasks
 			// If we find a file path in the message, and the file exists, check if it's locked
 			// en-US message is:
 			// The process cannot access the file 'D:\temp\tmpw5mhqp.tmp' because it is being used by another process.
-			var matches = Regex.Match (ex.Message, @"'([^']+)'");
+			var matches = Regex.Matches (ex.Message, @"'([^']+)'");
 			for (int i = 0; i < matches.Count; ++i) {
 				string path = matches [i].Groups [1].Value;
 				if (!File.Exists (path)) {
