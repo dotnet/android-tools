@@ -9,6 +9,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Xamarin.Tools.Zip;
 using Microsoft.Build.Utilities;
+using System.Threading;
+using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
+using System.Collections;
 
 namespace Microsoft.Android.Build.Tasks
 {
@@ -110,7 +114,36 @@ namespace Microsoft.Android.Build.Tasks
 			return changed;
 		}
 
+		const int DEFAULT_COPYIFCHANGED_RETRIES = 3;
+		const int ERROR_ACCESS_DENIED = 5;
+		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
+
 		public static bool CopyIfChanged (string source, string destination)
+		{
+			int retryCount = 0;
+			while (retryCount < DEFAULT_COPYIFCHANGED_RETRIES) {
+				try {
+					return CopyIfChangedRetry (source, destination);
+				} catch (Exception e) {
+					switch (e) {
+						case UnauthorizedAccessException:
+						case IOException:
+							int code = Marshal.GetHRForException(e);
+							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
+								throw;
+							};
+							break;
+						default:
+							throw;
+					} 
+				}
+				retryCount++;
+				Thread.Sleep(DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+			}
+			return false;
+		}
+
+		public static bool CopyIfChangedRetry (string source, string destination)
 		{
 			if (HasFileChanged (source, destination)) {
 				var directory = Path.GetDirectoryName (destination);
@@ -157,6 +190,31 @@ namespace Microsoft.Android.Build.Tasks
 		}
 
 		public static bool CopyIfStreamChanged (Stream stream, string destination)
+		{
+			int retryCount = 0;
+			while (retryCount < DEFAULT_COPYIFCHANGED_RETRIES) {
+				try {
+					return CopyIfStreamChangedRetry (stream, destination);
+				} catch (Exception e) {
+					switch (e) {
+						case UnauthorizedAccessException:
+						case IOException:
+							int code = Marshal.GetHRForException(e);
+							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
+								throw;
+							};
+							break;
+						default:
+							throw;
+					} 
+				}
+				retryCount++;
+				Thread.Sleep(DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+			}
+			return false;
+		}
+
+		public static bool CopyIfStreamChangedRetry (Stream stream, string destination)
 		{
 			if (HasStreamChanged (stream, destination)) {
 				var directory = Path.GetDirectoryName (destination);

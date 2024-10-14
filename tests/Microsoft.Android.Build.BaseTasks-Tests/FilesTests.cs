@@ -437,6 +437,17 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		}
 
 		[Test]
+		public void CopyIfChanged_LockedFile ()
+		{
+			var dest = NewFile (contents: "foo", fileName: "foo_locked");
+			var src = NewFile (contents: "foo", fileName: "foo");
+			using (var file = File.OpenWrite (dest)) {
+				Assert.IsFalse (Files.CopyIfChanged (src, dest));
+			}
+			Assert.IsTrue (Files.CopyIfChanged (src, dest));
+		}
+
+		[Test]
 		public void ExtractAll ()
 		{
 			using (var zip = ZipArchive.Create (stream)) {
