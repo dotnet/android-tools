@@ -18,7 +18,8 @@ namespace Microsoft.Android.Build.Tasks
 {
 	public static class Files
 	{
-		const int ERROR_ACCESS_DENIED = 5;
+		const int ERROR_ACCESS_DENIED = -2147024891;
+		const int ERROR_SHARING_VIOLATION = -2147024864;
 
 		const int DEFAULT_FILE_WRITE_RETRY_ATTEMPTS = 10;
 
@@ -168,8 +169,8 @@ namespace Microsoft.Android.Build.Tasks
 						case UnauthorizedAccessException:
 						case IOException:
 							int code = Marshal.GetHRForException (e);
-							if (code != ERROR_ACCESS_DENIED || retryCount == attempts) {
-								Console.WriteLine ($"{nameof(CopyIfChanged)}: Throwing {code} {retryCount}.");
+							if ((code != ERROR_ACCESS_DENIED && code != ERROR_SHARING_VIOLATION) || retryCount == attempts) {
+								Console.WriteLine ($"{nameof(CopyIfChanged)}: Throwing {e}\ncode:{code}\nretryCount:{retryCount}.");
 								throw;
 							};
 							break;
@@ -243,7 +244,7 @@ namespace Microsoft.Android.Build.Tasks
 						case UnauthorizedAccessException:
 						case IOException:
 							int code = Marshal.GetHRForException (e);
-							if (code != ERROR_ACCESS_DENIED || retryCount == attempts) {
+							if ((code != ERROR_ACCESS_DENIED && code != ERROR_SHARING_VIOLATION) || retryCount == attempts) {
 								throw;
 							};
 							break;
