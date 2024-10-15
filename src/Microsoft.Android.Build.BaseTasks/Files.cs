@@ -160,8 +160,7 @@ namespace Microsoft.Android.Build.Tasks
 			int retryCount = 0;
 			int attempts = GetFileWriteRetryAttempts ();
 			int delay = GetFileWriteRetryDelay ();
-			while (retryCount < attempts) {
-				Console.WriteLine ($"{nameof(CopyIfChanged)}: Copy Attempt {retryCount}.");
+			while (retryCount <= attempts) {
 				try {
 					return CopyIfChangedRetry (source, destination);
 				} catch (Exception e) {
@@ -170,7 +169,6 @@ namespace Microsoft.Android.Build.Tasks
 						case IOException:
 							int code = Marshal.GetHRForException (e);
 							if ((code != ERROR_ACCESS_DENIED && code != ERROR_SHARING_VIOLATION) || retryCount == attempts) {
-								Console.WriteLine ($"{nameof(CopyIfChanged)}: Throwing {e}\ncode:{code}\nretryCount:{retryCount}.");
 								throw;
 							};
 							break;
@@ -179,7 +177,6 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
-				Console.WriteLine ($"{nameof(CopyIfChanged)}: Copy Sleeping {delay}.");
 				Thread.Sleep (delay);
 			}
 			return false;
@@ -236,7 +233,7 @@ namespace Microsoft.Android.Build.Tasks
 			int retryCount = 0;
 			int attempts = GetFileWriteRetryAttempts ();
 			int delay = GetFileWriteRetryDelay ();
-			while (retryCount < attempts) {
+			while (retryCount <= attempts) {
 				try {
 					return CopyIfStreamChangedRetry (stream, destination);
 				} catch (Exception e) {
