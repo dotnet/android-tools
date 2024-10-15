@@ -160,6 +160,7 @@ namespace Microsoft.Android.Build.Tasks
 			int attempts = GetFileWriteRetryAttempts ();
 			int delay = GetFileWriteRetryDelay ();
 			while (retryCount < attempts) {
+				Console.WriteLine ($"{nameof(CopyIfChanged)}: Copy Attempt {retryCount}.");
 				try {
 					return CopyIfChangedRetry (source, destination);
 				} catch (Exception e) {
@@ -168,6 +169,7 @@ namespace Microsoft.Android.Build.Tasks
 						case IOException:
 							int code = Marshal.GetHRForException (e);
 							if (code != ERROR_ACCESS_DENIED || retryCount == attempts) {
+								Console.WriteLine ($"{nameof(CopyIfChanged)}: Throwing {code} {retryCount}.");
 								throw;
 							};
 							break;
@@ -176,6 +178,7 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
+				Console.WriteLine ($"{nameof(CopyIfChanged)}: Copy Sleeping {delay}.");
 				Thread.Sleep (delay);
 			}
 			return false;
