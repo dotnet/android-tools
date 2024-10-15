@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Tools.Zip;
 using Microsoft.Android.Build.Tasks;
@@ -448,16 +449,18 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			src = NewFile (contents: "foo1", fileName: "foo");
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			src = NewFile (contents: "foo2", fileName: "foo");
+			var ev = new ManualResetEvent (false);
 			var task = Task.Run (async () => {
 				var file = File.Open (dest, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 				try {
+					ev.Set ();
 					await Task.Delay (2500);
 				} finally {
 					file.Close();
 					file.Dispose ();
 				}
 			});
-			await Task.Delay (1000);
+			ev.WaitOne ();
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			await task;
 		}
