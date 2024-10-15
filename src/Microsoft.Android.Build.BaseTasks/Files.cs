@@ -18,6 +18,12 @@ namespace Microsoft.Android.Build.Tasks
 {
 	public static class Files
 	{
+		const int ERROR_ACCESS_DENIED = 5;
+
+		const int DEFAULT_FILE_WRITE_RETRY_ATTEMPTS = 10;
+
+		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
+
 		/// <summary>
 		/// Windows has a MAX_PATH limit of 260 characters
 		/// See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
@@ -32,6 +38,33 @@ namespace Microsoft.Android.Build.Tasks
 		public static readonly Encoding UTF8withoutBOM = new UTF8Encoding (encoderShouldEmitUTF8Identifier: false);
 		readonly static byte[] Utf8Preamble = Encoding.UTF8.GetPreamble ();
 
+		/// <summary>
+		/// Checks for the environment variable DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS to
+		/// see if a custom value for the number of times to retry writing a file has been 
+		/// set.
+		/// </summary>
+		/// <returns>The value of DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS or the default of DEFAULT_FILE_WRITE_RETRY_ATTEMPTS</returns>
+		public static int GetFileWriteRetryAttempts ()
+		{
+			var retryVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS");
+			if (!string.IsNullOrEmpty (retryVariable) && int.TryParse (retryVariable, out int retry))
+				return retry;
+			return DEFAULT_FILE_WRITE_RETRY_ATTEMPTS;
+		}
+
+		/// <summary>
+		/// Checks for the environment variable DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS to
+		/// see if a custom value for the delay between trying to write a file has been 
+		/// set.
+		/// </summary>
+		/// <returns>The value of DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS or the default of DEFAULT_FILE_WRITE_RETRY_DELAY_MS</returns>
+		public static int GetFileWriteRetryDelay ()
+		{
+			var delayVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS");
+			if (!string.IsNullOrEmpty (delayVariable) && int.TryParse (delayVariable, out int delay))
+				return delay;
+			return DEFAULT_FILE_WRITE_RETRY_DELAY_MS;
+		} 
 		/// <summary>
 		/// Converts a full path to a \\?\ prefixed path that works on all Windows machines when over 260 characters
 		/// NOTE: requires a *full path*, use sparingly
@@ -114,14 +147,12 @@ namespace Microsoft.Android.Build.Tasks
 			return changed;
 		}
 
-		const int DEFAULT_COPYIFCHANGED_RETRIES = 3;
-		const int ERROR_ACCESS_DENIED = 5;
-		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
-
 		public static bool CopyIfChanged (string source, string destination)
 		{
 			int retryCount = 0;
-			while (retryCount < DEFAULT_COPYIFCHANGED_RETRIES) {
+			int attempts = GetFileWriteRetryAttempts ();
+			int delay = GetFileWriteRetryDelay ();
+			while (retryCount < attempts) {
 				try {
 					return CopyIfChangedRetry (source, destination);
 				} catch (Exception e) {
@@ -129,7 +160,7 @@ namespace Microsoft.Android.Build.Tasks
 						case UnauthorizedAccessException:
 						case IOException:
 							int code = Marshal.GetHRForException (e);
-							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
+							if (code != ERROR_ACCESS_DENIED || retryCount == attempts) {
 								throw;
 							};
 							break;
@@ -138,7 +169,7 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
-				Thread.Sleep (DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+				Thread.Sleep (delay);
 			}
 			return false;
 		}
@@ -192,7 +223,9 @@ namespace Microsoft.Android.Build.Tasks
 		public static bool CopyIfStreamChanged (Stream stream, string destination)
 		{
 			int retryCount = 0;
-			while (retryCount < DEFAULT_COPYIFCHANGED_RETRIES) {
+			int attempts = GetFileWriteRetryAttempts ();
+			int delay = GetFileWriteRetryDelay ();
+			while (retryCount < attempts) {
 				try {
 					return CopyIfStreamChangedRetry (stream, destination);
 				} catch (Exception e) {
@@ -200,7 +233,7 @@ namespace Microsoft.Android.Build.Tasks
 						case UnauthorizedAccessException:
 						case IOException:
 							int code = Marshal.GetHRForException (e);
-							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
+							if (code != ERROR_ACCESS_DENIED || retryCount == attempts) {
 								throw;
 							};
 							break;
@@ -209,7 +242,7 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
-				Thread.Sleep (DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+				Thread.Sleep (delay);
 			}
 			return false;
 		}
