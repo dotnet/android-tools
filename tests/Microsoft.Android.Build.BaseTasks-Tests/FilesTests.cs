@@ -438,7 +438,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		}
 
 		[Test]
-		public void CopyIfChanged_LockedFile ()
+		public async Task CopyIfChanged_LockedFile ()
 		{
 			var dest = NewFile (contents: "foo", fileName: "foo_locked");
 			var src = NewFile (contents: "foo0", fileName: "foo");
@@ -448,12 +448,17 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			src = NewFile (contents: "foo1", fileName: "foo");
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			src = NewFile (contents: "foo2", fileName: "foo");
-			Task.Run (async () => {
-				using (var file = File.OpenWrite (dest)) {
+			var task = Task.Run (async () => {
+				var file = File.OpenWrite (dest);
+				try {
 					await Task.Delay (200);
+				} finally {
+					file.Close();
+					file.Dispose ();
 				}
 			});
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
+			await task;
 		}
 
 		[Test]
