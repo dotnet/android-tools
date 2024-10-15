@@ -449,6 +449,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			src = NewFile (contents: "foo1", fileName: "foo");
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			src = NewFile (contents: "foo2", fileName: "foo");
+			dest = NewFile (contents: "foo", fileName: "foo_locked2");
 			var ev = new ManualResetEvent (false);
 			var task = Task.Run (async () => {
 				var file = File.Open (dest, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
