@@ -24,6 +24,9 @@ namespace Microsoft.Android.Build.Tasks
 
 		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
 
+		static int fileWriteRetry = -1;
+		static int fileWriteRetryDelay = -1;
+
 		/// <summary>
 		/// Windows has a MAX_PATH limit of 260 characters
 		/// See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#maximum-path-length-limitation
@@ -46,10 +49,12 @@ namespace Microsoft.Android.Build.Tasks
 		/// <returns>The value of DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS or the default of DEFAULT_FILE_WRITE_RETRY_ATTEMPTS</returns>
 		public static int GetFileWriteRetryAttempts ()
 		{
-			var retryVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS");
-			if (!string.IsNullOrEmpty (retryVariable) && int.TryParse (retryVariable, out int retry))
-				return retry;
-			return DEFAULT_FILE_WRITE_RETRY_ATTEMPTS;
+			if (fileWriteRetry == -1) {
+				var retryVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_ATTEMPTS");
+				if (string.IsNullOrEmpty (retryVariable) || !int.TryParse (retryVariable, out fileWriteRetry))
+					fileWriteRetry = DEFAULT_FILE_WRITE_RETRY_ATTEMPTS;
+			}
+			return fileWriteRetry;
 		}
 
 		/// <summary>
@@ -60,10 +65,12 @@ namespace Microsoft.Android.Build.Tasks
 		/// <returns>The value of DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS or the default of DEFAULT_FILE_WRITE_RETRY_DELAY_MS</returns>
 		public static int GetFileWriteRetryDelay ()
 		{
-			var delayVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS");
-			if (!string.IsNullOrEmpty (delayVariable) && int.TryParse (delayVariable, out int delay))
-				return delay;
-			return DEFAULT_FILE_WRITE_RETRY_DELAY_MS;
+			if (fileWriteRetryDelay == -1) {
+				var delayVariable = Environment.GetEnvironmentVariable ("DOTNET_ANDROID_FILE_WRITE_RETRY_DELAY_MS");
+				if (string.IsNullOrEmpty (delayVariable) || !int.TryParse (delayVariable, out fileWriteRetryDelay))
+					fileWriteRetryDelay = DEFAULT_FILE_WRITE_RETRY_DELAY_MS;
+			}
+			return fileWriteRetryDelay;
 		} 
 		/// <summary>
 		/// Converts a full path to a \\?\ prefixed path that works on all Windows machines when over 260 characters
