@@ -451,7 +451,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			var task = Task.Run (async () => {
 				var file = File.Open (dest, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 				try {
-					await Task.Delay (200);
+					await Task.Delay (2500);
 				} finally {
 					file.Close();
 					file.Dispose ();
