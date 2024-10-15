@@ -457,6 +457,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 					file.Dispose ();
 				}
 			});
+			await Task.Delay (1000);
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			await task;
 		}
