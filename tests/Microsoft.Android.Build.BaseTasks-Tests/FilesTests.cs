@@ -449,7 +449,7 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			src = NewFile (contents: "foo2", fileName: "foo");
 			var task = Task.Run (async () => {
-				var file = File.OpenWrite (dest);
+				var file = File.Open (dest, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
 				try {
 					await Task.Delay (200);
 				} finally {
