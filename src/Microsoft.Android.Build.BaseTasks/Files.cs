@@ -128,7 +128,7 @@ namespace Microsoft.Android.Build.Tasks
 					switch (e) {
 						case UnauthorizedAccessException:
 						case IOException:
-							int code = Marshal.GetHRForException(e);
+							int code = Marshal.GetHRForException (e);
 							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
 								throw;
 							};
@@ -138,7 +138,7 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
-				Thread.Sleep(DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+				Thread.Sleep (DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
 			}
 			return false;
 		}
@@ -199,7 +199,7 @@ namespace Microsoft.Android.Build.Tasks
 					switch (e) {
 						case UnauthorizedAccessException:
 						case IOException:
-							int code = Marshal.GetHRForException(e);
+							int code = Marshal.GetHRForException (e);
 							if (code != ERROR_ACCESS_DENIED || retryCount == DEFAULT_COPYIFCHANGED_RETRIES) {
 								throw;
 							};
@@ -209,7 +209,7 @@ namespace Microsoft.Android.Build.Tasks
 					} 
 				}
 				retryCount++;
-				Thread.Sleep(DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
+				Thread.Sleep (DEFAULT_FILE_WRITE_RETRY_DELAY_MS);
 			}
 			return false;
 		}
