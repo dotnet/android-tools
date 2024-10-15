@@ -441,10 +441,11 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		public void CopyIfChanged_LockedFile ()
 		{
 			var dest = NewFile (contents: "foo", fileName: "foo_locked");
-			var src = NewFile (contents: "foo", fileName: "foo");
+			var src = NewFile (contents: "foo0", fileName: "foo");
 			using (var file = File.OpenWrite (dest)) {
 				Assert.Throws<IOException> (() => Files.CopyIfChanged (src, dest));
 			}
+			src = NewFile (contents: "foo1", fileName: "foo");
 			Assert.IsTrue (Files.CopyIfChanged (src, dest));
 			src = NewFile (contents: "foo2", fileName: "foo");
 			Task.Run (async () => {
