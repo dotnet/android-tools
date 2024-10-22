@@ -241,7 +241,7 @@ namespace Microsoft.Android.Build.Tasks
 						case UnauthorizedAccessException:
 						case IOException:
 							int code = Marshal.GetHRForException (e);
-							if ((code != ERROR_ACCESS_DENIED && code != ERROR_SHARING_VIOLATION) || retryCount == attempts) {
+							if ((code != ERROR_ACCESS_DENIED && code != ERROR_SHARING_VIOLATION) || retryCount >= attempts) {
 								throw;
 							};
 							break;
