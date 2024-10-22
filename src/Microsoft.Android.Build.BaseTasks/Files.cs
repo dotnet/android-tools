@@ -162,7 +162,7 @@ namespace Microsoft.Android.Build.Tasks
 			int delay = GetFileWriteRetryDelay ();
 			while (retryCount <= attempts) {
 				try {
-					return CopyIfChangedRetry (source, destination);
+					return CopyIfChangedOnce (source, destination);
 				} catch (Exception e) {
 					switch (e) {
 						case UnauthorizedAccessException:
@@ -182,7 +182,7 @@ namespace Microsoft.Android.Build.Tasks
 			return false;
 		}
 
-		public static bool CopyIfChangedRetry (string source, string destination)
+		public static bool CopyIfChangedOnce (string source, string destination)
 		{
 			if (HasFileChanged (source, destination)) {
 				var directory = Path.GetDirectoryName (destination);
@@ -235,7 +235,7 @@ namespace Microsoft.Android.Build.Tasks
 			int delay = GetFileWriteRetryDelay ();
 			while (retryCount <= attempts) {
 				try {
-					return CopyIfStreamChangedRetry (stream, destination);
+					return CopyIfStreamChangedOnce (stream, destination);
 				} catch (Exception e) {
 					switch (e) {
 						case UnauthorizedAccessException:
@@ -255,7 +255,7 @@ namespace Microsoft.Android.Build.Tasks
 			return false;
 		}
 
-		public static bool CopyIfStreamChangedRetry (Stream stream, string destination)
+		public static bool CopyIfStreamChangedOnce (Stream stream, string destination)
 		{
 			if (HasStreamChanged (stream, destination)) {
 				var directory = Path.GetDirectoryName (destination);
