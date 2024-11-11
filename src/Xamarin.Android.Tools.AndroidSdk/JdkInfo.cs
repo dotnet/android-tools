@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -333,6 +334,7 @@ namespace Xamarin.Android.Tools
 				.Concat (GetPathEnvironmentJdks (logger))
 				.Concat (GetLibexecJdks (logger))
 				.Concat (GetJavaAlternativesJdks (logger))
+				.Where (v => JdkRunsOnHost (v, logger))
 				;
 		}
 
@@ -344,7 +346,23 @@ namespace Xamarin.Android.Tools
 			return MicrosoftOpenJdkLocations.GetMicrosoftOpenJdks (logger)
 				.Concat (EclipseAdoptiumJdkLocations.GetEclipseAdoptiumJdks (logger))
 				.Concat (MicrosoftDistJdkLocations.GetMicrosoftDistJdks (logger))
+				.Where (v => JdkRunsOnHost (v, logger))
 				;
+		}
+
+		static bool JdkRunsOnHost (JdkInfo jdk, Action<TraceLevel, string> logger)
+		{
+			if (OS.IsMac) {
+				var cputype = RuntimeInformation.OSArchitecture;
+				if (jdk.ReleaseProperties.TryGetValue ("OS_ARCH", out var arch)) {
+					return (cputype, arch) switch {
+						(Architecture.Arm64,    "aarch64")  => true,
+						(Architecture.X64,      "x86_64")   => true,
+						_ => false,
+					};
+				}
+			}
+			return true;
 		}
 
 		internal static JdkInfo? TryGetJdkInfo (string path, Action<TraceLevel, string> logger, string locator)
