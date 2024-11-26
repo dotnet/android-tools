@@ -6,7 +6,6 @@ using System.Xml.Linq;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.IO;
-using System.Collections;
 
 namespace Xamarin.Android.Tools
 {
@@ -330,8 +329,8 @@ namespace Xamarin.Android.Tools
 
 		IEnumerable<XElement> GetLaunchableActivities ()
 		{
-			var activities = application.Elements ("activity") ?? Enumerable.Empty<XElement> ();
-			var aliases = application.Elements ("activity-alias") ?? Enumerable.Empty<XElement> ();
+			var activities = application.Elements ("activity");
+			var aliases = application.Elements ("activity-alias");
 			foreach (var activity in activities.Union (aliases)) {
 				foreach (var filter in activity.Elements ("intent-filter")) {
 					foreach (var category in filter.Elements ("category"))
