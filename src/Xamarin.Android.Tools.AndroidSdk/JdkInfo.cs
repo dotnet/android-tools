@@ -383,7 +383,7 @@ namespace Xamarin.Android.Tools
 
 		static IEnumerable<string> GetLibexecJdkPaths (Action<TraceLevel, string> logger)
 		{
-			if (!OS.IsLinux) {
+			if (!OS.IsMac) {
 				yield break;
 			}
 
