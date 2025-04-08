@@ -133,4 +133,28 @@
   <data name="InvalidXmlLibExecJdk_path_args_message" xml:space="preserve">
     <value>An exception occurred while reading the output of '{0} {1}'. Exception: {2}</value>
   </data>
+  <data name="XA5300_AndroidSdk_JdkInfo" xml:space="preserve">
+    <value>An exception occurred while retrieving the properties of the selected Java SDK installation. Check that the selected Java SDK installation contains a compatible version of Java and that 'java -XshowSettings:properties -version' runs successfully for that installation. Exception: {0}</value>
+    <comment>The following terms should not be translated: java -XshowSettings:properties -version
+{0} - The exception message of the associated exception</comment>
+  </data>
+  <data name="XA5300_AndroidSdk_Refresh_Exception" xml:space="preserve">
+    <value>An exception occurred while finding the Android SDK or Java SDK. Exception: {0}</value>
+    <comment>{0} - The exception message of the associated exception</comment>
+  </data>
+  <data name="XA5300_Android_SDK" xml:space="preserve">
+    <value>The Android SDK directory could not be found. Check that the Android SDK Manager in Visual Studio shows a valid installation. To use a custom SDK path for a command line build, set the 'AndroidSdkDirectory' MSBuild property to the custom path.</value>
+    <comment>The following terms should not be translated: AndroidSdkDirectory</comment>
+  </data>
+  <data name="XA5300_Java_SDK" xml:space="preserve">
+    <value>The Java SDK directory could not be found. Ensure that the Android section of the Visual Studio options has a valid Java SDK directory configured. To use a custom SDK path for a command line build, set the 'JavaSdkDirectory' MSBuild property to the custom path.</value>
+    <comment>The following terms should not be translated: JavaSdkDirectory</comment>
+  </data>
+  <data name="XA5300_MonoDroidSdk_Refresh_Exception" xml:space="preserve">
+    <value>An exception occurred while validating the .NET for Android installation. Using the Visual Studio installer to repair or reinstall the .NET MAUI component might resolve this problem. Exception: {0}</value>
+    <comment>{0} - The exception message of the associated exception</comment>
+  </data>
+  <data name="XA5300_MonoDroidSdk_XA_Version" xml:space="preserve">
+    <value>Unable to determine the .NET for Android version.</value>
+  </data>
 </root>

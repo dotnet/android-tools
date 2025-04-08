@@ -86,5 +86,59 @@ namespace Xamarin.Android.Tools.AndroidSdk.Properties {
                 return ResourceManager.GetString("InvalidXmlLibExecJdk_path_args_message", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Android SDK directory could not be found. Check that the Android SDK Manager in Visual Studio shows a valid installation. To use a custom SDK path for a command line build, set the &apos;AndroidSdkDirectory&apos; MSBuild property to the custom path..
+        /// </summary>
+        internal static string XA5300_Android_SDK {
+            get {
+                return ResourceManager.GetString("XA5300_Android_SDK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An exception occurred while retrieving the properties of the selected Java SDK installation. Check that the selected Java SDK installation contains a compatible version of Java and that &apos;java -XshowSettings:properties -version&apos; runs successfully for that installation. Exception: {0}.
+        /// </summary>
+        internal static string XA5300_AndroidSdk_JdkInfo {
+            get {
+                return ResourceManager.GetString("XA5300_AndroidSdk_JdkInfo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An exception occurred while finding the Android SDK or Java SDK. Exception: {0}.
+        /// </summary>
+        internal static string XA5300_AndroidSdk_Refresh_Exception {
+            get {
+                return ResourceManager.GetString("XA5300_AndroidSdk_Refresh_Exception", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The Java SDK directory could not be found. Ensure that the Android section of the Visual Studio options has a valid Java SDK directory configured. To use a custom SDK path for a command line build, set the &apos;JavaSdkDirectory&apos; MSBuild property to the custom path..
+        /// </summary>
+        internal static string XA5300_Java_SDK {
+            get {
+                return ResourceManager.GetString("XA5300_Java_SDK", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to An exception occurred while validating the .NET for Android installation. Using the Visual Studio installer to repair or reinstall the .NET MAUI component might resolve this problem. Exception: {0}.
+        /// </summary>
+        internal static string XA5300_MonoDroidSdk_Refresh_Exception {
+            get {
+                return ResourceManager.GetString("XA5300_MonoDroidSdk_Refresh_Exception", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Unable to determine the .NET for Android version..
+        /// </summary>
+        internal static string XA5300_MonoDroidSdk_XA_Version {
+            get {
+                return ResourceManager.GetString("XA5300_MonoDroidSdk_XA_Version", resourceCulture);
+            }
+        }
     }
 }

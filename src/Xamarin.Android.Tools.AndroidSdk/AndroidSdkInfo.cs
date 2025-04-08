@@ -227,5 +227,38 @@ namespace Xamarin.Android.Tools
 				yield return toolsDir;
 			}
 		}
+
+		public string GetZipAlignPath ()
+		{
+			var zipAlign = OS.IsWindows ? "zipalign.exe" : "zipalign";
+			foreach (var p in GetBuildToolsPaths ()) {
+				var app = Path.Combine (p, "bin", zipAlign);
+				if (File.Exists (app))
+					return app;
+				app = Path.Combine (p, zipAlign);
+				if (File.Exists (app))
+					return app;
+			}
+
+			return null;
+		}
+
+		public string GetApkSignerPath ()
+		{
+			const string apkSigner = "apksigner.jar";
+
+			foreach (var p in GetBuildToolsPaths ())
+			{
+				var app = Path.Combine (p, "lib", apkSigner);
+				if (File.Exists (app))
+					return app;
+				app = Path.Combine (p, apkSigner);
+				if (File.Exists (app))
+					return app;
+			}
+
+			return null;
+		}
+
 	}
 }

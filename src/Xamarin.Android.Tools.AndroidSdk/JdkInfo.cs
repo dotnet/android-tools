@@ -21,10 +21,14 @@ namespace Xamarin.Android.Tools
 
 		public      string?                             Locator                     {get;}
 
+		public      string                              BinPath                     {get;}
 		public      string                              JarPath                     {get;}
 		public      string                              JavaPath                    {get;}
 		public      string                              JavacPath                   {get;}
+		public      string                              Jarsigner                   {get;}
 		public      string                              JdkJvmPath                  {get;}
+		public      string                              Keytool                     {get;}
+
 		public      ReadOnlyCollection<string>          IncludePath                 {get;}
 
 		public      Version?                            Version                     => javaVersion.Value;
@@ -60,10 +64,12 @@ namespace Xamarin.Android.Tools
 			Locator             = locator;
 			this.logger         = logger ?? AndroidSdkInfo.DefaultConsoleLogger;
 
-			var binPath         = Path.Combine (HomePath, "bin");
-			JarPath             = RequireExecutableInDirectory (binPath, "jar");
-			JavaPath            = RequireExecutableInDirectory (binPath, "java");
-			JavacPath           = RequireExecutableInDirectory (binPath, "javac");
+			BinPath             = Path.Combine (HomePath, "bin");
+			JarPath             = RequireExecutableInDirectory (BinPath, "jar");
+			JavaPath            = RequireExecutableInDirectory (BinPath, "java");
+			JavacPath           = RequireExecutableInDirectory (BinPath, "javac");
+			Jarsigner           = ProcessUtils.FindExecutablesInDirectory (BinPath, "jarsigner").FirstOrDefault () ?? string.Empty;
+			Keytool             = ProcessUtils.FindExecutablesInDirectory (BinPath, "keytool").FirstOrDefault () ?? string.Empty;
 
 			string? jdkJvmPath  = GetJdkJvmPath ();
 
