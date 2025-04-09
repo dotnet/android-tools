@@ -14,10 +14,11 @@ using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Xamarin.Android.Tools;
 
-namespace Xamarin.Android.Tools
+namespace Xamarin.AndroidTools
 {
-	public class AndroidSdkInstance
+	public class AndroidSdk
 	{
 		public static AndroidSdkInfo Sdk { get; private set; }
 
@@ -27,7 +28,7 @@ namespace Xamarin.Android.Tools
 
 		public const string AutoRefreshSwitch = "Xamarin.AndroidTools.AndroidSdk.AutoRefresh";
 
-		static AndroidSdkInstance ()
+		static AndroidSdk ()
 		{
 			// Return early if AutoRefreshSwitch is false
 			if (AppContext.TryGetSwitch (AutoRefreshSwitch, out var enabled) && !enabled) {
@@ -54,11 +55,11 @@ namespace Xamarin.Android.Tools
 				Jdk = null;
 
 				if (ex is InvalidOperationException && ex.Message.Contains (" Android "))
-					AndroidLogger.LogError (AndroidSdk.Properties.Resources.XA5300_Android_SDK);
+					AndroidLogger.LogError (Xamarin.Android.Tools.AndroidSdk.Properties.Resources.XA5300_Android_SDK);
 				else if (ex is InvalidOperationException && ex.Message.Contains (" Java "))
-					AndroidLogger.LogError (AndroidSdk.Properties.Resources.XA5300_Java_SDK);
+					AndroidLogger.LogError (Xamarin.Android.Tools.AndroidSdk.Properties.Resources.XA5300_Java_SDK);
 				else
-					AndroidLogger.LogError (AndroidSdk.	Properties.Resources.XA5300_AndroidSdk_Refresh_Exception, ex.ToString ());
+					AndroidLogger.LogError (Xamarin.Android.Tools.AndroidSdk.Properties.Resources.XA5300_AndroidSdk_Refresh_Exception, ex.ToString ());
 			}
 		}
 

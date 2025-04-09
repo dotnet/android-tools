@@ -228,6 +228,16 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
+		public string GetAdbPath ()
+		{
+			var adbTool = OS.IsWindows ? "adb.exe" : "adb";
+			var adbPath = Path.Combine(AndroidSdkPath, "platform-tools", adbTool);
+			if (File.Exists (adbPath))
+					return adbPath;
+
+			return null;
+		}
+
 		public string GetZipAlignPath ()
 		{
 			var zipAlign = OS.IsWindows ? "zipalign.exe" : "zipalign";

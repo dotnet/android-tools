@@ -1,7 +1,6 @@
 using System;
 
-// TODO: Dedupe from Mono.AndroidTools
-namespace Xamarin.Android.Tools
+namespace Xamarin.AndroidTools
 {
 	public delegate void MessageHandler (string task, string message);
 	public delegate void TaskLogHandler (AndroidTaskLog log);
