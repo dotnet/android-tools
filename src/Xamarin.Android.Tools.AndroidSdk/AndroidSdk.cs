@@ -10,9 +10,9 @@
 // 
 
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Xamarin.Android.Tools;
 
@@ -20,11 +20,11 @@ namespace Xamarin.AndroidTools
 {
 	public class AndroidSdk
 	{
-		public static AndroidSdkInfo Sdk { get; private set; }
+		public static AndroidSdkInfo? Sdk { get; private set; }
 
-		public static JdkInfo Jdk { get; private set; }
+		public static JdkInfo? Jdk { get; private set; }
 
-		public static AndroidVersions SupportedVersions;
+		public static AndroidVersions? SupportedVersions;
 
 		public const string AutoRefreshSwitch = "Xamarin.AndroidTools.AndroidSdk.AutoRefresh";
 
@@ -41,16 +41,15 @@ namespace Xamarin.AndroidTools
 
 		public static void Refresh ()
 		{
-			Refresh (null, null, null);
+			Refresh (string.Empty, string.Empty, string.Empty);
 		}
 
-		public static void Refresh (string androidSdkPath = null, string androidNdkPath = null, string javaSdkPath = null)
+		public static void Refresh (string androidSdkPath = "", string androidNdkPath = "", string javaSdkPath = "")
 		{
 			try {
 				Sdk = new AndroidSdkInfo (Logger, androidSdkPath, androidNdkPath, javaSdkPath);
 				Jdk = new JdkInfo (javaSdkPath);
-			}
-			catch (Exception ex) {
+			} catch (Exception ex) {
 				Sdk = null;
 				Jdk = null;
 
@@ -63,48 +62,48 @@ namespace Xamarin.AndroidTools
 			}
 		}
 
-		public static void Refresh (string androidSdkPath = null, string androidNdkPath = null, string javaSdkPath = null, string[] referenceAssemblyPaths = null)
+		public static void Refresh (string androidSdkPath = "", string androidNdkPath = "", string javaSdkPath = "", string []? referenceAssemblyPaths = null)
 		{
 			Refresh (androidSdkPath, androidNdkPath, javaSdkPath);
 			RefreshSupportedVersions (referenceAssemblyPaths);
 		}
 
-		public static void RefreshSupportedVersions (string[] referenceAssemblyPaths)
+		public static void RefreshSupportedVersions (string []? referenceAssemblyPaths)
 		{
-			SupportedVersions = new AndroidVersions (referenceAssemblyPaths);
+			SupportedVersions = new AndroidVersions (referenceAssemblyPaths ?? Array.Empty<string> ());
 		}
 
 		static void Logger (TraceLevel level, string value)
 		{
 			switch (level) {
-			case TraceLevel.Error:
-				AndroidLogger.LogError (null, "{0}", value);
-				break;
-			case TraceLevel.Info:
-				AndroidLogger.LogInfo (null, "{0}", value);
-				break;
-			case TraceLevel.Warning:
-				AndroidLogger.LogWarning (null, "{0}", value);
-				break;
-			case TraceLevel.Verbose:
-			default:
-				AndroidLogger.LogDebug (null, "{0}", value);
-				break;
+				case TraceLevel.Error:
+					AndroidLogger.LogError ("", "{0}", value);
+					break;
+				case TraceLevel.Info:
+					AndroidLogger.LogInfo ("", "{0}", value);
+					break;
+				case TraceLevel.Warning:
+					AndroidLogger.LogWarning ("", "{0}", value);
+					break;
+				case TraceLevel.Verbose:
+				default:
+					AndroidLogger.LogDebug ("", "{0}", value);
+					break;
 			}
 		}
 
 		public static string GetRevisionFromSdkPackageDirectory (string sdkPackageDirectory)
 		{
 			if (!Directory.Exists (sdkPackageDirectory))
-				return null;
+				return string.Empty;
 
 			return SdkBuildProperties.LoadProperties (Path.Combine (sdkPackageDirectory, "source.properties")).GetPropertyValue ("Pkg.Revision=");
 		}
-		
+
 		public static void SetPreferredAndroidSdkPath (string path)
 		{
 			AndroidSdkInfo.SetPreferredAndroidSdkPath (path);
-			
+
 			// Update everything to use new path
 			Refresh ();
 		}

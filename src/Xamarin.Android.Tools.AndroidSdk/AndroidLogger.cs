@@ -7,18 +7,18 @@ namespace Xamarin.AndroidTools
 
 	public static class AndroidLogger
 	{
-		public static event MessageHandler Info;
-		public static event MessageHandler Warning;
-		public static event MessageHandler Error;
-		public static event MessageHandler Debug;
-		public static event TaskLogHandler Task;
+		public static event MessageHandler? Info;
+		public static event MessageHandler? Warning;
+		public static event MessageHandler? Error;
+		public static event MessageHandler? Debug;
+		public static event TaskLogHandler? Task;
 
-		public static void LogInfo (string format, params object[] args)
+		public static void LogInfo (string format, params object [] args)
 		{
 			LogInfo (string.Empty, format, args);
 		}
 
-		public static void LogInfo (string task, string format, params object[] args)
+		public static void LogInfo (string task, string format, params object [] args)
 		{
 			if (Info != null) {
 				if (args == null || args.Length == 0)
@@ -28,12 +28,12 @@ namespace Xamarin.AndroidTools
 			}
 		}
 
-		public static void LogWarning (string format, params object[] args)
+		public static void LogWarning (string format, params object [] args)
 		{
 			LogWarning (string.Empty, format, args);
 		}
 
-		public static void LogWarning (string task, string format, params object[] args)
+		public static void LogWarning (string task, string format, params object [] args)
 		{
 			if (Warning != null) {
 				if (args == null)
@@ -43,18 +43,18 @@ namespace Xamarin.AndroidTools
 			}
 		}
 
-		public static void LogError (string format, params object[] args)
+		public static void LogError (string format, params object [] args)
 		{
 			LogError (string.Empty, format, args);
 		}
 
 		public static void LogError (string message, Exception ex)
 		{
-			message += (ex != null? System.Environment.NewLine + ex.ToString () : string.Empty);
+			message += (ex != null ? System.Environment.NewLine + ex.ToString () : string.Empty);
 			LogError (message);
 		}
 
-		public static void LogError (string task, string format, params object[] args)
+		public static void LogError (string task, string format, params object [] args)
 		{
 			if (Error != null) {
 				if (args == null || args.Length == 0)
@@ -64,12 +64,12 @@ namespace Xamarin.AndroidTools
 			}
 		}
 
-		public static void LogDebug (string format, params object[] args)
+		public static void LogDebug (string format, params object [] args)
 		{
 			LogDebug (string.Empty, format, args);
 		}
 
-		public static void LogDebug (string task, string format, params object[] args)
+		public static void LogDebug (string task, string format, params object [] args)
 		{
 			if (Debug != null) {
 				if (args == null || args.Length == 0)
@@ -88,9 +88,9 @@ namespace Xamarin.AndroidTools
 
 	public class AndroidTaskLog
 	{
-		public string Task { get; private set; }
-		public string Input { get; private set; }
-		public string Output { get; private set; }
+		public string Task { get; private set; } = string.Empty;
+		public string Input { get; private set; } = string.Empty;
+		public string Output { get; private set; } = string.Empty;
 		public DateTime StartTime { get; private set; }
 		public DateTime EndTime { get; private set; }
 
@@ -113,7 +113,7 @@ namespace Xamarin.AndroidTools
 		{
 			if (output == null)
 				output = "";
-			Output = output.ToString();
+			Output = output.ToString ();
 			EndTime = DateTime.Now;
 
 			return this;

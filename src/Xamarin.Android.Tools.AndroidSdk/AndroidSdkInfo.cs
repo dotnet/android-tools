@@ -235,7 +235,7 @@ namespace Xamarin.Android.Tools
 			if (File.Exists (adbPath))
 					return adbPath;
 
-			return null;
+			return string.Empty;
 		}
 
 		public string GetZipAlignPath ()
@@ -250,7 +250,7 @@ namespace Xamarin.Android.Tools
 					return app;
 			}
 
-			return null;
+			return string.Empty;
 		}
 
 		public string GetApkSignerPath ()
@@ -267,7 +267,7 @@ namespace Xamarin.Android.Tools
 					return app;
 			}
 
-			return null;
+			return string.Empty;
 		}
 
 	}

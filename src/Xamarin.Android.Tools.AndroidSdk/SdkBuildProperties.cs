@@ -8,8 +8,8 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
+using System.Linq;
 
 namespace Xamarin.Android.Tools
 {
@@ -21,17 +21,17 @@ namespace Xamarin.Android.Tools
 		public static IEnumerable<string> LoadProperties (string propertyFile)
 		{
 			if (File.Exists (propertyFile)) {
-				var allText = File.ReadAllText(propertyFile).Replace("\r", string.Empty);
+				var allText = File.ReadAllText (propertyFile).Replace ("\r", string.Empty);
 				return allText.Split (new [] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
 			}
 
-			return null;
+			return Array.Empty<string> ();
 		}
 
-		public static string GetPropertyValue(this IEnumerable<string> properties, string propertyName)
+		public static string GetPropertyValue (this IEnumerable<string> properties, string propertyName)
 		{
 			if (properties == null)
-				return null;
+				return string.Empty;
 
 			var prop = properties.FirstOrDefault (p => p.StartsWith (propertyName, StringComparison.InvariantCultureIgnoreCase));
 			if (!string.IsNullOrEmpty (prop)) {
@@ -43,8 +43,7 @@ namespace Xamarin.Android.Tools
 				return string.Empty;
 			}
 
-			return null;
+			return string.Empty;
 		}
 	}
 }
-

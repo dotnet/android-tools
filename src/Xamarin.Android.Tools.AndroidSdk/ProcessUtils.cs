@@ -89,7 +89,7 @@ namespace Xamarin.Android.Tools
 		/// <summary>
 		/// Executes an Android Sdk tool and returns a result. The result is based on a function of the command output.
 		/// </summary>
-		public static Task<TResult> ExecuteToolAsync<TResult> (string exe, ProcessArgumentBuilder args, Func<string, TResult> result, CancellationToken token, Action<Process> onStarted = null, Dictionary<string, string> envVars = null)
+		public static Task<TResult> ExecuteToolAsync<TResult> (string exe, ProcessArgumentBuilder args, Func<string, TResult> result, CancellationToken token, Action<Process>? onStarted = null, Dictionary<string, string>? envVars = null)
 		{
 			var tcs = new TaskCompletionSource<TResult> ();
 
