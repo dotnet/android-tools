@@ -35,15 +35,18 @@ namespace Xamarin.Android.Tools
 	public class ProcessArgumentBuilder
 	{
 		System.Text.StringBuilder sb = new System.Text.StringBuilder ();
-		
+
 		public string ProcessPath {
 			get; private set;
-		}
-		
+		} = string.Empty;
+
 		// .NET doesn't allow escaping chars other than " and \ inside " quotes
 		static string escapeDoubleQuoteCharsStr = "\\\"";
 
-		
+		public ProcessArgumentBuilder ()
+		{
+		}
+
 		public ProcessArgumentBuilder (string processPath)
 		{
 			ProcessPath = processPath;
