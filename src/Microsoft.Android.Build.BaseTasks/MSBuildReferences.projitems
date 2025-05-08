@@ -10,26 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Microsoft.Build"                  Version="$(MSBuildPackageReferenceVersion)" />
-    <PackageVersion Include="Microsoft.Build.Framework"        Version="$(MSBuildPackageReferenceVersion)" />
-    <PackageVersion Include="Microsoft.Build.Tasks.Core"       Version="$(MSBuildPackageReferenceVersion)" />
-    <PackageVersion Include="Microsoft.Build.Utilities.Core"   Version="$(MSBuildPackageReferenceVersion)" />
+    <PackageReference Include="Microsoft.Build"                  VersionOverride="$(MSBuildPackageReferenceVersion)" Condition=" '$(_IncludeMicrosoftBuildPackage)' == 'true' " />
+    <PackageReference Include="Microsoft.Build.Framework"        VersionOverride="$(MSBuildPackageReferenceVersion)" />
+    <PackageReference Include="Microsoft.Build.Tasks.Core"       VersionOverride="$(MSBuildPackageReferenceVersion)" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core"   VersionOverride="$(MSBuildPackageReferenceVersion)" />
     <!-- Explicitly update the System.Formats.Asn1 transitive dependency of Microsoft.Build to address https://github.com/advisories/GHSA-447r-wph3-92pm -->
-    <PackageVersion Include="System.Formats.Asn1"              Version="8.0.1" />
-    <PackageVersion Include="K4os.Compression.LZ4"             Version="1.1.11" />
-    <PackageVersion Include="Xamarin.LibZipSharp"              Version="$(LibZipSharpVersion)" />
-    <PackageVersion Include="Mono.Unix"                        Version="$(MonoUnixVersion)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Build" Condition=" '$(_IncludeMicrosoftBuildPackage)' == 'true' " />
-    <PackageReference Include="Microsoft.Build.Framework" />
-    <PackageReference Include="Microsoft.Build.Tasks.Core" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" />
-    <PackageReference Include="System.Formats.Asn1" />
-    <PackageReference Include="K4os.Compression.LZ4" />
-    <PackageReference Include="Xamarin.LibZipSharp" GeneratePathProperty="true" />
-    <PackageReference Include="Mono.Unix" GeneratePathProperty="true" />
+    <PackageReference Include="System.Formats.Asn1"              VersionOverride="8.0.1" />
+    <PackageReference Include="K4os.Compression.LZ4"             VersionOverride="1.1.11" />
+    <PackageReference Include="Xamarin.LibZipSharp"              VersionOverride="$(LibZipSharpVersion)" />
+    <PackageReference Include="Mono.Unix"                        VersionOverride="$(MonoUnixVersion)" />
   </ItemGroup>
 
 </Project>
