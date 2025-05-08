@@ -17,8 +17,8 @@
     <!-- Explicitly update the System.Formats.Asn1 transitive dependency of Microsoft.Build to address https://github.com/advisories/GHSA-447r-wph3-92pm -->
     <PackageReference Include="System.Formats.Asn1"              VersionOverride="8.0.1" />
     <PackageReference Include="K4os.Compression.LZ4"             VersionOverride="1.1.11" />
-    <PackageReference Include="Xamarin.LibZipSharp"              VersionOverride="$(LibZipSharpVersion)" />
-    <PackageReference Include="Mono.Unix"                        VersionOverride="$(MonoUnixVersion)" />
+    <PackageReference Include="Xamarin.LibZipSharp"              VersionOverride="$(LibZipSharpVersion)" GeneratePathProperty="true" />
+    <PackageReference Include="Mono.Unix"                        VersionOverride="$(MonoUnixVersion)" GeneratePathProperty="true" />
   </ItemGroup>
 
 </Project>
