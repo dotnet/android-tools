@@ -89,16 +89,29 @@ namespace Xamarin.Android.Tools
 		/// <summary>
 		/// Executes an Android Sdk tool and returns a result. The result is based on a function of the command output.
 		/// </summary>
-		public static Task<TResult> ExecuteToolAsync<TResult> (string exe, Func<string, TResult> result, CancellationToken token, Action<Process>? onStarted = null)
+		public static Task<TResult> ExecuteToolAsync<TResult> (
+			string exe,
+			ProcessArgumentBuilder args,
+			Func<string, TResult> result,
+			CancellationToken token,
+			Action<Process>? onStarted = null,
+			Dictionary<string, string>? envVars = null)
 		{
 			var tcs = new TaskCompletionSource<TResult> ();
 
 			var log = new StringWriter ();
 			var error = new StringWriter ();
 
-			var psi = new ProcessStartInfo (exe);
+			var psi = new ProcessStartInfo (exe, args.ToString ());
 			psi.CreateNoWindow = true;
+			psi.WindowStyle = ProcessWindowStyle.Hidden;
 			psi.RedirectStandardInput = onStarted != null;
+			//psi.EnvironmentVariables ["JAVA_HOME"] = AndroidSdk.JavaSdkPath;
+			if (envVars != null) {
+				foreach (var kvp in envVars) {
+					psi.EnvironmentVariables [kvp.Key] = kvp.Value;
+				}
+			}
 
 			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted);
 			var exeName = Path.GetFileName (exe);
@@ -123,11 +136,7 @@ namespace Xamarin.Android.Tools
 					tcs.TrySetResult (result != null ? result (output) : default (TResult)!);
 				} else {
 					var errorMessage = !string.IsNullOrEmpty (errorOutput) ? errorOutput : output;
-					errorMessage = string.IsNullOrEmpty (errorMessage)
-						? $"`{exeName}` returned non-zero exit code"
-						: $"{t.Result} : {errorMessage}";
-
-					tcs.TrySetException (new InvalidOperationException (errorMessage));
+					tcs.TrySetException (new AndroidSdkToolException (string.IsNullOrEmpty (errorMessage) ? exeName + " returned non-zero exit code" : errorMessage, t.Result, errorMessage));
 				}
 			}, TaskContinuationOptions.ExecuteSynchronously);
 
