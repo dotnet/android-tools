@@ -271,5 +271,43 @@ namespace Xamarin.Android.Tools.Tests
 				Directory.Delete (dir, recursive: true);
 			}
 		}
+
+		[Test]
+		public void GetKnownSystemJdkInfos_DiscoversLinuxUserJdk ()
+		{
+			if (!OS.IsLinux) {
+				Assert.Ignore ("This test is only valid on Linux.");
+				return;
+			}
+
+			var userJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
+			var testJdkDir = Path.Combine (userJdkRoot, "jdk-21.0.99");
+
+			try {
+				CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
+
+				Action<TraceLevel, string> logger = (level, message) => {
+					Console.WriteLine ($"[{level}] {message}");
+				};
+
+				var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
+				var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
+
+				Assert.IsNotNull (foundJdk, $"Expected to find JDK at {testJdkDir}");
+				Assert.AreEqual ("~/Android/jdk/jdk-*", foundJdk.Locator, "Locator should indicate user JDK path");
+				Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
+			}
+			finally {
+				if (Directory.Exists (testJdkDir))
+					Directory.Delete (testJdkDir, recursive: true);
+				// Clean up the parent directories if they're empty
+				var jdkDir = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
+				if (Directory.Exists (jdkDir) && !Directory.EnumerateFileSystemEntries (jdkDir).Any ())
+					Directory.Delete (jdkDir);
+				var androidDir = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android");
+				if (Directory.Exists (androidDir) && !Directory.EnumerateFileSystemEntries (androidDir).Any ())
+					Directory.Delete (androidDir);
+			}
+		}
 	}
 }

@@ -14,7 +14,9 @@ namespace Xamarin.Android.Tools {
 			return GetMacOSSystemJdks ("microsoft-*.jdk", logger)
 				.Concat (GetWindowsFileSystemJdks (Path.Combine ("Android", "openjdk", "jdk-*"), logger))
 				.Concat (GetWindowsFileSystemJdks (Path.Combine ("Microsoft", "jdk-*"), logger))
+				.Concat (GetWindowsUserFileSystemJdks ("jdk-*", logger))
 				.Concat (GetWindowsRegistryJdks (logger, @"SOFTWARE\Microsoft\JDK", "*", @"hotspot\MSI", "Path"))
+				.Concat (GetLinuxUserJdks ("jdk-*", logger))
 				.OrderByDescending (jdk => jdk, JdkInfoVersionComparer.Default);
 		}
 	}
