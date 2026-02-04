@@ -31,25 +31,32 @@ namespace Xamarin.Android.Tools {
 
 		const   string  MacOSJavaVirtualMachinesRoot    = "/Library/Java/JavaVirtualMachines";
 
-		protected static IEnumerable<JdkInfo> GetMacOSUserJdks (string pattern, Action<TraceLevel, string> logger, string? locator = null)
+		protected static IEnumerable<JdkInfo> GetMacOSUserJdks (Action<TraceLevel, string> logger)
 		{
 			if (!OS.IsMac) {
 				return Array.Empty<JdkInfo> ();
 			}
 
-			var root = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
-			if (!Directory.Exists (root)) {
-				return Array.Empty<JdkInfo> ();
-			}
+			// Search ~/Android/jdk/jdk-*
+			var androidJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
+			var androidJdks = Directory.Exists (androidJdkRoot)
+				? FromPaths (GetMacOSUserAndroidJdkPaths (androidJdkRoot), logger, "~/Android/jdk/jdk-*")
+				: Array.Empty<JdkInfo> ();
 
-			return FromPaths (GetMacOSUserJdkPaths (root, pattern), logger, locator ?? $"~/Android/jdk/{pattern}");
+			// Search ~/Library/Java/JavaVirtualMachines/*
+			var libraryJvmRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Library", "Java", "JavaVirtualMachines");
+			var libraryJdks = Directory.Exists (libraryJvmRoot)
+				? FromPaths (GetMacOSUserLibraryJvmPaths (libraryJvmRoot), logger, "~/Library/Java/JavaVirtualMachines/*")
+				: Array.Empty<JdkInfo> ();
+
+			return androidJdks.Concat (libraryJdks);
 		}
 
-		static IEnumerable<string> GetMacOSUserJdkPaths (string root, string pattern)
+		static IEnumerable<string> GetMacOSUserAndroidJdkPaths (string root)
 		{
 			IEnumerable<string> jdks;
 			try {
-				jdks = Directory.EnumerateDirectories (root, pattern);
+				jdks = Directory.EnumerateDirectories (root, "jdk-*");
 			}
 			catch (IOException) {
 				yield break;
@@ -62,27 +69,12 @@ namespace Xamarin.Android.Tools {
 			}
 		}
 
-		protected static IEnumerable<JdkInfo> GetMacOSUserLibraryJdks (string pattern, Action<TraceLevel, string> logger, string? locator = null)
-		{
-			if (!OS.IsMac) {
-				return Array.Empty<JdkInfo> ();
-			}
-
-			var root = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Library", "Java", "JavaVirtualMachines");
-			if (!Directory.Exists (root)) {
-				return Array.Empty<JdkInfo> ();
-			}
-
-			locator = locator ?? $"~/Library/Java/JavaVirtualMachines/{pattern}";
-			return FromPaths (GetMacOSUserLibraryJdkPaths (root, pattern), logger, locator);
-		}
-
-		static IEnumerable<string> GetMacOSUserLibraryJdkPaths (string root, string pattern)
+		static IEnumerable<string> GetMacOSUserLibraryJvmPaths (string root)
 		{
 			var toHome = Path.Combine ("Contents", "Home");
 			IEnumerable<string> jdks;
 			try {
-				jdks = Directory.EnumerateDirectories (root, pattern);
+				jdks = Directory.EnumerateDirectories (root, "*");
 			}
 			catch (IOException) {
 				yield break;
