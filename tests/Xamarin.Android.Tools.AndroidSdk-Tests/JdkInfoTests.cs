@@ -280,7 +280,7 @@ namespace Xamarin.Android.Tools.Tests
 				return;
 			}
 
-			var userJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android", "jdk");
+			var userJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android");
 			// Test multiple folder naming patterns
 			var testCases = new[] {
 				"jdk-21.0.99",
@@ -301,7 +301,7 @@ namespace Xamarin.Android.Tools.Tests
 					var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
 
 					Assert.IsNotNull (foundJdk, $"Expected to find JDK at {testJdkDir} with folder name '{folderName}'");
-					Assert.AreEqual (@"%LocalAppData%\Android\jdk\*jdk*", foundJdk.Locator, $"Locator should indicate user JDK path for folder '{folderName}'");
+					Assert.AreEqual (@"%LocalAppData%\Android\*jdk*", foundJdk.Locator, $"Locator should indicate user JDK path for folder '{folderName}'");
 					Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
 				}
 				finally {
@@ -313,9 +313,6 @@ namespace Xamarin.Android.Tools.Tests
 			// Clean up the parent directories if they're empty
 			if (Directory.Exists (userJdkRoot) && !Directory.EnumerateFileSystemEntries (userJdkRoot).Any ())
 				Directory.Delete (userJdkRoot);
-			var androidDir = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android");
-			if (Directory.Exists (androidDir) && !Directory.EnumerateFileSystemEntries (androidDir).Any ())
-				Directory.Delete (androidDir);
 		}
 
 		[Test]

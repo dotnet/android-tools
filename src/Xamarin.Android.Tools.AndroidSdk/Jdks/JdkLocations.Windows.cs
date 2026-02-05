@@ -60,7 +60,7 @@ namespace Xamarin.Android.Tools {
 				yield break;
 			}
 
-			var root = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android", "jdk");
+			var root = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android");
 			if (!Directory.Exists (root)) {
 				yield break;
 			}
@@ -77,7 +77,7 @@ namespace Xamarin.Android.Tools {
 			foreach (var home in homes) {
 				if (!ProcessUtils.FindExecutablesInDirectory (Path.Combine (home, "bin"), "java").Any ())
 					continue;
-				var jdk = JdkInfo.TryGetJdkInfo (home, logger, @"%LocalAppData%\Android\jdk\*jdk*");
+				var jdk = JdkInfo.TryGetJdkInfo (home, logger, @"%LocalAppData%\Android\*jdk*");
 				if (jdk == null)
 					continue;
 				yield return jdk;
