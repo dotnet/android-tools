@@ -74,7 +74,7 @@ namespace Xamarin.Android.Tools {
 			}
 
 			foreach (var home in homes) {
-				if (!File.Exists (Path.Combine (home, "bin", "java.exe")))
+				if (!ProcessUtils.FindExecutablesInDirectory (Path.Combine (home, "bin"), "java").Any ())
 					continue;
 				var loc = locator ?? $"%LocalAppData%\\Android\\jdk\\{pattern}";
 				var jdk = JdkInfo.TryGetJdkInfo (home, logger, loc);
