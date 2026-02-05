@@ -43,33 +43,31 @@ namespace Xamarin.Android.Tools {
 				return Array.Empty<JdkInfo> ();
 			}
 
-			return FromPaths (GetMacOSUserLibraryAndroidJdkPaths (), logger, "~/Library/Android/*jdk*/");
+			IEnumerable<string> dirs;
+			try {
+				dirs = Directory.EnumerateDirectories (libraryAndroidRoot, "*jdk*");
+			}
+			catch (IOException) {
+				return Array.Empty<JdkInfo> ();
+			}
 
-			IEnumerable<string> GetMacOSUserLibraryAndroidJdkPaths ()
-			{
-				var toHome = Path.Combine ("Contents", "Home");
-				IEnumerable<string> dirs;
-				try {
-					dirs = Directory.EnumerateDirectories (libraryAndroidRoot, "*jdk*");
+			var toHome = Path.Combine ("Contents", "Home");
+			var paths = new List<string> ();
+			foreach (var dir in dirs) {
+				// Check for macOS .jdk bundle structure (Contents/Home)
+				var bundleHome = Path.Combine (dir, toHome);
+				if (Directory.Exists (bundleHome)) {
+					paths.Add (bundleHome);
+					continue;
 				}
-				catch (IOException) {
-					yield break;
-				}
-
-				foreach (var dir in dirs) {
-					// Check for macOS .jdk bundle structure (Contents/Home)
-					var bundleHome = Path.Combine (dir, toHome);
-					if (Directory.Exists (bundleHome)) {
-						yield return bundleHome;
-						continue;
-					}
-					// Check for flat JDK structure (release file in root)
-					var release = Path.Combine (dir, "release");
-					if (File.Exists (release)) {
-						yield return dir;
-					}
+				// Check for flat JDK structure (release file in root)
+				var release = Path.Combine (dir, "release");
+				if (File.Exists (release)) {
+					paths.Add (dir);
 				}
 			}
+
+			return FromPaths (paths, logger, "~/Library/Android/*jdk*/");
 		}
 
 		protected static IEnumerable<JdkInfo> GetMacOSSystemJdks (string pattern, Action<TraceLevel, string> logger, string? locator = null)
