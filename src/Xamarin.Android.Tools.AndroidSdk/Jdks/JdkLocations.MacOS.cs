@@ -58,11 +58,8 @@ namespace Xamarin.Android.Tools {
 				var bundleHome = Path.Combine (dir, toHome);
 				if (Directory.Exists (bundleHome)) {
 					paths.Add (bundleHome);
-					continue;
-				}
-				// Check for flat JDK structure (release file in root)
-				var release = Path.Combine (dir, "release");
-				if (File.Exists (release)) {
+				} else {
+					// Flat JDK structure - let TryGetJdkInfo validate
 					paths.Add (dir);
 				}
 			}
