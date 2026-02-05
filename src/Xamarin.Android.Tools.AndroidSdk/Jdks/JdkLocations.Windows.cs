@@ -75,8 +75,6 @@ namespace Xamarin.Android.Tools {
 			}
 
 			foreach (var home in homes) {
-				if (!ProcessUtils.FindExecutablesInDirectory (Path.Combine (home, "bin"), "java").Any ())
-					continue;
 				var jdk = JdkInfo.TryGetJdkInfo (home, logger, @"%LocalAppData%\Android\*jdk*");
 				if (jdk == null)
 					continue;
