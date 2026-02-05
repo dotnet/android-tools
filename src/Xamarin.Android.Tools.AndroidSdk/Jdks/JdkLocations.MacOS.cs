@@ -31,7 +31,7 @@ namespace Xamarin.Android.Tools {
 
 		const   string  MacOSJavaVirtualMachinesRoot    = "/Library/Java/JavaVirtualMachines";
 
-		protected static IEnumerable<JdkInfo> GetMacOSUserJdks (Action<TraceLevel, string> logger)
+		protected static IEnumerable<JdkInfo> GetMacOSUserFileSystemJdks (Action<TraceLevel, string> logger)
 		{
 			if (!OS.IsMac) {
 				return Array.Empty<JdkInfo> ();

@@ -273,7 +273,10 @@ namespace Xamarin.Android.Tools.Tests
 		}
 
 		[Test]
-		public void GetKnownSystemJdkInfos_DiscoversWindowsUserJdk ()
+		[TestCase ("jdk-21.0.99")]
+		[TestCase ("jdk-21.0.8.1-hotspot")]
+		[TestCase ("microsoft-21.jdk")]
+		public void GetKnownSystemJdkInfos_DiscoversWindowsUserJdk (string folderName)
 		{
 			if (!OS.IsWindows) {
 				Assert.Ignore ("This test is only valid on Windows.");
@@ -281,42 +284,37 @@ namespace Xamarin.Android.Tools.Tests
 			}
 
 			var userJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.LocalApplicationData), "Android");
-			// Test multiple folder naming patterns
-			var testCases = new[] {
-				"jdk-21.0.99",
-				"jdk-21.0.8.1-hotspot",
-				"microsoft-21.jdk",
-			};
+			var testJdkDir = Path.Combine (userJdkRoot, folderName);
 
-			foreach (var folderName in testCases) {
-				var testJdkDir = Path.Combine (userJdkRoot, folderName);
-				try {
-					CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
+			try {
+				CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
 
-					Action<TraceLevel, string> logger = (level, message) => {
-						Console.WriteLine ($"[{level}] {message}");
-					};
+				Action<TraceLevel, string> logger = (level, message) => {
+					Console.WriteLine ($"[{level}] {message}");
+				};
 
-					var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
-					var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
+				var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
+				var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
 
-					Assert.IsNotNull (foundJdk, $"Expected to find JDK at {testJdkDir} with folder name '{folderName}'");
-					Assert.AreEqual (@"%LocalAppData%\Android\*jdk*", foundJdk.Locator, $"Locator should indicate user JDK path for folder '{folderName}'");
-					Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
-				}
-				finally {
-					if (Directory.Exists (testJdkDir))
-						Directory.Delete (testJdkDir, recursive: true);
-				}
+				Assert.IsNotNull (foundJdk, $"Expected to find JDK at {testJdkDir} with folder name '{folderName}'");
+				Assert.AreEqual (@"%LocalAppData%\Android\*jdk*", foundJdk.Locator, $"Locator should indicate user JDK path for folder '{folderName}'");
+				Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
 			}
-
-			// Clean up the parent directories if they're empty
-			if (Directory.Exists (userJdkRoot) && !Directory.EnumerateFileSystemEntries (userJdkRoot).Any ())
-				Directory.Delete (userJdkRoot);
+			finally {
+				if (Directory.Exists (testJdkDir))
+					Directory.Delete (testJdkDir, recursive: true);
+				// Clean up the parent directories if they're empty
+				if (Directory.Exists (userJdkRoot) && !Directory.EnumerateFileSystemEntries (userJdkRoot).Any ())
+					Directory.Delete (userJdkRoot);
+			}
 		}
 
 		[Test]
-		public void GetKnownSystemJdkInfos_DiscoversMacOSUserJdk ()
+		[TestCase ("microsoft-21.jdk", false)]
+		[TestCase ("jdk-21", true)]
+		[TestCase ("jdk-21.0.8.1-hotspot", true)]
+		[TestCase ("temurin-21.jdk", false)]
+		public void GetKnownSystemJdkInfos_DiscoversMacOSUserJdk (string folderName, bool isFlat)
 		{
 			if (!OS.IsMac) {
 				Assert.Ignore ("This test is only valid on macOS.");
@@ -324,60 +322,40 @@ namespace Xamarin.Android.Tools.Tests
 			}
 
 			var userJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Library", "Android");
-			// Test multiple folder naming patterns - both bundle structure and flat structure
-			var bundleTestCases = new[] { "microsoft-21.jdk" };
-			var flatTestCases = new[] { "jdk-21" };
+			string testJdkDir;
+			string testJdkBundle;
 
-			// Test bundle structure (Contents/Home)
-			foreach (var folderName in bundleTestCases) {
-				var testJdkBundle = Path.Combine (userJdkRoot, folderName);
-				var testJdkDir = Path.Combine (testJdkBundle, "Contents", "Home");
-				try {
-					CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
-
-					Action<TraceLevel, string> logger = (level, message) => {
-						Console.WriteLine ($"[{level}] {message}");
-					};
-
-					var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
-					var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
-
-					Assert.IsNotNull (foundJdk, $"Expected to find JDK bundle at {testJdkDir} with folder name '{folderName}'");
-					Assert.AreEqual ("~/Library/Android/*jdk*/", foundJdk.Locator, $"Locator should indicate user JDK path for bundle folder '{folderName}'");
-					Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
-				}
-				finally {
-					if (Directory.Exists (testJdkBundle))
-						Directory.Delete (testJdkBundle, recursive: true);
-				}
+			if (isFlat) {
+				// Flat structure: release file directly in folder
+				testJdkDir = Path.Combine (userJdkRoot, folderName);
+				testJdkBundle = testJdkDir;
+			} else {
+				// Bundle structure: Contents/Home inside folder
+				testJdkBundle = Path.Combine (userJdkRoot, folderName);
+				testJdkDir = Path.Combine (testJdkBundle, "Contents", "Home");
 			}
 
-			// Test flat structure (release file in root)
-			foreach (var folderName in flatTestCases) {
-				var testJdkDir = Path.Combine (userJdkRoot, folderName);
-				try {
-					CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
+			try {
+				CreateFauxJdk (testJdkDir, releaseVersion: "21.0.99", releaseBuildNumber: "1", javaVersion: "21.0.99-1");
 
-					Action<TraceLevel, string> logger = (level, message) => {
-						Console.WriteLine ($"[{level}] {message}");
-					};
+				Action<TraceLevel, string> logger = (level, message) => {
+					Console.WriteLine ($"[{level}] {message}");
+				};
 
-					var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
-					var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
+				var jdks = JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
+				var foundJdk = jdks.FirstOrDefault (j => j.HomePath == testJdkDir);
 
-					Assert.IsNotNull (foundJdk, $"Expected to find flat JDK at {testJdkDir} with folder name '{folderName}'");
-					Assert.AreEqual ("~/Library/Android/*jdk*/", foundJdk.Locator, $"Locator should indicate user JDK path for flat folder '{folderName}'");
-					Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
-				}
-				finally {
-					if (Directory.Exists (testJdkDir))
-						Directory.Delete (testJdkDir, recursive: true);
-				}
+				Assert.IsNotNull (foundJdk, $"Expected to find JDK at {testJdkDir} with folder name '{folderName}' (isFlat={isFlat})");
+				Assert.AreEqual ("~/Library/Android/*jdk*/", foundJdk.Locator, $"Locator should indicate user JDK path for folder '{folderName}'");
+				Assert.AreEqual (new Version (21, 0, 99, 1), foundJdk.Version);
 			}
-
-			// Clean up the parent directories if they're empty
-			if (Directory.Exists (userJdkRoot) && !Directory.EnumerateFileSystemEntries (userJdkRoot).Any ())
-				Directory.Delete (userJdkRoot);
+			finally {
+				if (Directory.Exists (testJdkBundle))
+					Directory.Delete (testJdkBundle, recursive: true);
+				// Clean up the parent directories if they're empty
+				if (Directory.Exists (userJdkRoot) && !Directory.EnumerateFileSystemEntries (userJdkRoot).Any ())
+					Directory.Delete (userJdkRoot);
+			}
 		}
 	}
 }
