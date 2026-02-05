@@ -37,54 +37,38 @@ namespace Xamarin.Android.Tools {
 				return Array.Empty<JdkInfo> ();
 			}
 
-			// Search ~/Android/jdk/jdk-*
-			var androidJdkRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
-			var androidJdks = Directory.Exists (androidJdkRoot)
-				? FromPaths (GetMacOSUserAndroidJdkPaths (androidJdkRoot), logger, "~/Android/jdk/jdk-*")
-				: Array.Empty<JdkInfo> ();
+			// Search ~/Library/Android/*jdk*/ (matches microsoft-21.jdk, jdk-21, etc.)
+			var libraryAndroidRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Library", "Android");
+			if (!Directory.Exists (libraryAndroidRoot)) {
+				return Array.Empty<JdkInfo> ();
+			}
 
-			// Search ~/Library/Java/JavaVirtualMachines/*
-			var libraryJvmRoot = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Library", "Java", "JavaVirtualMachines");
-			var libraryJdks = Directory.Exists (libraryJvmRoot)
-				? FromPaths (GetMacOSUserLibraryJvmPaths (libraryJvmRoot), logger, "~/Library/Java/JavaVirtualMachines/*")
-				: Array.Empty<JdkInfo> ();
-
-			return androidJdks.Concat (libraryJdks);
+			return FromPaths (GetMacOSUserLibraryAndroidJdkPaths (libraryAndroidRoot), logger, "~/Library/Android/*jdk*/");
 		}
 
-		static IEnumerable<string> GetMacOSUserAndroidJdkPaths (string root)
-		{
-			IEnumerable<string> jdks;
-			try {
-				jdks = Directory.EnumerateDirectories (root, "jdk-*");
-			}
-			catch (IOException) {
-				yield break;
-			}
-
-			foreach (var jdk in jdks) {
-				var release = Path.Combine (jdk, "release");
-				if (File.Exists (release))
-					yield return jdk;
-			}
-		}
-
-		static IEnumerable<string> GetMacOSUserLibraryJvmPaths (string root)
+		static IEnumerable<string> GetMacOSUserLibraryAndroidJdkPaths (string root)
 		{
 			var toHome = Path.Combine ("Contents", "Home");
-			IEnumerable<string> jdks;
+			IEnumerable<string> dirs;
 			try {
-				jdks = Directory.EnumerateDirectories (root, "*");
+				dirs = Directory.EnumerateDirectories (root, "*jdk*");
 			}
 			catch (IOException) {
 				yield break;
 			}
 
-			foreach (var dir in jdks) {
-				var home = Path.Combine (dir, toHome);
-				if (!Directory.Exists (home))
+			foreach (var dir in dirs) {
+				// Check for macOS .jdk bundle structure (Contents/Home)
+				var bundleHome = Path.Combine (dir, toHome);
+				if (Directory.Exists (bundleHome)) {
+					yield return bundleHome;
 					continue;
-				yield return home;
+				}
+				// Check for flat JDK structure (release file in root)
+				var release = Path.Combine (dir, "release");
+				if (File.Exists (release)) {
+					yield return dir;
+				}
 			}
 		}
 

@@ -28,36 +28,5 @@ namespace Xamarin.Android.Tools {
 				.Where (jdk => jdk != null)
 				.Select (jdk => jdk!);
 		}
-
-		protected static IEnumerable<JdkInfo> GetLinuxUserJdks (string pattern, Action<TraceLevel, string> logger, string? locator = null)
-		{
-			if (!OS.IsLinux) {
-				return Array.Empty<JdkInfo> ();
-			}
-
-			var root = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), "Android", "jdk");
-			if (!Directory.Exists (root)) {
-				return Array.Empty<JdkInfo> ();
-			}
-
-			return FromPaths (GetLinuxUserJdkPaths (root, pattern), logger, locator ?? $"~/Android/jdk/{pattern}");
-		}
-
-		static IEnumerable<string> GetLinuxUserJdkPaths (string root, string pattern)
-		{
-			IEnumerable<string> jdks;
-			try {
-				jdks = Directory.EnumerateDirectories (root, pattern);
-			}
-			catch (IOException) {
-				yield break;
-			}
-
-			foreach (var jdk in jdks) {
-				var release = Path.Combine (jdk, "release");
-				if (File.Exists (release))
-					yield return jdk;
-			}
-		}
 	}
 }

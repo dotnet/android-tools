@@ -54,7 +54,7 @@ namespace Xamarin.Android.Tools {
 			}
 		}
 
-		protected static IEnumerable<JdkInfo> GetWindowsUserFileSystemJdks (string pattern, Action<TraceLevel, string> logger, string? locator = null)
+		protected static IEnumerable<JdkInfo> GetWindowsUserFileSystemJdks (Action<TraceLevel, string> logger)
 		{
 			if (!OS.IsWindows) {
 				yield break;
@@ -67,7 +67,8 @@ namespace Xamarin.Android.Tools {
 
 			IEnumerable<string> homes;
 			try {
-				homes = Directory.EnumerateDirectories (root, pattern);
+				// Match any folder containing "jdk" (jdk-21, microsoft-21.jdk, jdk-21.0.8.1-hotspot, etc.)
+				homes = Directory.EnumerateDirectories (root, "*jdk*");
 			}
 			catch (IOException) {
 				yield break;
@@ -76,8 +77,7 @@ namespace Xamarin.Android.Tools {
 			foreach (var home in homes) {
 				if (!ProcessUtils.FindExecutablesInDirectory (Path.Combine (home, "bin"), "java").Any ())
 					continue;
-				var loc = locator ?? $"%LocalAppData%\\Android\\jdk\\{pattern}";
-				var jdk = JdkInfo.TryGetJdkInfo (home, logger, loc);
+				var jdk = JdkInfo.TryGetJdkInfo (home, logger, @"%LocalAppData%\Android\jdk\*jdk*");
 				if (jdk == null)
 					continue;
 				yield return jdk;
