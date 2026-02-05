@@ -43,31 +43,31 @@ namespace Xamarin.Android.Tools {
 				return Array.Empty<JdkInfo> ();
 			}
 
-			return FromPaths (GetMacOSUserLibraryAndroidJdkPaths (libraryAndroidRoot), logger, "~/Library/Android/*jdk*/");
-		}
+			return FromPaths (GetMacOSUserLibraryAndroidJdkPaths (), logger, "~/Library/Android/*jdk*/");
 
-		static IEnumerable<string> GetMacOSUserLibraryAndroidJdkPaths (string root)
-		{
-			var toHome = Path.Combine ("Contents", "Home");
-			IEnumerable<string> dirs;
-			try {
-				dirs = Directory.EnumerateDirectories (root, "*jdk*");
-			}
-			catch (IOException) {
-				yield break;
-			}
-
-			foreach (var dir in dirs) {
-				// Check for macOS .jdk bundle structure (Contents/Home)
-				var bundleHome = Path.Combine (dir, toHome);
-				if (Directory.Exists (bundleHome)) {
-					yield return bundleHome;
-					continue;
+			IEnumerable<string> GetMacOSUserLibraryAndroidJdkPaths ()
+			{
+				var toHome = Path.Combine ("Contents", "Home");
+				IEnumerable<string> dirs;
+				try {
+					dirs = Directory.EnumerateDirectories (libraryAndroidRoot, "*jdk*");
 				}
-				// Check for flat JDK structure (release file in root)
-				var release = Path.Combine (dir, "release");
-				if (File.Exists (release)) {
-					yield return dir;
+				catch (IOException) {
+					yield break;
+				}
+
+				foreach (var dir in dirs) {
+					// Check for macOS .jdk bundle structure (Contents/Home)
+					var bundleHome = Path.Combine (dir, toHome);
+					if (Directory.Exists (bundleHome)) {
+						yield return bundleHome;
+						continue;
+					}
+					// Check for flat JDK structure (release file in root)
+					var release = Path.Combine (dir, "release");
+					if (File.Exists (release)) {
+						yield return dir;
+					}
 				}
 			}
 		}
