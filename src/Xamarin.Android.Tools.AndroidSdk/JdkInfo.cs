@@ -358,6 +358,10 @@ namespace Xamarin.Android.Tools
 		internal static JdkInfo? TryGetJdkInfo (string path, Action<TraceLevel, string> logger, string locator)
 		{
 			JdkInfo? jdk = null;
+			if (!Directory.Exists (path)) {
+				logger (TraceLevel.Verbose, $"Skipping JDK path `{path}` from `{locator}`: path does not exist or is not a directory.");
+				return jdk;
+			}
 			try {
 				jdk = new JdkInfo (path, locator);
 			}
