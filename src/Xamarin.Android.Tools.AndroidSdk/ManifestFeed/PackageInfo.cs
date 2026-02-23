@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 namespace Xamarin.Android.Tools
 {
@@ -60,95 +58,26 @@ namespace Xamarin.Android.Tools
 			if (Archives.Count == 0)
 				return null;
 
-			var currentOs = GetCurrentOsName ();
-			var currentArch = GetCurrentArchName ();
+			var currentOs = PlatformUtils.GetCurrentOsName ();
+			var currentArch = PlatformUtils.GetCurrentArchName ();
 
 			// First try exact match (OS + arch)
 			var exactMatch = Archives.FirstOrDefault (a =>
-				string.Equals (NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase) &&
-				string.Equals (NormalizeArchName (a.Arch), currentArch, StringComparison.OrdinalIgnoreCase));
+				string.Equals (PlatformUtils.NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase) &&
+				string.Equals (PlatformUtils.NormalizeArchName (a.Arch), currentArch, StringComparison.OrdinalIgnoreCase));
 
 			if (exactMatch != null)
 				return exactMatch;
 
 			// Then try OS-only match
 			var osMatch = Archives.FirstOrDefault (a =>
-				string.Equals (NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase));
+				string.Equals (PlatformUtils.NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase));
 
 			if (osMatch != null)
 				return osMatch;
 
 			// Return first archive if no match (may be cross-platform)
 			return Archives.FirstOrDefault (a => string.IsNullOrEmpty (a.HostOs));
-		}
-
-		static string GetCurrentOsName ()
-		{
-			if (OS.IsWindows)
-				return "windows";
-			if (OS.IsMac)
-				return "macosx";
-			return "linux";
-		}
-
-		static string GetCurrentArchName ()
-		{
-			var arch = RuntimeInformation.OSArchitecture;
-			switch (arch) {
-				case Architecture.X64:
-					return "x86_64";
-				case Architecture.Arm64:
-					return "aarch64";
-				case Architecture.X86:
-					return "x86";
-				case Architecture.Arm:
-					return "arm";
-				default:
-					return "x86_64";
-			}
-		}
-
-		static string? NormalizeOsName (string? os)
-		{
-			if (string.IsNullOrEmpty (os))
-				return os;
-
-			switch (os.ToLowerInvariant ()) {
-				case "windows":
-				case "win":
-					return "windows";
-				case "macosx":
-				case "macos":
-				case "darwin":
-				case "osx":
-					return "macosx";
-				case "linux":
-					return "linux";
-				default:
-					return os.ToLowerInvariant ();
-			}
-		}
-
-		static string? NormalizeArchName (string? arch)
-		{
-			if (string.IsNullOrEmpty (arch))
-				return arch;
-
-			switch (arch.ToLowerInvariant ()) {
-				case "x86_64":
-				case "x64":
-				case "amd64":
-					return "x86_64";
-				case "aarch64":
-				case "arm64":
-					return "aarch64";
-				case "x86":
-				case "i386":
-				case "i686":
-					return "x86";
-				default:
-					return arch.ToLowerInvariant ();
-			}
 		}
 	}
 
@@ -213,85 +142,16 @@ namespace Xamarin.Android.Tools
 			if (string.IsNullOrEmpty (HostOs))
 				return true;
 
-			var currentOs = GetCurrentOsName ();
-			if (!string.Equals (NormalizeOsName (HostOs), currentOs, StringComparison.OrdinalIgnoreCase))
+			var currentOs = PlatformUtils.GetCurrentOsName ();
+			if (!string.Equals (PlatformUtils.NormalizeOsName (HostOs), currentOs, StringComparison.OrdinalIgnoreCase))
 				return false;
 
 			// If no Arch specified, assume any architecture matches
 			if (string.IsNullOrEmpty (Arch))
 				return true;
 
-			var currentArch = GetCurrentArchName ();
-			return string.Equals (NormalizeArchName (Arch), currentArch, StringComparison.OrdinalIgnoreCase);
-		}
-
-		static string GetCurrentOsName ()
-		{
-			if (OS.IsWindows)
-				return "windows";
-			if (OS.IsMac)
-				return "macosx";
-			return "linux";
-		}
-
-		static string GetCurrentArchName ()
-		{
-			var arch = RuntimeInformation.OSArchitecture;
-			switch (arch) {
-				case Architecture.X64:
-					return "x86_64";
-				case Architecture.Arm64:
-					return "aarch64";
-				case Architecture.X86:
-					return "x86";
-				case Architecture.Arm:
-					return "arm";
-				default:
-					return "x86_64";
-			}
-		}
-
-		static string? NormalizeOsName (string? os)
-		{
-			if (string.IsNullOrEmpty (os))
-				return os;
-
-			switch (os.ToLowerInvariant ()) {
-				case "windows":
-				case "win":
-					return "windows";
-				case "macosx":
-				case "macos":
-				case "darwin":
-				case "osx":
-					return "macosx";
-				case "linux":
-					return "linux";
-				default:
-					return os.ToLowerInvariant ();
-			}
-		}
-
-		static string? NormalizeArchName (string? arch)
-		{
-			if (string.IsNullOrEmpty (arch))
-				return arch;
-
-			switch (arch.ToLowerInvariant ()) {
-				case "x86_64":
-				case "x64":
-				case "amd64":
-					return "x86_64";
-				case "aarch64":
-				case "arm64":
-					return "aarch64";
-				case "x86":
-				case "i386":
-				case "i686":
-					return "x86";
-				default:
-					return arch.ToLowerInvariant ();
-			}
+			var currentArch = PlatformUtils.GetCurrentArchName ();
+			return string.Equals (PlatformUtils.NormalizeArchName (Arch), currentArch, StringComparison.OrdinalIgnoreCase);
 		}
 	}
 
@@ -353,32 +213,31 @@ namespace Xamarin.Android.Tools
 				return;
 
 			var source = Path ?? DisplayName ?? "";
-			var sourceLower = source.ToLowerInvariant ();
 
-			if (sourceLower.IndexOf ("microsoft", StringComparison.Ordinal) >= 0) {
+			if (source.IndexOf ("microsoft", StringComparison.OrdinalIgnoreCase) >= 0) {
 				VendorId = "microsoft";
 				VendorDisplay = "Microsoft";
-			} else if (sourceLower.IndexOf ("adoptium", StringComparison.Ordinal) >= 0 ||
-			           sourceLower.IndexOf ("temurin", StringComparison.Ordinal) >= 0) {
+			} else if (source.IndexOf ("adoptium", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			           source.IndexOf ("temurin", StringComparison.OrdinalIgnoreCase) >= 0) {
 				VendorId = "adoptium";
 				VendorDisplay = "Eclipse Adoptium";
-			} else if (sourceLower.IndexOf ("azul", StringComparison.Ordinal) >= 0 ||
-			           sourceLower.IndexOf ("zulu", StringComparison.Ordinal) >= 0) {
+			} else if (source.IndexOf ("azul", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			           source.IndexOf ("zulu", StringComparison.OrdinalIgnoreCase) >= 0) {
 				VendorId = "azul";
 				VendorDisplay = "Azul";
-			} else if (sourceLower.IndexOf ("oracle", StringComparison.Ordinal) >= 0) {
+			} else if (source.IndexOf ("oracle", StringComparison.OrdinalIgnoreCase) >= 0) {
 				VendorId = "oracle";
 				VendorDisplay = "Oracle";
-			} else if (sourceLower.IndexOf ("amazon", StringComparison.Ordinal) >= 0 ||
-			           sourceLower.IndexOf ("corretto", StringComparison.Ordinal) >= 0) {
+			} else if (source.IndexOf ("amazon", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			           source.IndexOf ("corretto", StringComparison.OrdinalIgnoreCase) >= 0) {
 				VendorId = "amazon";
 				VendorDisplay = "Amazon Corretto";
 			}
 
 			// Check for preview indicators
-			Preview = sourceLower.IndexOf ("preview", StringComparison.Ordinal) >= 0 ||
-			          sourceLower.IndexOf ("ea", StringComparison.Ordinal) >= 0 ||
-			          sourceLower.IndexOf ("early-access", StringComparison.Ordinal) >= 0;
+			Preview = source.IndexOf ("preview", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			          source.IndexOf ("ea", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			          source.IndexOf ("early-access", StringComparison.OrdinalIgnoreCase) >= 0;
 		}
 	}
 }
