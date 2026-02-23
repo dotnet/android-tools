@@ -67,6 +67,14 @@ namespace Xamarin.Android.Tools
 				License = GetElementAttribute (packageElement, "uses-license", "ref", ns)
 			};
 
+			// Parse package type from path (e.g., "cmdline-tools;20.0" -> "cmdline-tools")
+			var semiColonIndex = path.IndexOf (';');
+			package.PackageType = semiColonIndex > 0 ? path.Substring (0, semiColonIndex) : path;
+
+			// Check for obsolete flag
+			var obsoleteElement = GetElement (packageElement, "obsolete", ns);
+			package.Obsolete = obsoleteElement != null;
+
 			// Parse version
 			var revisionElement = GetElement (packageElement, "revision", ns);
 			if (revisionElement != null) {
@@ -114,10 +122,12 @@ namespace Xamarin.Android.Tools
 			}
 
 			var url = GetElementValue (completeElement, "url", ns);
-			var sha1 = GetElementValue (completeElement, "checksum", ns);
+			var checksumElement = GetElement (completeElement, "checksum", ns);
+			var checksum = checksumElement?.Value;
+			var checksumType = checksumElement?.Attribute ("type")?.Value ?? "sha1";
 			var size = ParseLong (GetElementValue (completeElement, "size", ns));
 
-			if (string.IsNullOrEmpty (url) || string.IsNullOrEmpty (sha1)) {
+			if (string.IsNullOrEmpty (url) || string.IsNullOrEmpty (checksum)) {
 				return null;
 			}
 
@@ -127,11 +137,18 @@ namespace Xamarin.Android.Tools
 				url = $"https://dl.google.com/android/repository/{url}";
 			}
 
+			var hostOs = GetElementValue (archiveElement, "host-os", ns);
+			var hostArch = GetElementValue (archiveElement, "host-arch", ns);
+			var hostBitsStr = GetElementValue (archiveElement, "host-bits", ns);
+
 			var archive = new ArchiveInfo {
 				Url = url,
-				Sha1 = sha1,
+				Checksum = checksum,
+				ChecksumType = checksumType,
 				Size = size ?? 0,
-				HostOs = GetElementValue (archiveElement, "host-os", ns)
+				HostOs = hostOs,
+				Arch = hostArch,
+				HostBits = ParseUInt (hostBitsStr) ?? 0
 			};
 
 			return archive;
@@ -166,6 +183,15 @@ namespace Xamarin.Android.Tools
 			if (string.IsNullOrEmpty (value))
 				return null;
 			if (int.TryParse (value, out var result))
+				return result;
+			return null;
+		}
+
+		static uint? ParseUInt (string? value)
+		{
+			if (string.IsNullOrEmpty (value))
+				return null;
+			if (uint.TryParse (value, out var result))
 				return result;
 			return null;
 		}

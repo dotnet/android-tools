@@ -73,10 +73,28 @@ namespace Xamarin.Android.Tools
 
 			if (packageElement.TryGetProperty ("license", out var license)) {
 				package.License = license.GetString ();
+			} else if (packageElement.TryGetProperty ("licenseId", out var licenseId)) {
+				package.License = licenseId.GetString ();
 			}
 
 			if (packageElement.TryGetProperty ("description", out var description)) {
 				package.Description = description.GetString ();
+			}
+
+			// Parse package type
+			if (packageElement.TryGetProperty ("packageType", out var packageType)) {
+				package.PackageType = packageType.GetString ();
+			} else if (packageElement.TryGetProperty ("type", out var type)) {
+				package.PackageType = type.GetString ();
+			}
+
+			// Parse obsolete flag
+			if (packageElement.TryGetProperty ("obsolete", out var obsolete)) {
+				if (obsolete.ValueKind == JsonValueKind.True) {
+					package.Obsolete = true;
+				} else if (obsolete.ValueKind == JsonValueKind.False) {
+					package.Obsolete = false;
+				}
 			}
 
 			// Parse archives
@@ -106,20 +124,31 @@ namespace Xamarin.Android.Tools
 				url = urlProp.GetString ();
 			}
 
-			string? sha1 = null;
+			string? checksum = null;
+			string checksumType = "sha1";
+
 			if (archiveElement.TryGetProperty ("sha1", out var sha1Prop)) {
-				sha1 = sha1Prop.GetString ();
+				checksum = sha1Prop.GetString ();
+				checksumType = "sha1";
+			} else if (archiveElement.TryGetProperty ("sha256", out var sha256Prop)) {
+				checksum = sha256Prop.GetString ();
+				checksumType = "sha256";
 			} else if (archiveElement.TryGetProperty ("checksum", out var checksumProp)) {
-				sha1 = checksumProp.GetString ();
+				checksum = checksumProp.GetString ();
+				// Check for checksumType property
+				if (archiveElement.TryGetProperty ("checksumType", out var checksumTypeProp)) {
+					checksumType = checksumTypeProp.GetString () ?? "sha1";
+				}
 			}
 
-			if (string.IsNullOrEmpty (url) || string.IsNullOrEmpty (sha1)) {
+			if (string.IsNullOrEmpty (url) || string.IsNullOrEmpty (checksum)) {
 				return null;
 			}
 
 			var archive = new ArchiveInfo {
 				Url = url,
-				Sha1 = sha1
+				Checksum = checksum,
+				ChecksumType = checksumType
 			};
 
 			if (archiveElement.TryGetProperty ("size", out var size)) {
@@ -140,6 +169,18 @@ namespace Xamarin.Android.Tools
 				archive.Arch = arch.GetString ();
 			} else if (archiveElement.TryGetProperty ("architecture", out var architecture)) {
 				archive.Arch = architecture.GetString ();
+			} else if (archiveElement.TryGetProperty ("hostArch", out var hostArch)) {
+				archive.Arch = hostArch.GetString ();
+			}
+
+			if (archiveElement.TryGetProperty ("hostBits", out var hostBits)) {
+				if (hostBits.ValueKind == JsonValueKind.Number) {
+					archive.HostBits = hostBits.GetUInt32 ();
+				}
+			} else if (archiveElement.TryGetProperty ("bits", out var bits)) {
+				if (bits.ValueKind == JsonValueKind.Number) {
+					archive.HostBits = bits.GetUInt32 ();
+				}
 			}
 
 			return archive;

@@ -168,7 +168,9 @@ namespace Xamarin.Android.Tools
 				DisplayName = package.DisplayName,
 				Version = package.Version,
 				License = package.License,
-				Description = package.Description
+				Description = package.Description,
+				PackageType = package.PackageType,
+				Obsolete = package.Obsolete
 			};
 
 			var normalizedOs = NormalizeOsName (os);
@@ -201,6 +203,49 @@ namespace Xamarin.Android.Tools
 					p.Path.StartsWith ("jdk", StringComparison.OrdinalIgnoreCase) ||
 					p.Path.IndexOf ("java", StringComparison.OrdinalIgnoreCase) >= 0 ||
 					p.Path.IndexOf ("openjdk", StringComparison.OrdinalIgnoreCase) >= 0))
+				.ToList ();
+		}
+
+		/// <summary>
+		/// Gets all available JDK versions from the manifest with vendor information.
+		/// </summary>
+		/// <returns>List of JDK packages with vendor details.</returns>
+		public List<JdkPackageInfo> GetJdkPackages ()
+		{
+			return Packages
+				.Where (p => p.Path != null && (
+					p.Path.IndexOf ("jdk", StringComparison.OrdinalIgnoreCase) >= 0 ||
+					p.Path.IndexOf ("java", StringComparison.OrdinalIgnoreCase) >= 0 ||
+					p.Path.IndexOf ("openjdk", StringComparison.OrdinalIgnoreCase) >= 0))
+				.Select (p => {
+					var jdkPackage = JdkPackageInfo.FromPackageInfo (p);
+					jdkPackage.ParseVendorFromPath ();
+					return jdkPackage;
+				})
+				.ToList ();
+		}
+
+		/// <summary>
+		/// Gets JDK packages filtered by vendor.
+		/// </summary>
+		/// <param name="vendorId">The vendor identifier (e.g., "microsoft", "adoptium", "azul").</param>
+		/// <returns>List of JDK packages from the specified vendor.</returns>
+		public List<JdkPackageInfo> GetJdkPackagesByVendor (string vendorId)
+		{
+			return GetJdkPackages ()
+				.Where (p => string.Equals (p.VendorId, vendorId, StringComparison.OrdinalIgnoreCase))
+				.ToList ();
+		}
+
+		/// <summary>
+		/// Gets JDK packages filtered by major version.
+		/// </summary>
+		/// <param name="majorVersion">The major JDK version (e.g., 17, 21).</param>
+		/// <returns>List of JDK packages with the specified major version.</returns>
+		public List<JdkPackageInfo> GetJdkPackagesByMajorVersion (int majorVersion)
+		{
+			return GetJdkPackages ()
+				.Where (p => p.GetMajorVersion () == majorVersion)
 				.ToList ();
 		}
 
