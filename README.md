@@ -1,18 +1,35 @@
 # android-tools
-[![Build Status](https://dev.azure.com/devdiv/DevDiv/_apis/build/status%2FXamarin%2FAndroid%2Fandroid-tools?branchName=main)](https://dev.azure.com/devdiv/DevDiv/_build/latest?definitionId=22338&branchName=main)
+[![Build Status](https://dev.azure.com/dnceng-public/public/_apis/build/status%2Fdotnet%2Fandroid-tools?branchName=main)](https://dev.azure.com/dnceng-public/public/_build/latest?definitionId=279&branchName=main)
 
-**android-tools** is a repo to easily share code between the
-[xamarin-android][android] repo and the .NET for Android commercial tooling,
-such as IDE extensions, without requiring that the IDE extensions
-submodule the entire **android** repo, which is gigantic.
+**android-tools** is a library for interacting with the Android SDK, providing APIs for:
+- Android SDK detection and management (`AndroidSdkInfo`)
+- SDK component installation and bootstrapping (`SdkManager`)
+- JDK detection and installation (`JdkInfo`, `JdkInstaller`)
+- AVD (Android Virtual Device) management (`AvdManagerRunner`)
+- ADB device interaction (`AdbRunner`)
+- Emulator management (`EmulatorRunner`)
 
-[android]: https://github.com/xamarin/xamarin-android
+This code is shared between [dotnet/android][android], .NET MAUI tooling,
+and IDE extensions (e.g., Visual Studio), without requiring consumers to
+submodule the entire **android** repo.
+
+[android]: https://github.com/dotnet/android
 
 # Build Requirements
 
-**-android-tools** requires .NET 6 or later.
+**android-tools** requires the [.NET 9 SDK](https://dotnet.microsoft.com/download) or later.
 
-# Build Configuration
+# Build
+
+To build **android-tools**:
+
+	dotnet build Xamarin.Android.Tools.sln
+
+Alternatively run `make` (on Unix-like systems):
+
+	make
+
+## Build Configuration
 
 The default `make all` target accepts the following optional
 **make**(1) variables:
@@ -21,66 +38,41 @@ The default `make all` target accepts the following optional
     Possible values include `Debug` and `Release`.
     The default value is `Debug`.
   * `$(V)`: Controls build verbosity. When set to a non-zero value,
-    The build is built with `/v:diag` logging.
-
-# Build
-
-To build **android-tools**:
-
-	dotnet build Xamarin.Android.Tools.sln
-
-Alternatively run `make`:
-
-	make
+    builds are performed with `/v:diag` logging.
 
 # Tests
 
 To run the unit tests:
 
-	dotnet test tests/Xamarin.Android.Tools.AndroidSdk-Tests/Xamarin.Android.Tools.AndroidSdk-Tests.csproj -l "console;verbosity=detailed"
+	dotnet test tests/Xamarin.Android.Tools.AndroidSdk-Tests/
 
 # Build Output Directory Structure
 
 There are two configurations, `Debug` and `Release`, controlled by the
 `$(Configuration)` MSBuild property or the `$(CONFIGURATION)` make variable.
 
-The `bin\$(Configuration)` directory, e.g. `bin\Debug`, contains
-*redistributable* artifacts. The `bin\Test$(Configuration)` directory,
-e.g. `bin\TestDebug`, contains unit tests and related files.
-
 * `bin\$(Configuration)`: redistributable build artifacts.
 * `bin\Test$(Configuration)`: Unit tests and related files.
+
+# Multi-targeting
+
+The library multi-targets `netstandard2.0` and `$(DotNetTargetFramework)` (currently `net9.0`).
+
+- **`netstandard2.0`** is required for .NET Framework consumers (e.g., Visual Studio on Windows).
+- The modern TFM enables newer runtime features behind `#if NET5_0_OR_GREATER` guards.
+
+Multi-targeting can be disabled via `$(AndroidToolsDisableMultiTargeting)=true`.
 
 # Distribution
 
 Package versioning follows [Semantic Versioning 2.0.0](https://semver.org/).
 The major version in the `nuget.version` file should be updated when a breaking change is introduced.
 The minor version should be updated when new functionality is added.
-The patch version will be automatically determined by the number of commits since the last version change.
+The patch version is automatically determined by the number of commits since the last version change.
 
-Xamarin.Android.Tools.AndroidSdk nupkg files are produced for every build which occurrs on [Azure Devops](https://devdiv.visualstudio.com/DevDiv/_build?definitionId=22338).
-To download one of these packages, navigate to the build you are interested in and click on the `Artifacts` button.
-
-Alternatively, "unofficial" releases are currently hosted on the [Xamarin.Android](https://dev.azure.com/xamarin/public/_packaging?_a=feed&feed=Xamarin.Android) feed.
-Add the feed to your project's `NuGet.config` to reference these packages:
-
-```xml
-<configuration>
-  <packageSources>
-    <add key="Xamarin.Android" value="https://pkgs.dev.azure.com/xamarin/public/_packaging/Xamarin.Android/nuget/v3/index.json" />
-  </packageSources>
-</configuration>
-```
-
-# Mailing Lists
-
-To discuss this project, and participate in the design, we use the
-[android-devel@lists.xamarin.com](http://lists.xamarin.com/mailman/listinfo/android-devel) mailing list.
-
-# Coding Guidelines
-
-We use [Mono's Coding Guidelines](http://www.mono-project.com/community/contributing/coding-guidelines/).
+NuGet packages are produced for every build on [Azure Pipelines](https://dev.azure.com/dnceng-public/public/_build?definitionId=279).
+To download a package, navigate to the build and click on the `Artifacts` button.
 
 # Reporting Bugs
 
-We use [GitHub](https://github.com/dotnet/android-tools/issues) to track issues.
+We use [GitHub Issues](https://github.com/dotnet/android-tools/issues) to track issues.
