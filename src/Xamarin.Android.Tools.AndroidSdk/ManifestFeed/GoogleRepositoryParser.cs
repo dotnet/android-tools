@@ -20,7 +20,7 @@ namespace Xamarin.Android.Tools
 			try {
 				var doc = XDocument.Parse (xmlContent);
 				
-				if (doc.Root == null) {
+				if (doc.Root is null) {
 					logger (TraceLevel.Warning, "Empty XML document");
 					return;
 				}
@@ -39,7 +39,7 @@ namespace Xamarin.Android.Tools
 				foreach (var packageElement in packages) {
 					try {
 						var package = ParsePackage (packageElement, ns, logger);
-						if (package != null) {
+						if (package is not null) {
 							manifest.Packages.Add (package);
 						}
 					} catch (Exception ex) {
@@ -73,20 +73,20 @@ namespace Xamarin.Android.Tools
 
 			// Check for obsolete flag
 			var obsoleteElement = GetElement (packageElement, "obsolete", ns);
-			package.Obsolete = obsoleteElement != null;
+			package.Obsolete = obsoleteElement is not null;
 
 			// Parse version
 			var revisionElement = GetElement (packageElement, "revision", ns);
-			if (revisionElement != null) {
+			if (revisionElement is not null) {
 				package.Version = ParseVersion (revisionElement, ns);
 			}
 
 			// Parse archives
 			var archivesElement = GetElement (packageElement, "archives", ns);
-			if (archivesElement != null) {
+			if (archivesElement is not null) {
 				foreach (var archiveElement in GetElements (archivesElement, "archive", ns)) {
 					var archive = ParseArchive (archiveElement, ns, path, logger);
-					if (archive != null) {
+					if (archive is not null) {
 						package.Archives.Add (archive);
 					}
 				}
@@ -102,14 +102,14 @@ namespace Xamarin.Android.Tools
 			var build = ParseInt (GetElementValue (revisionElement, "micro", ns));
 			var revision = ParseInt (GetElementValue (revisionElement, "preview", ns));
 
-			if (major == null)
+			if (major is null)
 				return null;
 
-			if (minor == null)
+			if (minor is null)
 				return new Version (major.Value, 0);
-			if (build == null)
+			if (build is null)
 				return new Version (major.Value, minor.Value);
-			if (revision == null)
+			if (revision is null)
 				return new Version (major.Value, minor.Value, build.Value);
 			return new Version (major.Value, minor.Value, build.Value, revision.Value);
 		}
@@ -117,7 +117,7 @@ namespace Xamarin.Android.Tools
 		static ArchiveInfo? ParseArchive (XElement archiveElement, XNamespace ns, string packagePath, Action<TraceLevel, string> logger)
 		{
 			var completeElement = GetElement (archiveElement, "complete", ns);
-			if (completeElement == null) {
+			if (completeElement is null) {
 				return null;
 			}
 

@@ -66,14 +66,14 @@ namespace Xamarin.Android.Tools
 				string.Equals (PlatformUtils.NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase) &&
 				string.Equals (PlatformUtils.NormalizeArchName (a.Arch), currentArch, StringComparison.OrdinalIgnoreCase));
 
-			if (exactMatch != null)
+			if (exactMatch is not null)
 				return exactMatch;
 
 			// Then try OS-only match
 			var osMatch = Archives.FirstOrDefault (a =>
 				string.Equals (PlatformUtils.NormalizeOsName (a.HostOs), currentOs, StringComparison.OrdinalIgnoreCase));
 
-			if (osMatch != null)
+			if (osMatch is not null)
 				return osMatch;
 
 			// Return first archive if no match (may be cross-platform)
@@ -181,7 +181,7 @@ namespace Xamarin.Android.Tools
 		/// <returns>The major version number, or 0 if version is not available.</returns>
 		public int GetMajorVersion ()
 		{
-			if (Version == null)
+			if (Version is null)
 				return 0;
 
 			return Version.Major;

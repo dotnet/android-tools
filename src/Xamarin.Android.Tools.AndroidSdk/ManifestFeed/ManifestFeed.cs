@@ -153,7 +153,7 @@ namespace Xamarin.Android.Tools
 		public PackageInfo? ResolvePackage (string packagePath, string? os = null, string? arch = null)
 		{
 			var package = Packages.FirstOrDefault (p => string.Equals (p.Path, packagePath, StringComparison.OrdinalIgnoreCase));
-			if (package == null) {
+			if (package is null) {
 				logger (TraceLevel.Warning, $"Package not found: {packagePath}");
 				return null;
 			}
@@ -199,7 +199,7 @@ namespace Xamarin.Android.Tools
 		public List<PackageInfo> GetJdkVersions ()
 		{
 			return Packages
-				.Where (p => p.Path != null && (
+				.Where (p => p.Path is not null && (
 					p.Path.StartsWith ("jdk", StringComparison.OrdinalIgnoreCase) ||
 					p.Path.IndexOf ("java", StringComparison.OrdinalIgnoreCase) >= 0 ||
 					p.Path.IndexOf ("openjdk", StringComparison.OrdinalIgnoreCase) >= 0))
@@ -213,7 +213,7 @@ namespace Xamarin.Android.Tools
 		public List<JdkPackageInfo> GetJdkPackages ()
 		{
 			return Packages
-				.Where (p => p.Path != null && (
+				.Where (p => p.Path is not null && (
 					p.Path.IndexOf ("jdk", StringComparison.OrdinalIgnoreCase) >= 0 ||
 					p.Path.IndexOf ("java", StringComparison.OrdinalIgnoreCase) >= 0 ||
 					p.Path.IndexOf ("openjdk", StringComparison.OrdinalIgnoreCase) >= 0))

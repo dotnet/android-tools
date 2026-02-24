@@ -23,7 +23,7 @@ namespace Xamarin.Android.Tools
 						foreach (var packageElement in packages.EnumerateArray ()) {
 							try {
 								var package = ParsePackage (packageElement, logger);
-								if (package != null) {
+								if (package is not null) {
 									manifest.Packages.Add (package);
 								}
 							} catch (Exception ex) {
@@ -101,14 +101,14 @@ namespace Xamarin.Android.Tools
 			if (packageElement.TryGetProperty ("archives", out var archives) && archives.ValueKind == JsonValueKind.Array) {
 				foreach (var archiveElement in archives.EnumerateArray ()) {
 					var archive = ParseArchive (archiveElement);
-					if (archive != null) {
+					if (archive is not null) {
 						package.Archives.Add (archive);
 					}
 				}
 			} else if (packageElement.TryGetProperty ("downloads", out var downloads) && downloads.ValueKind == JsonValueKind.Array) {
 				foreach (var downloadElement in downloads.EnumerateArray ()) {
 					var archive = ParseArchive (downloadElement);
-					if (archive != null) {
+					if (archive is not null) {
 						package.Archives.Add (archive);
 					}
 				}
