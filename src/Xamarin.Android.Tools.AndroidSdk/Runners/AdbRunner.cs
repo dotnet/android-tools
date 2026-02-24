@@ -20,11 +20,19 @@ public class AdbRunner
 readonly Func<string?> getSdkPath;
 static readonly Regex DetailsRegex = new Regex (@"(\w+):(\S+)", RegexOptions.Compiled);
 
+/// <summary>
+/// Creates a new <see cref="AdbRunner"/>.
+/// </summary>
+/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
+/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 public AdbRunner (Func<string?> getSdkPath)
 {
 this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
 }
 
+/// <summary>
+/// Gets the path to the adb executable, or null if not found.
+/// </summary>
 public string? AdbPath {
 get {
 var sdkPath = getSdkPath ();
@@ -34,22 +42,34 @@ var sdkAdb = Path.Combine (sdkPath, "platform-tools", "adb" + ext);
 if (File.Exists (sdkAdb))
 return sdkAdb;
 }
+
 return ProcessUtils.FindExecutablesInPath ("adb").FirstOrDefault ();
 }
 }
 
-public bool IsAvailable => AdbPath != null;
+/// <summary>
+/// Gets whether ADB is available.
+/// </summary>
+public bool IsAvailable => AdbPath is not null;
 
 /// <summary>
 /// Lists connected devices.
 /// </summary>
+/// <param name="cancellationToken">Cancellation token.</param>
+/// <returns>A list of connected devices.</returns>
+/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
 public async Task<List<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 {
 if (!IsAvailable)
 throw new InvalidOperationException ("ADB not found.");
 
 var stdout = new StringWriter ();
-var psi = new ProcessStartInfo { FileName = AdbPath!, Arguments = "devices -l", UseShellExecute = false, CreateNoWindow = true };
+var psi = new ProcessStartInfo {
+FileName = AdbPath!,
+Arguments = "devices -l",
+UseShellExecute = false,
+CreateNoWindow = true
+};
 await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
 var devices = new List<AdbDeviceInfo> ();
@@ -71,31 +91,28 @@ case "device": device.Device = match.Groups [2].Value; break;
 }
 devices.Add (device);
 }
+
 return devices;
 }
 
 /// <summary>
 /// Stops a running emulator.
 /// </summary>
+/// <param name="serial">The emulator serial number (e.g., "emulator-5554").</param>
+/// <param name="cancellationToken">Cancellation token.</param>
+/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
 public async Task StopEmulatorAsync (string serial, CancellationToken cancellationToken = default)
 {
 if (!IsAvailable)
 throw new InvalidOperationException ("ADB not found.");
 
-var psi = new ProcessStartInfo { FileName = AdbPath!, Arguments = $"-s \"{serial}\" emu kill", UseShellExecute = false, CreateNoWindow = true };
+var psi = new ProcessStartInfo {
+FileName = AdbPath!,
+Arguments = $"-s \"{serial}\" emu kill",
+UseShellExecute = false,
+CreateNoWindow = true
+};
 await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
 }
-}
-
-/// <summary>
-/// Information about a connected Android device.
-/// </summary>
-public class AdbDeviceInfo
-{
-public string Serial { get; set; } = string.Empty;
-public string? State { get; set; }
-public string? Model { get; set; }
-public string? Device { get; set; }
-public bool IsEmulator => Serial.StartsWith ("emulator-");
 }
 }
