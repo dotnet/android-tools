@@ -11,7 +11,7 @@ Two independent libraries (neither references the other):
 
 **Patterns:**
 - **Platform polymorphism**: `AndroidSdkBase` → `AndroidSdkWindows`/`AndroidSdkUnix` (Template Method). JDK: vendor classes inherit `JdkLocations` partial, aggregated by priority in `JdkInfo.GetKnownSystemJdkInfos()`. Platform files: `Jdks/JdkLocations.{Windows,MacOS}.cs`, `Sdks/AndroidSdk{Windows,Unix}.cs`.
-- **Task hierarchy**: `AndroidTask` → `AndroidToolTask` → `AsyncTask` (long-running, UI-safe). All use `UnhandledExceptionLogger` for XA error codes.
+- **Task base types**: `AndroidTask` (common `Task`-based MSBuild tasks), `AndroidToolTask` (`ToolTask`-based wrappers for external tools), and `AsyncTask` (long-running, UI-safe `Task`-based tasks). All use `UnhandledExceptionLogger` for XA error codes.
 - **Incremental builds**: `Files.CopyIf*Changed()` skips unchanged writes. `ObjectPool<T>`/`MemoryStreamPool` reduces GC. `JdkInfo` uses `Lazy<T>` for expensive parsing.
 
 ## Build & Test
@@ -28,9 +28,9 @@ Output: `bin\$(Configuration)\` (redistributables), `bin\Test$(Configuration)\` 
 
 - [Mono Coding Guidelines](http://www.mono-project.com/community/contributing/coding-guidelines/): tabs, K&R braces, `PascalCase` public members.
 - Nullable enabled in `AndroidSdk`. `NullableAttributes.cs` excluded on `net10.0+`.
-- Strong-named via `product.snk`. Tests use `InternalsVisibleTo` with full public key (`Properties/AssemblyInfo.cs`).
+- Strong-named via `product.snk`. In the AndroidSdk project, tests use `InternalsVisibleTo` with full public key (`Properties/AssemblyInfo.cs`).
 - Assembly names support `$(VendorPrefix)`/`$(VendorSuffix)` for branding forks.
-- 14-language `.resx` localization via OneLocBuild (`Localize/`). Do not hand-edit satellite `.resx`.
+- `.resx` localization in multiple languages via OneLocBuild (`Localize/`). Do not hand-edit satellite `.resx`.
 
 ## Tests
 
