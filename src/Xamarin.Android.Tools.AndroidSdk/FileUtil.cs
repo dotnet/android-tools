@@ -107,6 +107,70 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
+		/// <summary>Checks if the target path is writable by testing write access on the nearest existing ancestor.</summary>
+		public static bool IsTargetPathWritable (string targetPath, Action<TraceLevel, string> logger)
+		{
+			if (string.IsNullOrEmpty (targetPath))
+				return false;
+
+			string normalizedPath;
+			try {
+				normalizedPath = Path.GetFullPath (targetPath);
+			}
+			catch {
+				normalizedPath = targetPath;
+			}
+
+			if (OS.IsWindows) {
+				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
+				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
+				if (IsUnderDirectory (normalizedPath, programFiles) || IsUnderDirectory (normalizedPath, programFilesX86)) {
+					logger (TraceLevel.Warning, $"Target path '{targetPath}' is in Program Files which typically requires elevation.");
+					return false;
+				}
+			}
+
+			try {
+				var testDir = normalizedPath;
+				while (!string.IsNullOrEmpty (testDir) && !Directory.Exists (testDir))
+					testDir = Path.GetDirectoryName (testDir);
+
+				if (string.IsNullOrEmpty (testDir))
+					return false;
+
+				var testFile = Path.Combine (testDir, $".write-test-{Guid.NewGuid ()}");
+				using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
+				return true;
+			}
+			catch (Exception ex) {
+				logger (TraceLevel.Warning, $"Target path '{targetPath}' is not writable: {ex.Message}");
+				return false;
+			}
+		}
+
+		/// <summary>Checks if a path is under a given directory.</summary>
+		public static bool IsUnderDirectory (string path, string directory)
+		{
+			if (string.IsNullOrEmpty (directory) || string.IsNullOrEmpty (path))
+				return false;
+			if (path.Equals (directory, StringComparison.OrdinalIgnoreCase))
+				return true;
+			return path.StartsWith (directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+		}
+
+		// Returns .msi (Windows), .pkg (macOS), or null (Linux)
+		public static string? GetInstallerExtension ()
+		{
+			if (OS.IsWindows) return ".msi";
+			if (OS.IsMac) return ".pkg";
+			return null;
+		}
+
+		public static string GetArchiveExtension ()
+		{
+			return OS.IsWindows ? ".zip" : ".tar.gz";
+		}
+
 		[DllImport ("libc", SetLastError=true)]
 		static extern int rename (string old, string @new);
 	}

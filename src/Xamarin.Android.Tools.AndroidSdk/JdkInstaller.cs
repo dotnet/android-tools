@@ -95,13 +95,13 @@ namespace Xamarin.Android.Tools
 				throw new ArgumentNullException (nameof (targetPath));
 
 			// When elevated and a platform installer is available, use it and let the installer handle paths
-			if (IsElevated () && GetInstallerExtension () is not null) {
+			if (IsElevated () && FileUtil.GetInstallerExtension () is not null) {
 				logger (TraceLevel.Info, "Running elevated — using platform installer (.msi/.pkg).");
 				await InstallWithPlatformInstallerAsync (majorVersion, progress, cancellationToken).ConfigureAwait (false);
 				return;
 			}
 
-			if (!IsTargetPathWritable (targetPath)) {
+			if (!FileUtil.IsTargetPathWritable (targetPath, logger)) {
 				logger (TraceLevel.Error, $"Target path '{targetPath}' is not writable or is in a restricted location.");
 				throw new ArgumentException ($"Target path '{targetPath}' is not writable or is in a restricted location.", nameof (targetPath));
 			}
@@ -114,7 +114,7 @@ namespace Xamarin.Android.Tools
 				throw new InvalidOperationException ($"Failed to fetch SHA-256 checksum for JDK {majorVersion}. Cannot verify download integrity.");
 			versionInfo.Checksum = checksum;
 
-			var tempArchivePath = Path.Combine (Path.GetTempPath (), $"microsoft-jdk-{majorVersion}-{Guid.NewGuid ()}{GetArchiveExtension ()}");
+			var tempArchivePath = Path.Combine (Path.GetTempPath (), $"microsoft-jdk-{majorVersion}-{Guid.NewGuid ()}{FileUtil.GetArchiveExtension ()}");
 
 			try {
 				// Download
@@ -179,7 +179,7 @@ namespace Xamarin.Android.Tools
 
 		async Task InstallWithPlatformInstallerAsync (int majorVersion, IProgress<JdkInstallProgress>? progress, CancellationToken cancellationToken)
 		{
-			var installerExt = GetInstallerExtension ()!;
+			var installerExt = FileUtil.GetInstallerExtension ()!;
 			var info = BuildVersionInfo (majorVersion, installerExt);
 
 			// Fetch checksum before download for supply-chain integrity
@@ -263,49 +263,6 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>Checks if the target path is writable and not in a restricted location.</summary>
-		public bool IsTargetPathWritable (string targetPath)
-		{
-			if (string.IsNullOrEmpty (targetPath))
-				return false;
-
-			// Normalize the path to prevent path traversal bypasses (e.g., "C:\Program Files\..\Users")
-			string normalizedPath;
-			try {
-				normalizedPath = Path.GetFullPath (targetPath);
-			}
-			catch {
-				normalizedPath = targetPath;
-			}
-
-			if (OS.IsWindows) {
-				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
-				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
-				if (IsUnderDirectory (normalizedPath, programFiles) || IsUnderDirectory (normalizedPath, programFilesX86)) {
-					logger (TraceLevel.Warning, $"Target path '{targetPath}' is in Program Files which typically requires elevation.");
-					return false;
-				}
-			}
-
-			// Test writability on the nearest existing ancestor directory without creating the target
-			try {
-				var testDir = normalizedPath;
-				while (!string.IsNullOrEmpty (testDir) && !Directory.Exists (testDir))
-					testDir = Path.GetDirectoryName (testDir);
-
-				if (string.IsNullOrEmpty (testDir))
-					return false;
-
-				var testFile = Path.Combine (testDir, $".write-test-{Guid.NewGuid ()}");
-				using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
-				return true;
-			}
-			catch (Exception ex) {
-				logger (TraceLevel.Warning, $"Target path '{targetPath}' is not writable: {ex.Message}");
-				return false;
-			}
-		}
-
 		/// <summary>Removes a JDK installation at the specified path.</summary>
 		public bool Remove (string jdkPath)
 		{
@@ -328,7 +285,7 @@ namespace Xamarin.Android.Tools
 		{
 			var os = GetMicrosoftOpenJDKOSName ();
 			var arch = GetArchitectureName ();
-			var ext = extensionOverride ?? GetArchiveExtension ();
+			var ext = extensionOverride ?? FileUtil.GetArchiveExtension ();
 
 			var filename = $"microsoft-jdk-{majorVersion}-{os}-{arch}{ext}";
 			var downloadUrl = $"{DownloadUrlBase}/{filename}";
@@ -398,19 +355,6 @@ namespace Xamarin.Android.Tools
 			};
 		}
 
-		static string GetArchiveExtension ()
-		{
-			return OS.IsWindows ? ".zip" : ".tar.gz";
-		}
-
-		// Returns .msi (Windows), .pkg (macOS), or null (Linux)
-		static string? GetInstallerExtension ()
-		{
-			if (OS.IsWindows) return ".msi";
-			if (OS.IsMac) return ".pkg";
-			return null;
-		}
-
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
 		public static bool IsElevated ()
 		{
@@ -447,15 +391,6 @@ namespace Xamarin.Android.Tools
 #else
 			return geteuid () == 0;
 #endif
-		}
-
-		static bool IsUnderDirectory (string path, string directory)
-		{
-			if (string.IsNullOrEmpty (directory) || string.IsNullOrEmpty (path))
-				return false;
-			if (path.Equals (directory, StringComparison.OrdinalIgnoreCase))
-				return true;
-			return path.StartsWith (directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 		}
 
 		[DllImport ("libc", SetLastError = true)]
