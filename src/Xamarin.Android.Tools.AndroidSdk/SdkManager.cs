@@ -61,7 +61,11 @@ namespace Xamarin.Android.Tools
 		public SdkManifestSource ManifestSource
 		{
 			get => ManifestFeedUrl == GoogleManifestFeedUrl ? SdkManifestSource.Google : SdkManifestSource.Xamarin;
-			set => ManifestFeedUrl = value == SdkManifestSource.Google ? GoogleManifestFeedUrl : DefaultManifestFeedUrl;
+			set {
+				if (value == SdkManifestSource.Google)
+					throw new NotSupportedException ("The Google SDK manifest format is not currently supported. Use the Xamarin manifest feed.");
+				ManifestFeedUrl = DefaultManifestFeedUrl;
+			}
 		}
 
 		/// <summary>
@@ -327,7 +331,7 @@ namespace Xamarin.Android.Tools
 							extractedDir = tempExtractDir;
 					}
 
-					// Move to latest, with rollback on failure and cross-device fallback
+					// Move extracted files into versioned directory, with rollback on failure and cross-device fallback
 					string? backupPath = null;
 					if (Directory.Exists (versionDir)) {
 						backupPath = versionDir + $".old-{Guid.NewGuid ():N}";
@@ -955,7 +959,7 @@ namespace Xamarin.Android.Tools
 								CreateNoWindow = true,
 								UseShellExecute = false,
 							};
-							var process = Process.Start (psi);
+							using var process = Process.Start (psi);
 							process?.WaitForExit ();
 							if (process is null || process.ExitCode != 0) {
 								throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {process?.ExitCode ?? -1}");
