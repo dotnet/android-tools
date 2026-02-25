@@ -52,6 +52,13 @@ namespace Xamarin.Android.Tools
 		/// </summary>
 		public bool IsAvailable => AdbPath is not null;
 
+		void ConfigureEnvironment (ProcessStartInfo psi)
+		{
+			var sdkPath = getSdkPath ();
+			if (!string.IsNullOrEmpty (sdkPath))
+				psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
+		}
+
 		/// <summary>
 		/// Lists connected devices.
 		/// </summary>
@@ -70,6 +77,7 @@ namespace Xamarin.Android.Tools
 				UseShellExecute = false,
 				CreateNoWindow = true
 			};
+			ConfigureEnvironment (psi);
 			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
 			var devices = new List<AdbDeviceInfo> ();
@@ -96,6 +104,40 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>
+		/// Waits for a device to become available.
+		/// </summary>
+		/// <param name="serial">Optional device serial number. When null, waits for any device.</param>
+		/// <param name="timeout">Maximum time to wait. Defaults to 60 seconds.</param>
+		/// <param name="cancellationToken">Cancellation token.</param>
+		/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
+		/// <exception cref="TimeoutException">Thrown when no device becomes available within the timeout.</exception>
+		public async Task WaitForDeviceAsync (string? serial = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+		{
+			if (!IsAvailable)
+				throw new InvalidOperationException ("ADB not found.");
+
+			var effectiveTimeout = timeout ?? TimeSpan.FromSeconds (60);
+			var args = string.IsNullOrEmpty (serial) ? "wait-for-device" : $"-s \"{serial}\" wait-for-device";
+
+			var psi = new ProcessStartInfo {
+				FileName = AdbPath!,
+				Arguments = args,
+				UseShellExecute = false,
+				CreateNoWindow = true
+			};
+			ConfigureEnvironment (psi);
+
+			using var cts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
+			cts.CancelAfter (effectiveTimeout);
+
+			try {
+				await ProcessUtils.StartProcess (psi, null, null, cts.Token).ConfigureAwait (false);
+			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+				throw new TimeoutException ($"Timed out waiting for device after {effectiveTimeout.TotalSeconds}s.");
+			}
+		}
+
+		/// <summary>
 		/// Stops a running emulator.
 		/// </summary>
 		/// <param name="serial">The emulator serial number (e.g., "emulator-5554").</param>
@@ -112,7 +154,9 @@ namespace Xamarin.Android.Tools
 				UseShellExecute = false,
 				CreateNoWindow = true
 			};
+			ConfigureEnvironment (psi);
 			await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
 		}
 	}
 }
+
