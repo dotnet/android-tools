@@ -177,6 +177,10 @@ namespace Xamarin.Android.Tools
 			var installerExt = GetInstallerExtension ()!;
 			var info = BuildVersionInfo (majorVersion, installerExt);
 
+			// Fetch checksum before download for supply-chain integrity
+			var checksum = await FetchChecksumAsync (info.ChecksumUrl, $"JDK {majorVersion} installer", cancellationToken).ConfigureAwait (false);
+			info.Checksum = checksum;
+
 			var tempInstallerPath = Path.Combine (Path.GetTempPath (), $"microsoft-jdk-{majorVersion}-{Guid.NewGuid ()}{installerExt}");
 
 			try {
@@ -187,7 +191,7 @@ namespace Xamarin.Android.Tools
 					progress is null ? null : new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
 					cancellationToken).ConfigureAwait (false);
 
-				// Verify checksum if available
+				// Verify checksum
 				if (!string.IsNullOrEmpty (info.Checksum)) {
 					progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
 					DownloadUtils.VerifyChecksum (tempInstallerPath, info.Checksum!);
@@ -276,9 +280,16 @@ namespace Xamarin.Android.Tools
 				}
 			}
 
+			// Test writability on the nearest existing ancestor directory without creating the target
 			try {
-				Directory.CreateDirectory (targetPath);
-				var testFile = Path.Combine (targetPath, $".write-test-{Guid.NewGuid ()}");
+				var testDir = normalizedPath;
+				while (!string.IsNullOrEmpty (testDir) && !Directory.Exists (testDir))
+					testDir = Path.GetDirectoryName (testDir);
+
+				if (string.IsNullOrEmpty (testDir))
+					return false;
+
+				var testFile = Path.Combine (testDir, $".write-test-{Guid.NewGuid ()}");
 				using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
 				return true;
 			}
@@ -492,10 +503,16 @@ namespace Xamarin.Android.Tools
 		// Separate method so geteuid P/Invoke is never JIT-compiled on Windows
 		static bool IsElevatedUnix ()
 		{
+#if NET5_0_OR_GREATER
+			if (!OperatingSystem.IsWindows ())
+				return geteuid () == 0;
+			return false;
+#else
 			return geteuid () == 0;
+#endif
 		}
 
-		[DllImport ("libc")]
+		[DllImport ("libc", SetLastError = true)]
 		static extern uint geteuid ();
 	}
 }
