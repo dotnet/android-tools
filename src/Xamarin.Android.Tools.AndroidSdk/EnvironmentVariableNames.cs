@@ -16,8 +16,10 @@ namespace Xamarin.Android.Tools
 
 		/// <summary>
 		/// The ANDROID_SDK_ROOT environment variable specifying the Android SDK root directory.
-		/// This is an older variable name, but still supported by many tools.
+		/// Deprecated per https://developer.android.com/tools/variables#envar — use ANDROID_HOME instead.
+		/// Retained only for reading existing environment configurations.
 		/// </summary>
+		[System.Obsolete ("ANDROID_SDK_ROOT is deprecated. Use ANDROID_HOME instead.")]
 		public const string AndroidSdkRoot = "ANDROID_SDK_ROOT";
 
 		/// <summary>
