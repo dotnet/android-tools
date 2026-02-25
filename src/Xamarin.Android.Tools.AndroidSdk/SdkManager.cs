@@ -13,6 +13,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+#if NET5_0_OR_GREATER
+using System.Security.Principal;
+#endif
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -813,6 +816,16 @@ namespace Xamarin.Android.Tools
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerAsync (
 			string sdkManagerPath, string arguments, bool acceptLicenses = false, CancellationToken cancellationToken = default)
 		{
+			// Check if the SDK path requires elevated permissions for write operations
+			bool needsElevation = !string.IsNullOrEmpty (arguments)
+				&& !arguments.TrimStart ().StartsWith ("--list", StringComparison.Ordinal)
+				&& RequiresElevation ();
+
+			if (needsElevation && OS.IsWindows) {
+				logger (TraceLevel.Info, $"SDK path requires elevated permissions, running sdkmanager elevated...");
+				return await RunSdkManagerElevatedAsync (sdkManagerPath, arguments, acceptLicenses, cancellationToken).ConfigureAwait (false);
+			}
+
 			var psi = new ProcessStartInfo {
 				FileName = sdkManagerPath,
 				Arguments = arguments,
@@ -871,6 +884,127 @@ namespace Xamarin.Android.Tools
 			}
 
 			return (exitCode, stdoutStr, stderrStr);
+		}
+
+		/// <summary>
+		/// Determines whether the current SDK path requires elevated (Administrator) permissions
+		/// for write operations. This is typically the case when the SDK is installed in
+		/// system-protected locations like <c>C:\Program Files</c>.
+		/// </summary>
+		bool RequiresElevation ()
+		{
+			if (IsCurrentProcessElevated ())
+				return false; // already elevated
+
+			var sdkPath = AndroidSdkPath;
+			if (string.IsNullOrEmpty (sdkPath))
+				return false;
+
+			// Check if path is in a system-protected location
+			if (OS.IsWindows) {
+				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
+				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
+				if ((!string.IsNullOrEmpty (programFiles) && sdkPath.StartsWith (programFiles, StringComparison.OrdinalIgnoreCase)) ||
+				    (!string.IsNullOrEmpty (programFilesX86) && sdkPath.StartsWith (programFilesX86, StringComparison.OrdinalIgnoreCase)))
+					return true;
+			}
+
+			// Try a write test
+			try {
+				if (Directory.Exists (sdkPath)) {
+					var testFile = Path.Combine (sdkPath, $".write-test-{Guid.NewGuid ()}");
+					using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
+					return false;
+				}
+			}
+			catch {
+				return true;
+			}
+
+			return false;
+		}
+
+		/// <summary>
+		/// Runs sdkmanager with elevated (Administrator) privileges on Windows using a wrapper
+		/// script that captures stdout/stderr to temp files. UAC prompt will be shown to the user.
+		/// </summary>
+		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerElevatedAsync (
+			string sdkManagerPath, string arguments, bool acceptLicenses, CancellationToken cancellationToken)
+		{
+			var stdoutFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stdout-{Guid.NewGuid ()}.txt");
+			var stderrFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stderr-{Guid.NewGuid ()}.txt");
+			var scriptFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-elevated-{Guid.NewGuid ()}.cmd");
+
+			try {
+				// Build environment variable block for the elevated process
+				var envBlock = new StringBuilder ();
+				if (!string.IsNullOrEmpty (AndroidSdkPath))
+					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.AndroidHome}={AndroidSdkPath}\"");
+				if (!string.IsNullOrEmpty (JavaSdkPath))
+					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.JavaHome}={JavaSdkPath}\"");
+				var userHome = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
+				envBlock.AppendLine ($"set \"ANDROID_USER_HOME={userHome}\"");
+
+				// Build the wrapper script
+				var licenseInput = acceptLicenses ? "echo y| " : "";
+				var script = $"""
+					@echo off
+					{envBlock}
+					{licenseInput}"{sdkManagerPath}" {arguments} > "{stdoutFile}" 2> "{stderrFile}"
+					echo %ERRORLEVEL% > "{stdoutFile}.exit"
+					""";
+
+				File.WriteAllText (scriptFile, script);
+				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {arguments}");
+
+				var psi = new ProcessStartInfo {
+					FileName = "cmd.exe",
+					Arguments = $"/c \"{scriptFile}\"",
+					UseShellExecute = true,
+					Verb = "runas",
+					CreateNoWindow = true,
+					WindowStyle = ProcessWindowStyle.Hidden,
+				};
+
+				using var process = Process.Start (psi);
+				if (process is null)
+					throw new InvalidOperationException ("Failed to start elevated sdkmanager process.");
+
+				// Wait for the elevated process to complete
+				await Task.Run (() => {
+					if (!process.WaitForExit ((int) TimeSpan.FromMinutes (10).TotalMilliseconds)) {
+						process.Kill ();
+						throw new TimeoutException ("Elevated sdkmanager process timed out after 10 minutes.");
+					}
+				}, cancellationToken).ConfigureAwait (false);
+
+				// Read captured output
+				var stdoutStr = File.Exists (stdoutFile) ? File.ReadAllText (stdoutFile) : "";
+				var stderrStr = File.Exists (stderrFile) ? File.ReadAllText (stderrFile) : "";
+
+				// Read exit code from the marker file
+				var exitCodeFile = $"{stdoutFile}.exit";
+				int exitCode = process.ExitCode;
+				if (File.Exists (exitCodeFile)) {
+					var exitCodeStr = File.ReadAllText (exitCodeFile).Trim ();
+					int.TryParse (exitCodeStr, out exitCode);
+				}
+
+				if (exitCode != 0) {
+					logger (TraceLevel.Warning, $"Elevated sdkmanager exited with code {exitCode}");
+					logger (TraceLevel.Verbose, $"stdout: {stdoutStr}");
+					logger (TraceLevel.Verbose, $"stderr: {stderrStr}");
+				}
+
+				return (exitCode, stdoutStr, stderrStr);
+			}
+			finally {
+				// Cleanup temp files
+				try { if (File.Exists (scriptFile)) File.Delete (scriptFile); } catch { }
+				try { if (File.Exists (stdoutFile)) File.Delete (stdoutFile); } catch { }
+				try { if (File.Exists (stderrFile)) File.Delete (stderrFile); } catch { }
+				try { if (File.Exists ($"{stdoutFile}.exit")) File.Delete ($"{stdoutFile}.exit"); } catch { }
+			}
 		}
 
 		async Task DownloadFileAsync (string url, string destinationPath, long expectedSize, IProgress<SdkBootstrapProgress>? progress, CancellationToken cancellationToken)
@@ -995,6 +1129,9 @@ namespace Xamarin.Android.Tools
 		[DllImport ("libc", SetLastError = true)]
 		static extern int chmod (string pathname, int mode);
 
+		[DllImport ("libc")]
+		static extern uint geteuid ();
+
 		/// <summary>
 		/// Configures environment variables on a ProcessStartInfo for Android SDK tools.
 		/// </summary>
@@ -1007,6 +1144,15 @@ namespace Xamarin.Android.Tools
 			}
 			if (!string.IsNullOrEmpty (JavaSdkPath)) {
 				psi.EnvironmentVariables[EnvironmentVariableNames.JavaHome] = JavaSdkPath;
+			}
+
+			// Ensure ANDROID_USER_HOME is set so sdkmanager can write install properties and
+			// preferences to a user-writable location. Without this, sdkmanager fails with
+			// "Failed to read or create install properties file" when the SDK is installed in
+			// a system-protected path (e.g., C:\Program Files).
+			if (!psi.EnvironmentVariables.ContainsKey ("ANDROID_USER_HOME") || string.IsNullOrEmpty (psi.EnvironmentVariables["ANDROID_USER_HOME"])) {
+				var userHome = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
+				psi.EnvironmentVariables["ANDROID_USER_HOME"] = userHome;
 			}
 		}
 
@@ -1023,6 +1169,29 @@ namespace Xamarin.Android.Tools
 			foreach (var subDir in Directory.GetDirectories (sourceDir)) {
 				var destSubDir = Path.Combine (destinationDir, Path.GetFileName (subDir));
 				CopyDirectoryRecursive (subDir, destSubDir);
+			}
+		}
+
+		/// <summary>
+		/// Determines whether the current process is running with elevated privileges
+		/// (Administrator on Windows, root on macOS/Linux).
+		/// </summary>
+		static bool IsCurrentProcessElevated ()
+		{
+#if NET5_0_OR_GREATER
+			if (OS.IsWindows) {
+#pragma warning disable CA1416
+				using var identity = WindowsIdentity.GetCurrent ();
+				var principal = new WindowsPrincipal (identity);
+				return principal.IsInRole (WindowsBuiltInRole.Administrator);
+#pragma warning restore CA1416
+			}
+#endif
+			try {
+				return geteuid () == 0;
+			}
+			catch {
+				return false;
 			}
 		}
 
