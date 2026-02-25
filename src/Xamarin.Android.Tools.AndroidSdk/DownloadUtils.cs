@@ -1,0 +1,131 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Xamarin.Android.Tools
+{
+	/// <summary>
+	/// Shared helpers for downloading files, verifying checksums, and extracting archives.
+	/// </summary>
+	static class DownloadUtils
+	{
+		/// <summary>Downloads a file from the given URL with optional progress reporting.</summary>
+		public static async Task DownloadFileAsync (HttpClient client, string url, string destinationPath, long expectedSize, IProgress<(double percent, string message)>? progress, CancellationToken cancellationToken)
+		{
+			using var response = await client.GetAsync (url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait (false);
+			response.EnsureSuccessStatusCode ();
+
+			var totalBytes = response.Content.Headers.ContentLength ?? expectedSize;
+
+			using var contentStream = await response.Content.ReadAsStreamAsync ().ConfigureAwait (false);
+
+			var dirPath = Path.GetDirectoryName (destinationPath);
+			if (!string.IsNullOrEmpty (dirPath))
+				Directory.CreateDirectory (dirPath);
+
+			using var fileStream = new FileStream (destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+
+			var buffer = new byte [81920];
+			long totalRead = 0;
+			int bytesRead;
+
+			while ((bytesRead = await contentStream.ReadAsync (buffer, 0, buffer.Length, cancellationToken).ConfigureAwait (false)) > 0) {
+				await fileStream.WriteAsync (buffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
+				totalRead += bytesRead;
+
+				if (progress is not null && totalBytes > 0) {
+					var pct = (double) totalRead / totalBytes * 100;
+					progress.Report ((pct, $"Downloaded {totalRead / (1024 * 1024)} MB / {totalBytes / (1024 * 1024)} MB"));
+				}
+			}
+		}
+
+		/// <summary>Verifies a file's SHA-256 hash against an expected value.</summary>
+		public static void VerifyChecksum (string filePath, string expectedChecksum)
+		{
+			using var sha256 = SHA256.Create ();
+			using var stream = File.OpenRead (filePath);
+
+			var hash = sha256.ComputeHash (stream);
+			var actual = BitConverter.ToString (hash).Replace ("-", "").ToLowerInvariant ();
+
+			if (!string.Equals (actual, expectedChecksum, StringComparison.OrdinalIgnoreCase))
+				throw new InvalidOperationException ($"Checksum verification failed. Expected: {expectedChecksum}, Actual: {actual}");
+		}
+
+		/// <summary>Extracts a ZIP archive with Zip Slip protection.</summary>
+		public static void ExtractZipSafe (string archivePath, string destinationPath, CancellationToken cancellationToken)
+		{
+			using var archive = ZipFile.OpenRead (archivePath);
+			var fullExtractRoot = Path.GetFullPath (destinationPath);
+
+			foreach (var entry in archive.Entries) {
+				cancellationToken.ThrowIfCancellationRequested ();
+
+				if (string.IsNullOrEmpty (entry.Name))
+					continue;
+
+				var destinationFile = Path.GetFullPath (Path.Combine (fullExtractRoot, entry.FullName));
+
+				// Zip Slip protection
+				if (!destinationFile.StartsWith (fullExtractRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
+				    destinationFile != fullExtractRoot) {
+					throw new InvalidOperationException ($"Archive entry '{entry.FullName}' would extract outside target directory.");
+				}
+
+				var entryDir = Path.GetDirectoryName (destinationFile);
+				if (!string.IsNullOrEmpty (entryDir))
+					Directory.CreateDirectory (entryDir);
+
+				entry.ExtractToFile (destinationFile, overwrite: true);
+			}
+		}
+
+		/// <summary>Extracts a tar.gz archive using the system tar command.</summary>
+		public static async Task ExtractTarGzAsync (string archivePath, string destinationPath, Action<TraceLevel, string> logger, CancellationToken cancellationToken)
+		{
+			var psi = new ProcessStartInfo {
+				FileName = "/usr/bin/tar",
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+#if NET5_0_OR_GREATER
+			psi.ArgumentList.Add ("-xzf");
+			psi.ArgumentList.Add (archivePath);
+			psi.ArgumentList.Add ("-C");
+			psi.ArgumentList.Add (destinationPath);
+#else
+			psi.Arguments = $"-xzf \"{archivePath}\" -C \"{destinationPath}\"";
+#endif
+
+			var stdout = new StringWriter ();
+			var stderr = new StringWriter ();
+			var exitCode = await ProcessUtils.StartProcess (psi, stdout: stdout, stderr: stderr, cancellationToken).ConfigureAwait (false);
+
+			if (exitCode != 0) {
+				var errorOutput = stderr.ToString ();
+				logger (TraceLevel.Error, $"tar extraction failed (exit code {exitCode}): {errorOutput}");
+				throw new IOException ($"Failed to extract archive '{archivePath}': {errorOutput}");
+			}
+		}
+
+		/// <summary>Parses "hash  filename" or just "hash" from .sha256sum.txt content.</summary>
+		public static string? ParseChecksumFile (string content)
+		{
+			if (string.IsNullOrWhiteSpace (content))
+				return null;
+
+			var line = content.Trim ().Split ('\n') [0].Trim ();
+			var parts = line.Split (new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			return parts.Length > 0 ? parts [0] : null;
+		}
+	}
+}

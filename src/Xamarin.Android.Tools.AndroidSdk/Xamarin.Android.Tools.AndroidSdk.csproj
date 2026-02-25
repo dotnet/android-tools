@@ -27,8 +27,9 @@
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Condition=" '$(TargetFramework)' != 'netstandard2.0' " Remove="NullableAttributes.cs" />
+  <ItemGroup Condition=" '$(TargetFramework)' != 'netstandard2.0' ">
+    <Compile Remove="NullableAttributes.cs" />
+    <Compile Remove="IsExternalInit.cs" />
   </ItemGroup>
 
   <ItemGroup>
