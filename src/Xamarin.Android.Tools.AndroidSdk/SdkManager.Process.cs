@@ -97,7 +97,7 @@ namespace Xamarin.Android.Tools
 		/// </summary>
 		bool RequiresElevation ()
 		{
-			if (IsCurrentProcessElevated ())
+			if (ProcessUtils.IsElevated ())
 				return false; // already elevated
 
 			var sdkPath = AndroidSdkPath;
