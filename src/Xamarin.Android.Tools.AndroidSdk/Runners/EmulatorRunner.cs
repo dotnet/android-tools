@@ -16,6 +16,7 @@ namespace Xamarin.Android.Tools
 	public class EmulatorRunner
 	{
 		readonly Func<string?> getSdkPath;
+		readonly Func<string?>? getJdkPath;
 
 		/// <summary>
 		/// Creates a new <see cref="EmulatorRunner"/>.
@@ -23,8 +24,20 @@ namespace Xamarin.Android.Tools
 		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
 		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public EmulatorRunner (Func<string?> getSdkPath)
+			: this (getSdkPath, null)
+		{
+		}
+
+		/// <summary>
+		/// Creates a new <see cref="EmulatorRunner"/>.
+		/// </summary>
+		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
+		/// <param name="getJdkPath">Optional function that returns the JDK path. When provided, sets JAVA_HOME for emulator processes.</param>
+		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
+		public EmulatorRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
 		{
 			this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
+			this.getJdkPath = getJdkPath;
 		}
 
 		/// <summary>
@@ -47,6 +60,17 @@ namespace Xamarin.Android.Tools
 		/// Gets whether the Android Emulator is available.
 		/// </summary>
 		public bool IsAvailable => EmulatorPath is not null;
+
+		void ConfigureEnvironment (ProcessStartInfo psi)
+		{
+			var sdkPath = getSdkPath ();
+			if (!string.IsNullOrEmpty (sdkPath))
+				psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
+
+			var jdkPath = getJdkPath?.Invoke ();
+			if (!string.IsNullOrEmpty (jdkPath))
+				psi.EnvironmentVariables ["JAVA_HOME"] = jdkPath;
+		}
 
 		/// <summary>
 		/// Starts an AVD and returns the process.
@@ -73,6 +97,7 @@ namespace Xamarin.Android.Tools
 				UseShellExecute = false,
 				CreateNoWindow = true
 			};
+			ConfigureEnvironment (psi);
 
 			var process = new Process { StartInfo = psi };
 			process.Start ();
@@ -98,6 +123,7 @@ namespace Xamarin.Android.Tools
 				UseShellExecute = false,
 				CreateNoWindow = true
 			};
+			ConfigureEnvironment (psi);
 
 			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
@@ -112,3 +138,4 @@ namespace Xamarin.Android.Tools
 		}
 	}
 }
+
