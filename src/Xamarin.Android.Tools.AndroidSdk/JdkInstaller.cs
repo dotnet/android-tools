@@ -71,6 +71,9 @@ namespace Xamarin.Android.Tools
 					results.Add (info);
 					logger (TraceLevel.Info, $"Discovered {info.DisplayName} (size={info.Size})");
 				}
+				catch (OperationCanceledException) {
+					throw;
+				}
 				catch (Exception ex) {
 					logger (TraceLevel.Warning, $"Failed to discover JDK {version}: {ex.Message}");
 					logger (TraceLevel.Verbose, ex.ToString ());
@@ -191,12 +194,13 @@ namespace Xamarin.Android.Tools
 					progress is null ? null : new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
 					cancellationToken).ConfigureAwait (false);
 
-				// Verify checksum
-				if (!string.IsNullOrEmpty (info.Checksum)) {
-					progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
-					DownloadUtils.VerifyChecksum (tempInstallerPath, info.Checksum!);
-					progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
-				}
+				// Verify checksum — mandatory for supply-chain integrity
+				if (string.IsNullOrEmpty (info.Checksum))
+					throw new InvalidOperationException ($"Checksum could not be retrieved for installer. Aborting to preserve supply-chain integrity.");
+
+				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
+				DownloadUtils.VerifyChecksum (tempInstallerPath, info.Checksum!);
+				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
 
 				// Run the installer silently
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 0, "Running platform installer..."));
@@ -421,6 +425,9 @@ namespace Xamarin.Android.Tools
 				var checksum = DownloadUtils.ParseChecksumFile (content);
 				logger (TraceLevel.Verbose, $"{label}: checksum={checksum}");
 				return checksum;
+			}
+			catch (OperationCanceledException) {
+				throw;
 			}
 			catch (Exception ex) {
 				logger (TraceLevel.Warning, $"Could not fetch checksum for {label}: {ex.Message}");

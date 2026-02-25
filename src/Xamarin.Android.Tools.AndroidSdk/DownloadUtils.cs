@@ -103,6 +103,10 @@ namespace Xamarin.Android.Tools
 			psi.ArgumentList.Add ("-C");
 			psi.ArgumentList.Add (destinationPath);
 #else
+			if (archivePath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
+				throw new ArgumentException ($"Archive path contains unsafe characters: '{archivePath}'", nameof (archivePath));
+			if (destinationPath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
+				throw new ArgumentException ($"Destination path contains unsafe characters: '{destinationPath}'", nameof (destinationPath));
 			psi.Arguments = $"-xzf \"{archivePath}\" -C \"{destinationPath}\"";
 #endif
 
