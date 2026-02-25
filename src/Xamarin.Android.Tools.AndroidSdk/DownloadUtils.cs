@@ -123,6 +123,30 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
+		/// <summary>Fetches a SHA-256 checksum from a remote URL, returning null on failure.</summary>
+		public static async Task<string?> FetchChecksumAsync (HttpClient httpClient, string checksumUrl, string label, Action<TraceLevel, string> logger, CancellationToken cancellationToken)
+		{
+			try {
+				using var response = await httpClient.GetAsync (checksumUrl, cancellationToken).ConfigureAwait (false);
+				response.EnsureSuccessStatusCode ();
+#if NET5_0_OR_GREATER
+				var content = await response.Content.ReadAsStringAsync (cancellationToken).ConfigureAwait (false);
+#else
+				var content = await response.Content.ReadAsStringAsync ().ConfigureAwait (false);
+#endif
+				var checksum = ParseChecksumFile (content);
+				logger (TraceLevel.Verbose, $"{label}: checksum={checksum}");
+				return checksum;
+			}
+			catch (OperationCanceledException) {
+				throw;
+			}
+			catch (Exception ex) {
+				logger (TraceLevel.Warning, $"Could not fetch checksum for {label}: {ex.Message}");
+				return null;
+			}
+		}
+
 		/// <summary>Parses "hash  filename" or just "hash" from .sha256sum.txt content.</summary>
 		public static string? ParseChecksumFile (string content)
 		{

@@ -66,7 +66,7 @@ namespace Xamarin.Android.Tools
 					if (response.RequestMessage?.RequestUri is not null)
 						info.ResolvedUrl = response.RequestMessage.RequestUri.ToString ();
 
-					info.Checksum = await FetchChecksumAsync (info.ChecksumUrl, $"JDK {version}", cancellationToken).ConfigureAwait (false);
+					info.Checksum = await DownloadUtils.FetchChecksumAsync (httpClient, info.ChecksumUrl, $"JDK {version}", logger, cancellationToken).ConfigureAwait (false);
 					if (string.IsNullOrEmpty (info.Checksum))
 						logger (TraceLevel.Warning, $"Could not fetch checksum for JDK {version}, integrity verification will be skipped.");
 
@@ -109,7 +109,7 @@ namespace Xamarin.Android.Tools
 			var versionInfo = BuildVersionInfo (majorVersion);
 
 			// Fetch checksum - required for supply-chain integrity
-			var checksum = await FetchChecksumAsync (versionInfo.ChecksumUrl, $"JDK {majorVersion}", cancellationToken).ConfigureAwait (false);
+			var checksum = await DownloadUtils.FetchChecksumAsync (httpClient, versionInfo.ChecksumUrl, $"JDK {majorVersion}", logger, cancellationToken).ConfigureAwait (false);
 			if (string.IsNullOrEmpty (checksum))
 				throw new InvalidOperationException ($"Failed to fetch SHA-256 checksum for JDK {majorVersion}. Cannot verify download integrity.");
 			versionInfo.Checksum = checksum;
@@ -142,7 +142,7 @@ namespace Xamarin.Android.Tools
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 0, "Validating installation..."));
 				if (!IsValid (targetPath)) {
 					logger (TraceLevel.Error, $"JDK installation at '{targetPath}' failed validation.");
-					TryDeleteDirectory (targetPath, "invalid installation");
+					FileUtil.TryDeleteDirectory (targetPath, "invalid installation", logger);
 					throw new InvalidOperationException ($"JDK installation at '{targetPath}' failed validation. The extracted files may be corrupted.");
 				}
 				logger (TraceLevel.Info, $"Microsoft OpenJDK {majorVersion} installed successfully at {targetPath}");
@@ -156,7 +156,7 @@ namespace Xamarin.Android.Tools
 				throw;
 			}
 			finally {
-				TryDeleteFile (tempArchivePath);
+				FileUtil.TryDeleteFile (tempArchivePath, logger);
 			}
 		}
 
@@ -183,7 +183,7 @@ namespace Xamarin.Android.Tools
 			var info = BuildVersionInfo (majorVersion, installerExt);
 
 			// Fetch checksum before download for supply-chain integrity
-			var checksum = await FetchChecksumAsync (info.ChecksumUrl, $"JDK {majorVersion} installer", cancellationToken).ConfigureAwait (false);
+			var checksum = await DownloadUtils.FetchChecksumAsync (httpClient, info.ChecksumUrl, $"JDK {majorVersion} installer", logger, cancellationToken).ConfigureAwait (false);
 			if (string.IsNullOrEmpty (checksum))
 				throw new InvalidOperationException ($"Failed to fetch SHA-256 checksum for JDK {majorVersion} installer. Cannot verify download integrity.");
 			info.Checksum = checksum;
@@ -214,7 +214,7 @@ namespace Xamarin.Android.Tools
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
 			}
 			finally {
-				TryDeleteFile (tempInstallerPath);
+				FileUtil.TryDeleteFile (tempInstallerPath, logger);
 			}
 		}
 
@@ -373,87 +373,13 @@ namespace Xamarin.Android.Tools
 						jdkRoot = contentsHome;
 				}
 
-				MoveWithRollback (jdkRoot, targetPath);
+				FileUtil.MoveWithRollback (jdkRoot, targetPath, logger);
 			}
 			finally {
-				TryDeleteDirectory (tempExtractPath, "temp extract directory");
+				FileUtil.TryDeleteDirectory (tempExtractPath, "temp extract directory", logger);
 			}
 		}
 
-		void MoveWithRollback (string sourcePath, string targetPath)
-		{
-			string? backupPath = null;
-			if (Directory.Exists (targetPath)) {
-				backupPath = targetPath + $".old-{Guid.NewGuid ():N}";
-				Directory.Move (targetPath, backupPath);
-			}
-
-			var parentDir = Path.GetDirectoryName (targetPath);
-			if (!string.IsNullOrEmpty (parentDir))
-				Directory.CreateDirectory (parentDir);
-
-			try {
-				Directory.Move (sourcePath, targetPath);
-
-				// Only delete backup after successful move
-				if (backupPath is not null)
-					TryDeleteDirectory (backupPath, "old JDK backup");
-			}
-			catch (Exception ex) {
-				logger (TraceLevel.Error, $"Failed to move to '{targetPath}': {ex.Message}");
-				if (backupPath is not null && Directory.Exists (backupPath)) {
-					try {
-						if (Directory.Exists (targetPath))
-							Directory.Delete (targetPath, recursive: true);
-						Directory.Move (backupPath, targetPath);
-						logger (TraceLevel.Warning, $"Restored previous JDK from backup '{backupPath}'.");
-					}
-					catch (Exception restoreEx) {
-						logger (TraceLevel.Error, $"Failed to restore from backup: {restoreEx.Message}");
-					}
-				}
-				throw;
-			}
-		}
-
-		async Task<string?> FetchChecksumAsync (string checksumUrl, string label, CancellationToken cancellationToken)
-		{
-			try {
-				using var response = await httpClient.GetAsync (checksumUrl, cancellationToken).ConfigureAwait (false);
-				response.EnsureSuccessStatusCode ();
-#if NET5_0_OR_GREATER
-				var content = await response.Content.ReadAsStringAsync (cancellationToken).ConfigureAwait (false);
-#else
-				var content = await response.Content.ReadAsStringAsync ().ConfigureAwait (false);
-#endif
-				var checksum = DownloadUtils.ParseChecksumFile (content);
-				logger (TraceLevel.Verbose, $"{label}: checksum={checksum}");
-				return checksum;
-			}
-			catch (OperationCanceledException) {
-				throw;
-			}
-			catch (Exception ex) {
-				logger (TraceLevel.Warning, $"Could not fetch checksum for {label}: {ex.Message}");
-				return null;
-			}
-		}
-
-		void TryDeleteFile (string path)
-		{
-			if (!File.Exists (path))
-				return;
-			try { File.Delete (path); }
-			catch (Exception ex) { logger (TraceLevel.Warning, $"Could not delete '{path}': {ex.Message}"); }
-		}
-
-		void TryDeleteDirectory (string path, string label)
-		{
-			if (!Directory.Exists (path))
-				return;
-			try { Directory.Delete (path, recursive: true); }
-			catch (Exception ex) { logger (TraceLevel.Warning, $"Could not clean up {label} at '{path}': {ex.Message}"); }
-		}
 
 		static string GetMicrosoftOpenJDKOSName ()
 		{
