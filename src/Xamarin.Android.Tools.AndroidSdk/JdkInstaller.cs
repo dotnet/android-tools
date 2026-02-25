@@ -248,10 +248,19 @@ namespace Xamarin.Android.Tools
 			var stderr = new StringWriter ();
 			var exitCode = await ProcessUtils.StartProcess (psi, stdout: stdout, stderr: stderr, cancellationToken).ConfigureAwait (false);
 
-			if (exitCode != 0) {
+			// On Windows, msiexec can return non-zero exit codes that still indicate success,
+			// such as 3010 (success, reboot required) or 1641 (success, restart initiated).
+			// Treat these as success while logging that a reboot is required.
+			var rebootRequired = OS.IsWindows && (exitCode == 3010 || exitCode == 1641);
+
+			if (exitCode != 0 && !rebootRequired) {
 				var errorOutput = stderr.ToString ();
 				logger (TraceLevel.Error, $"Installer failed (exit code {exitCode}): {errorOutput}");
 				throw new InvalidOperationException ($"Platform installer failed with exit code {exitCode}: {errorOutput}");
+			}
+
+			if (rebootRequired) {
+				logger (TraceLevel.Warning, $"Installer completed successfully but a reboot is required (exit code {exitCode}).");
 			}
 		}
 
