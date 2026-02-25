@@ -145,7 +145,7 @@ namespace Xamarin.Android.Tools
 
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
 			}
-			catch (Exception ex) when (!(ex is ArgumentException) && !(ex is ArgumentNullException)) {
+			catch (Exception ex) when (ex is not ArgumentException and not ArgumentNullException) {
 				logger (TraceLevel.Error, $"JDK installation failed: {ex.Message}");
 				logger (TraceLevel.Verbose, ex.ToString ());
 				throw;
@@ -273,8 +273,7 @@ namespace Xamarin.Android.Tools
 			if (OS.IsWindows) {
 				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
 				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
-				if ((!string.IsNullOrEmpty (programFiles) && normalizedPath.StartsWith (programFiles, StringComparison.OrdinalIgnoreCase)) ||
-				    (!string.IsNullOrEmpty (programFilesX86) && normalizedPath.StartsWith (programFilesX86, StringComparison.OrdinalIgnoreCase))) {
+				if (IsUnderDirectory (normalizedPath, programFiles) || IsUnderDirectory (normalizedPath, programFilesX86)) {
 					logger (TraceLevel.Warning, $"Target path '{targetPath}' is in Program Files which typically requires elevation.");
 					return false;
 				}
@@ -456,8 +455,9 @@ namespace Xamarin.Android.Tools
 		static string GetArchitectureName ()
 		{
 			return RuntimeInformation.OSArchitecture switch {
+				Architecture.X64   => "x64",
 				Architecture.Arm64 => "aarch64",
-				_ => "x64",
+				_ => throw new PlatformNotSupportedException ($"Unsupported architecture: {RuntimeInformation.OSArchitecture}"),
 			};
 		}
 
@@ -510,6 +510,15 @@ namespace Xamarin.Android.Tools
 #else
 			return geteuid () == 0;
 #endif
+		}
+
+		static bool IsUnderDirectory (string path, string directory)
+		{
+			if (string.IsNullOrEmpty (directory) || string.IsNullOrEmpty (path))
+				return false;
+			if (path.Equals (directory, StringComparison.OrdinalIgnoreCase))
+				return true;
+			return path.StartsWith (directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
 		}
 
 		[DllImport ("libc", SetLastError = true)]
