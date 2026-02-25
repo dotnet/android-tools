@@ -228,7 +228,7 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			var dir = Path.Combine (Path.GetTempPath (), $"jdk-write-test-{Guid.NewGuid ()}");
 			try {
-				Assert.IsTrue (installer.IsTargetPathWritable (dir));
+				Assert.IsTrue (FileUtil.IsTargetPathWritable (dir, (level, msg) => TestContext.WriteLine ($"[{level}] {msg}")));
 			}
 			finally {
 				if (Directory.Exists (dir))
@@ -239,8 +239,9 @@ namespace Xamarin.Android.Tools.Tests
 		[Test]
 		public void IsTargetPathWritable_NullOrEmpty_ReturnsFalse ()
 		{
-			Assert.IsFalse (installer.IsTargetPathWritable (null!));
-			Assert.IsFalse (installer.IsTargetPathWritable (""));
+			var logger = new Action<TraceLevel, string> ((level, msg) => TestContext.WriteLine ($"[{level}] {msg}"));
+			Assert.IsFalse (FileUtil.IsTargetPathWritable (null!, logger));
+			Assert.IsFalse (FileUtil.IsTargetPathWritable ("", logger));
 		}
 
 		[Test]

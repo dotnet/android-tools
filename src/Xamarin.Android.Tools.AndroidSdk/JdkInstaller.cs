@@ -198,10 +198,6 @@ namespace Xamarin.Android.Tools
 					progress is null ? null : new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
 					cancellationToken).ConfigureAwait (false);
 
-				// Verify checksum — mandatory for supply-chain integrity
-				if (string.IsNullOrEmpty (info.Checksum))
-					throw new InvalidOperationException ($"Checksum could not be retrieved for installer. Aborting to preserve supply-chain integrity.");
-
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
 				DownloadUtils.VerifyChecksum (tempInstallerPath, info.Checksum!);
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
@@ -336,7 +332,6 @@ namespace Xamarin.Android.Tools
 				FileUtil.TryDeleteDirectory (tempExtractPath, "temp extract directory", logger);
 			}
 		}
-
 
 		static string GetMicrosoftOpenJDKOSName ()
 		{
