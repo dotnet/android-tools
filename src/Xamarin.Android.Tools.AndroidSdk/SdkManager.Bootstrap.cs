@@ -129,7 +129,7 @@ namespace Xamarin.Android.Tools
 						}
 						catch (IOException) {
 							// Cross-device fallback: copy recursively then delete source
-							CopyDirectoryRecursive (extractedDir, versionDir);
+							FileUtil.CopyDirectoryRecursive (extractedDir, versionDir);
 							Directory.Delete (extractedDir, recursive: true);
 						}
 						logger (TraceLevel.Info, $"Extracted cmdline-tools to '{versionDir}'.");
@@ -168,7 +168,7 @@ namespace Xamarin.Android.Tools
 
 				// Set executable permissions on Unix
 				if (!OS.IsWindows) {
-					SetExecutablePermissions (versionDir, logger);
+					FileUtil.SetExecutablePermissions (versionDir, logger);
 				}
 
 				// Update AndroidSdkPath for subsequent sdkmanager calls
