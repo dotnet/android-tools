@@ -103,6 +103,8 @@ namespace Xamarin.Android.Tools
 			psi.ArgumentList.Add ("-C");
 			psi.ArgumentList.Add (destinationPath);
 #else
+			// ArgumentList is not available on netstandard2.0, so we build Arguments manually.
+			// Reject characters that could allow argument injection through the shell.
 			if (archivePath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
 				throw new ArgumentException ($"Archive path contains unsafe characters: '{archivePath}'", nameof (archivePath));
 			if (destinationPath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
