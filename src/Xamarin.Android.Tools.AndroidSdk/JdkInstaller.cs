@@ -67,6 +67,8 @@ namespace Xamarin.Android.Tools
 						info.ResolvedUrl = response.RequestMessage.RequestUri.ToString ();
 
 					info.Checksum = await FetchChecksumAsync (info.ChecksumUrl, $"JDK {version}", cancellationToken).ConfigureAwait (false);
+					if (string.IsNullOrEmpty (info.Checksum))
+						logger (TraceLevel.Warning, $"Could not fetch checksum for JDK {version}, integrity verification will be skipped.");
 
 					results.Add (info);
 					logger (TraceLevel.Info, $"Discovered {info.DisplayName} (size={info.Size})");
@@ -182,6 +184,8 @@ namespace Xamarin.Android.Tools
 
 			// Fetch checksum before download for supply-chain integrity
 			var checksum = await FetchChecksumAsync (info.ChecksumUrl, $"JDK {majorVersion} installer", cancellationToken).ConfigureAwait (false);
+			if (string.IsNullOrEmpty (checksum))
+				throw new InvalidOperationException ($"Failed to fetch SHA-256 checksum for JDK {majorVersion} installer. Cannot verify download integrity.");
 			info.Checksum = checksum;
 
 			var tempInstallerPath = Path.Combine (Path.GetTempPath (), $"microsoft-jdk-{majorVersion}-{Guid.NewGuid ()}{installerExt}");
