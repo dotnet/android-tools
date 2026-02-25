@@ -476,6 +476,95 @@ Available Updates:
 				async () => await manager.AcceptLicensesAsync ());
 		}
 
+		[Test]
+		public async Task AcceptLicensesAsync_ExitCodeZero_Succeeds ()
+		{
+			var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-test-{Guid.NewGuid ()}");
+			try {
+				CreateFakeSdkManager (sdkDir, exitCode: 0, stdout: "All SDK package licenses accepted.");
+				manager.AndroidSdkPath = sdkDir;
+				// Should complete without throwing
+				await manager.AcceptLicensesAsync ();
+			}
+			finally {
+				if (Directory.Exists (sdkDir))
+					Directory.Delete (sdkDir, recursive: true);
+			}
+		}
+
+		[Test]
+		public async Task AcceptLicensesAsync_NonZeroWithAllLicensesAcceptedInStdout_Succeeds ()
+		{
+			var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-test-{Guid.NewGuid ()}");
+			try {
+				CreateFakeSdkManager (sdkDir, exitCode: 1, stdout: "All SDK package licenses accepted.");
+				manager.AndroidSdkPath = sdkDir;
+				// Known benign phrase: should not throw
+				await manager.AcceptLicensesAsync ();
+			}
+			finally {
+				if (Directory.Exists (sdkDir))
+					Directory.Delete (sdkDir, recursive: true);
+			}
+		}
+
+		[Test]
+		public async Task AcceptLicensesAsync_NonZeroWithLicensesAlreadyAcceptedInStdout_Succeeds ()
+		{
+			var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-test-{Guid.NewGuid ()}");
+			try {
+				CreateFakeSdkManager (sdkDir, exitCode: 1, stdout: "Licenses have already been accepted.");
+				manager.AndroidSdkPath = sdkDir;
+				// Known benign phrase: should not throw
+				await manager.AcceptLicensesAsync ();
+			}
+			finally {
+				if (Directory.Exists (sdkDir))
+					Directory.Delete (sdkDir, recursive: true);
+			}
+		}
+
+		[Test]
+		public void AcceptLicensesAsync_NonZeroWithUnknownError_Throws ()
+		{
+			var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-test-{Guid.NewGuid ()}");
+			try {
+				CreateFakeSdkManager (sdkDir, exitCode: 1, stdout: "Error: JAVA_HOME is not set.");
+				manager.AndroidSdkPath = sdkDir;
+				var ex = Assert.ThrowsAsync<InvalidOperationException> (
+					async () => await manager.AcceptLicensesAsync ());
+				Assert.That (ex!.Message, Does.Contain ("Failed to accept SDK licenses"));
+			}
+			finally {
+				if (Directory.Exists (sdkDir))
+					Directory.Delete (sdkDir, recursive: true);
+			}
+		}
+
+		static void CreateFakeSdkManager (string sdkDir, int exitCode, string stdout)
+		{
+			var binDir = Path.Combine (sdkDir, "cmdline-tools", "latest", "bin");
+			Directory.CreateDirectory (binDir);
+
+			if (OS.IsWindows) {
+				var script = Path.Combine (binDir, "sdkmanager.bat");
+				File.WriteAllText (script, $"@echo off\r\necho {stdout}\r\nexit /b {exitCode}\r\n");
+			} else {
+				var script = Path.Combine (binDir, "sdkmanager");
+				File.WriteAllText (script, $"#!/bin/sh\necho \"{stdout}\"\nexit {exitCode}\n");
+				var chmod = new ProcessStartInfo {
+					FileName = "chmod",
+					Arguments = $"+x \"{script}\"",
+					UseShellExecute = false,
+					RedirectStandardOutput = true,
+					RedirectStandardError = true,
+					CreateNoWindow = true,
+				};
+				using var p = Process.Start (chmod)!;
+				p.WaitForExit ();
+			}
+		}
+
 		// --- License Parsing ---
 
 		[Test]
