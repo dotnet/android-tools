@@ -19,32 +19,18 @@ namespace Xamarin.Android.Tools
 		readonly Func<string?> getSdkPath;
 		readonly Func<string?>? getJdkPath;
 
-		/// <summary>
-		/// Creates a new <see cref="AvdManagerRunner"/>.
-		/// </summary>
-		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
-		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public AvdManagerRunner (Func<string?> getSdkPath)
 			: this (getSdkPath, null)
 		{
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="AvdManagerRunner"/>.
-		/// </summary>
-		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
-		/// <param name="getJdkPath">Optional function that returns the JDK path. When provided, sets JAVA_HOME for avdmanager processes.</param>
-		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public AvdManagerRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
 		{
 			this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
 			this.getJdkPath = getJdkPath;
 		}
 
-		/// <summary>
-		/// Gets the path to the avdmanager executable, or null if not found.
-		/// </summary>
-		public string? AvdManagerPath {
+		internal string? AvdManagerPath {
 			get {
 				var sdkPath = getSdkPath ();
 				if (string.IsNullOrEmpty (sdkPath))
@@ -61,9 +47,6 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>
-		/// Gets whether the AVD Manager is available.
-		/// </summary>
 		public bool IsAvailable => !string.IsNullOrEmpty (AvdManagerPath);
 
 		void ConfigureEnvironment (ProcessStartInfo psi)
@@ -77,12 +60,6 @@ namespace Xamarin.Android.Tools
 				psi.EnvironmentVariables ["JAVA_HOME"] = jdkPath;
 		}
 
-		/// <summary>
-		/// Lists all configured AVDs.
-		/// </summary>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <returns>A list of configured AVDs.</returns>
-		/// <exception cref="InvalidOperationException">Thrown when AVD Manager is not found.</exception>
 		public async Task<List<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
@@ -101,16 +78,6 @@ namespace Xamarin.Android.Tools
 			return ParseAvdListOutput (stdout.ToString ());
 		}
 
-		/// <summary>
-		/// Creates a new AVD.
-		/// </summary>
-		/// <param name="name">The name for the new AVD.</param>
-		/// <param name="systemImage">The system image package (e.g., "system-images;android-35;google_apis;x86_64").</param>
-		/// <param name="deviceProfile">Optional device profile (e.g., "pixel_6"). Defaults to avdmanager's default.</param>
-		/// <param name="force">When true, overwrites an existing AVD with the same name.</param>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <returns>Information about the created AVD.</returns>
-		/// <exception cref="InvalidOperationException">Thrown when AVD Manager is not found or creation fails.</exception>
 		public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 			bool force = false, CancellationToken cancellationToken = default)
 		{
@@ -178,12 +145,6 @@ namespace Xamarin.Android.Tools
 			};
 		}
 
-		/// <summary>
-		/// Deletes an AVD.
-		/// </summary>
-		/// <param name="name">The name of the AVD to delete.</param>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <exception cref="InvalidOperationException">Thrown when AVD Manager is not found.</exception>
 		public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
