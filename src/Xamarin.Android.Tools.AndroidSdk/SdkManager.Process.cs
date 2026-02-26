@@ -82,11 +82,6 @@ namespace Xamarin.Android.Tools
 			return (exitCode, stdoutStr, stderrStr);
 		}
 
-		/// <summary>
-		/// Determines whether the current SDK path requires elevated (Administrator) permissions
-		/// for write operations. Reuses <see cref="FileUtil.IsTargetPathWritable"/> and
-		/// <see cref="ProcessUtils.IsElevated"/> to avoid duplicating path-check logic.
-		/// </summary>
 		bool RequiresElevation ()
 		{
 			if (ProcessUtils.IsElevated ())
@@ -100,13 +95,9 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>
-		/// Runs sdkmanager with elevated (Administrator) privileges on Windows using a wrapper
-		/// script that captures stdout/stderr to temp files. UAC prompt will be shown to the user.
+		/// Runs sdkmanager with elevated (Administrator) privileges on Windows.
+		/// Uses a wrapper script that captures stdout/stderr to temp files.
 		/// </summary>
-		/// <remarks>
-		/// Uses <c>ProcessUtils.StartShellExecuteProcessAsync</c> because elevation requires
-		/// support <c>UseShellExecute = true</c> with <c>Verb = "runas"</c> needed for UAC elevation.
-		/// </remarks>
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerElevatedAsync (
 			string sdkManagerPath, string[] arguments, bool acceptLicenses, CancellationToken cancellationToken)
 		{
@@ -200,23 +191,18 @@ namespace Xamarin.Android.Tools
 			logger (TraceLevel.Info, $"Download complete: {destinationPath}");
 		}
 
-		/// <summary>
-		/// Returns environment variables needed by Android SDK tools.
-		/// </summary>
 		Dictionary<string, string> GetEnvironmentVariables ()
 		{
-			var env = new Dictionary<string, string> ();
+			var env = new Dictionary<string, string> {
+				["ANDROID_USER_HOME"] = Path.Combine (
+					Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android")
+			};
 
 			if (!string.IsNullOrEmpty (AndroidSdkPath))
 				env[EnvironmentVariableNames.AndroidHome] = AndroidSdkPath!;
 
 			if (!string.IsNullOrEmpty (JavaSdkPath))
 				env[EnvironmentVariableNames.JavaHome] = JavaSdkPath!;
-
-			// Ensure ANDROID_USER_HOME is set so sdkmanager can write install properties
-			// to a user-writable location instead of the (possibly read-only) SDK path.
-			env["ANDROID_USER_HOME"] = Path.Combine (
-				Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
 
 			return env;
 		}
