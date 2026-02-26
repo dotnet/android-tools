@@ -20,20 +20,12 @@ namespace Xamarin.Android.Tools
 		readonly Func<string?> getSdkPath;
 		static readonly Regex DetailsRegex = new Regex (@"(\w+):(\S+)", RegexOptions.Compiled);
 
-		/// <summary>
-		/// Creates a new <see cref="AdbRunner"/>.
-		/// </summary>
-		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
-		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public AdbRunner (Func<string?> getSdkPath)
 		{
 			this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
 		}
 
-		/// <summary>
-		/// Gets the path to the adb executable, or null if not found.
-		/// </summary>
-		public string? AdbPath {
+		internal string? AdbPath {
 			get {
 				var sdkPath = getSdkPath ();
 				if (!string.IsNullOrEmpty (sdkPath)) {
@@ -59,12 +51,6 @@ namespace Xamarin.Android.Tools
 				psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
 		}
 
-		/// <summary>
-		/// Lists connected devices.
-		/// </summary>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <returns>A list of connected devices.</returns>
-		/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
 		public async Task<List<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
@@ -103,14 +89,6 @@ namespace Xamarin.Android.Tools
 			return devices;
 		}
 
-		/// <summary>
-		/// Waits for a device to become available.
-		/// </summary>
-		/// <param name="serial">Optional device serial number. When null, waits for any device.</param>
-		/// <param name="timeout">Maximum time to wait. Defaults to 60 seconds.</param>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
-		/// <exception cref="TimeoutException">Thrown when no device becomes available within the timeout.</exception>
 		public async Task WaitForDeviceAsync (string? serial = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
@@ -137,12 +115,6 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>
-		/// Stops a running emulator.
-		/// </summary>
-		/// <param name="serial">The emulator serial number (e.g., "emulator-5554").</param>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <exception cref="InvalidOperationException">Thrown when ADB is not found.</exception>
 		public async Task StopEmulatorAsync (string serial, CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
