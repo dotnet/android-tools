@@ -26,9 +26,6 @@ namespace Xamarin.Android.Tools
 		/// <summary>Default manifest feed URL (Xamarin/Microsoft).</summary>
 		public const string DefaultManifestFeedUrl = "https://aka.ms/AndroidManifestFeed/d18-0";
 
-		/// <summary>Google's official Android SDK repository manifest URL.</summary>
-		public const string GoogleManifestFeedUrl = "https://dl.google.com/android/repository/repository2-3.xml";
-
 		/// <summary>Buffer size for download operations (80 KB).</summary>
 		const int DownloadBufferSize = 81920;
 
@@ -41,19 +38,6 @@ namespace Xamarin.Android.Tools
 		/// Defaults to <see cref="DefaultManifestFeedUrl"/>.
 		/// </summary>
 		public string ManifestFeedUrl { get; set; } = DefaultManifestFeedUrl;
-
-		/// <summary>
-		/// Gets or sets the manifest source. Changing this property updates <see cref="ManifestFeedUrl"/>.
-		/// </summary>
-		public SdkManifestSource ManifestSource
-		{
-			get => ManifestFeedUrl == GoogleManifestFeedUrl ? SdkManifestSource.Google : SdkManifestSource.Xamarin;
-			set {
-				if (value == SdkManifestSource.Google)
-					throw new NotSupportedException ("The Google SDK manifest format is not currently supported. Use the Xamarin manifest feed.");
-				ManifestFeedUrl = DefaultManifestFeedUrl;
-			}
-		}
 
 		/// <summary>
 		/// Gets or sets the Android SDK root path. Used to locate and invoke <c>sdkmanager</c>.
