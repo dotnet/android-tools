@@ -25,7 +25,7 @@ namespace Xamarin.Android.Tools
 			this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
 		}
 
-		internal string? AdbPath {
+		public string? AdbPath {
 			get {
 				var sdkPath = getSdkPath ();
 				if (!string.IsNullOrEmpty (sdkPath)) {
