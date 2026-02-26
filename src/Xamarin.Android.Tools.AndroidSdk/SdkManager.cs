@@ -76,6 +76,21 @@ namespace Xamarin.Android.Tools
 			if (disposed)
 				throw new ObjectDisposedException (nameof (SdkManager));
 		}
+
+		string RequireSdkManagerPath ()
+		{
+			ThrowIfDisposed ();
+			return FindSdkManagerPath ()
+				?? throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
+		}
+
+		void ThrowOnSdkManagerFailure (int exitCode, string operation, string stderr)
+		{
+			if (exitCode == 0)
+				return;
+			logger (TraceLevel.Error, $"{operation} failed (exit code {exitCode}): {stderr}");
+			throw new InvalidOperationException ($"{operation} failed: {stderr}");
+		}
 	}
 }
 
