@@ -68,6 +68,8 @@ namespace Xamarin.Android.Tools
 
 			logger (TraceLevel.Verbose, "Checking for pending licenses...");
 
+			var envVars = GetEnvironmentVariables ();
+
 			// Run --licenses without auto-accept to get the license text
 			var psi = new ProcessStartInfo {
 				FileName = sdkManagerPath,
@@ -78,8 +80,6 @@ namespace Xamarin.Android.Tools
 				RedirectStandardError = true,
 				RedirectStandardInput = true,
 			};
-
-			ConfigureEnvironment (psi);
 
 			using var stdout = new StringWriter ();
 			using var stderr = new StringWriter ();
@@ -102,7 +102,7 @@ namespace Xamarin.Android.Tools
 			};
 
 			try {
-				await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, onStarted).ConfigureAwait (false);
+				await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, envVars, onStarted).ConfigureAwait (false);
 			}
 			catch (OperationCanceledException) {
 				throw;
