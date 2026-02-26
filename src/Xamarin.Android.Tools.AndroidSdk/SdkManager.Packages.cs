@@ -95,9 +95,14 @@ namespace Xamarin.Android.Tools
 			var sdkManagerPath = RequireSdkManagerPath ();
 			logger (TraceLevel.Info, $"Installing packages: {string.Join (", ", packageArray)}");
 
-			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
-				sdkManagerPath, packageArray, acceptLicenses, cancellationToken).ConfigureAwait (false);
-			ThrowOnSdkManagerFailure (exitCode, "Package installation", stderr);
+			// Install packages one at a time to work around sdkmanager shell script quoting issues
+			// on macOS/Linux where multiple quoted arguments are incorrectly concatenated
+			foreach (var package in packageArray) {
+				logger (TraceLevel.Info, $"Installing package: {package}");
+				var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
+					sdkManagerPath, new[] { package }, acceptLicenses, cancellationToken).ConfigureAwait (false);
+				ThrowOnSdkManagerFailure (exitCode, $"Package installation ({package})", stderr);
+			}
 			logger (TraceLevel.Info, "Packages installed successfully.");
 		}
 

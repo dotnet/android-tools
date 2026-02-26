@@ -29,7 +29,17 @@ namespace Xamarin.Android.Tools
 				return await RunSdkManagerElevatedAsync (sdkManagerPath, arguments, acceptLicenses, cancellationToken).ConfigureAwait (false);
 			}
 
-			var psi = ProcessUtils.CreateProcessStartInfo (sdkManagerPath, arguments);
+			// On macOS/Linux the sdkmanager shell script uses 'save()'/'eval' which
+			// concatenates individually-quoted arguments. Pass as a single Arguments
+			// string so the script receives them correctly.
+			var psi = OS.IsWindows
+				? ProcessUtils.CreateProcessStartInfo (sdkManagerPath, arguments)
+				: new ProcessStartInfo {
+					FileName = sdkManagerPath,
+					Arguments = argumentsStr,
+					UseShellExecute = false,
+					CreateNoWindow = true,
+				};
 			psi.RedirectStandardInput = acceptLicenses;
 
 			var envVars = GetEnvironmentVariables ();
@@ -131,10 +141,13 @@ namespace Xamarin.Android.Tools
 				var licenseInput = acceptLicenses
 					? $"(for /L %%i in (1,1,100) do @echo y) | "
 					: "";
+				// Use 'call' to invoke sdkmanager.bat so the wrapper script continues
+				// execution. Without 'call', invoking a .bat from a .cmd terminates
+				// the wrapper early and the exit code capture never runs.
 				var script = $"""
 					@echo off
 					{envBlock}
-					{licenseInput}"{sdkManagerPath}" {escapedArgs} > "{stdoutFile}" 2> "{stderrFile}"
+					{licenseInput}call "{sdkManagerPath}" {escapedArgs} > "{stdoutFile}" 2> "{stderrFile}"
 					echo %ERRORLEVEL% > "{exitCodeFile}"
 					""";
 
