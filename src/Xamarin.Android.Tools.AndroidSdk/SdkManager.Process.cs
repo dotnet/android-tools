@@ -106,10 +106,10 @@ namespace Xamarin.Android.Tools
 
 			// Check if path is in a system-protected location
 			if (OS.IsWindows) {
-				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
-				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
-				if ((!string.IsNullOrEmpty (programFiles) && sdkPath.StartsWith (programFiles, StringComparison.OrdinalIgnoreCase)) ||
-				    (!string.IsNullOrEmpty (programFilesX86) && sdkPath.StartsWith (programFilesX86, StringComparison.OrdinalIgnoreCase)))
+				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles) ?? "";
+				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86) ?? "";
+				if ((!string.IsNullOrEmpty (programFiles) && sdkPath!.StartsWith (programFiles, StringComparison.OrdinalIgnoreCase)) ||
+				    (!string.IsNullOrEmpty (programFilesX86) && sdkPath!.StartsWith (programFilesX86, StringComparison.OrdinalIgnoreCase)))
 					return true;
 			}
 
@@ -222,8 +222,9 @@ namespace Xamarin.Android.Tools
 
 			// In netstandard2.0, ReadAsStreamAsync() has no CancellationToken overload.
 			// Register to dispose the response on cancellation so the stream read will abort.
+			// Note: HttpResponseMessage.Dispose() is idempotent, so the using + registration is safe.
 			cancellationToken.ThrowIfCancellationRequested ();
-			using var registration = cancellationToken.Register (() => response.Dispose ());
+			using var registration = cancellationToken.Register (() => { try { response.Dispose (); } catch { } });
 			using var stream = await response.Content.ReadAsStreamAsync ().ConfigureAwait (false);
 			using var fileStream = File.Create (destinationPath);
 
