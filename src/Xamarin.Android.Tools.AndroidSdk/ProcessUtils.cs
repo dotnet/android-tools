@@ -24,12 +24,20 @@ namespace Xamarin.Android.Tools
 			ExecutableFileExtensions    = pathExts;
 		}
 
-		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
+		public static Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
+			=> StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables: null, onStarted: onStarted);
+
+		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables, Action<Process>? onStarted = null)
 		{
 			cancellationToken.ThrowIfCancellationRequested ();
 			psi.UseShellExecute = false;
 			psi.RedirectStandardOutput |= stdout != null;
 			psi.RedirectStandardError |= stderr != null;
+
+			if (environmentVariables != null) {
+				foreach (var kvp in environmentVariables)
+					psi.EnvironmentVariables[kvp.Key] = kvp.Value;
+			}
 
 			var process = new Process {
 				StartInfo = psi,
@@ -169,6 +177,31 @@ namespace Xamarin.Android.Tools
 		/// On .NET 5+ uses <see cref="ProcessStartInfo.ArgumentList"/> to avoid shell-escaping issues;
 		/// on older frameworks falls back to a single <see cref="ProcessStartInfo.Arguments"/> string.
 		/// </summary>
+		/// <summary>
+		/// Starts a process with <c>UseShellExecute = true</c> and waits for it to exit.
+		/// Used for elevated (UAC) scenarios where stdout/stderr cannot be redirected.
+		/// </summary>
+		public static async Task<int> StartShellExecuteProcessAsync (
+			ProcessStartInfo psi, TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			cancellationToken.ThrowIfCancellationRequested ();
+			psi.UseShellExecute = true;
+
+			using var process = Process.Start (psi);
+			if (process is null)
+				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
+
+			await Task.Run (() => {
+				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
+					KillProcess (process);
+					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
+				}
+			}, cancellationToken).ConfigureAwait (false);
+
+			cancellationToken.ThrowIfCancellationRequested ();
+			return process.ExitCode;
+		}
+
 		public static ProcessStartInfo CreateProcessStartInfo (string fileName, params string[] args)
 		{
 			var psi = new ProcessStartInfo {

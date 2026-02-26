@@ -71,10 +71,7 @@ namespace Xamarin.Android.Tools
 		public async Task<(IReadOnlyList<SdkPackage> Installed, IReadOnlyList<SdkPackage> Available)> ListAsync (CancellationToken cancellationToken = default)
 		{
 			ThrowIfDisposed ();
-			var sdkManagerPath = FindSdkManagerPath ();
-			if (sdkManagerPath is null)
-				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first to install command-line tools.");
-
+			var sdkManagerPath = FindSdkManagerPath () ?? throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first to install command-line tools.");
 			logger (TraceLevel.Info, "Running sdkmanager --list...");
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (sdkManagerPath, "--list", cancellationToken: cancellationToken).ConfigureAwait (false);
 
@@ -98,10 +95,8 @@ namespace Xamarin.Android.Tools
 			if (packages is null || !packages.Any ())
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
-			var sdkManagerPath = FindSdkManagerPath ();
-			if (sdkManagerPath is null)
-				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
-
+			var sdkManagerPath = FindSdkManagerPath () ?? throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
+			
 			var packageList = string.Join (" ", packages.Select (p => $"\"{p}\""));
 			logger (TraceLevel.Info, $"Installing packages: {packageList}");
 

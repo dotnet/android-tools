@@ -79,14 +79,29 @@ namespace Xamarin.Android.Tools
 		/// <summary>Verifies a file's SHA-256 hash against an expected value.</summary>
 		public static void VerifyChecksum (string filePath, string expectedChecksum)
 		{
-			using var sha256 = SHA256.Create ();
+			VerifyChecksum (filePath, expectedChecksum, "sha256");
+		}
+
+		/// <summary>Verifies a file's hash against an expected value using the specified algorithm (sha256 or sha1).</summary>
+		public static void VerifyChecksum (string filePath, string expectedChecksum, string checksumType)
+		{
+			using var hasher = CreateHashAlgorithm (checksumType);
 			using var stream = File.OpenRead (filePath);
 
-			var hash = sha256.ComputeHash (stream);
+			var hash = hasher.ComputeHash (stream);
 			var actual = BitConverter.ToString (hash).Replace ("-", "").ToLowerInvariant ();
 
 			if (!string.Equals (actual, expectedChecksum, StringComparison.OrdinalIgnoreCase))
 				throw new InvalidOperationException ($"Checksum verification failed. Expected: {expectedChecksum}, Actual: {actual}");
+		}
+
+		static HashAlgorithm CreateHashAlgorithm (string checksumType)
+		{
+			switch (checksumType.ToLowerInvariant ()) {
+				case "sha256": return SHA256.Create ();
+				case "sha1": return SHA1.Create ();
+				default: throw new NotSupportedException ($"Unsupported checksum type: '{checksumType}'.");
+			}
 		}
 
 		/// <summary>Extracts a ZIP archive with Zip Slip protection.</summary>

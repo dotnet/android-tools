@@ -4,7 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -55,10 +54,7 @@ namespace Xamarin.Android.Tools
 				// Step 3: Verify checksum
 				if (!string.IsNullOrEmpty (cmdlineTools.Checksum)) {
 					progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Verifying, Message = "Verifying checksum..." });
-					var checksumValid = VerifyChecksum (tempArchivePath, cmdlineTools.Checksum!, cmdlineTools.ChecksumType);
-					if (!checksumValid) {
-						throw new InvalidOperationException ($"Checksum verification failed for cmdline-tools archive. Expected: {cmdlineTools.Checksum}");
-					}
+					DownloadUtils.VerifyChecksum (tempArchivePath, cmdlineTools.Checksum!, cmdlineTools.ChecksumType ?? "sha1");
 					logger (TraceLevel.Info, "Checksum verification passed.");
 				}
 				else {
@@ -77,33 +73,7 @@ namespace Xamarin.Android.Tools
 				try {
 					Directory.CreateDirectory (tempExtractDir);
 
-					// Safe extraction to prevent zip slip (path traversal) attacks
-					var fullExtractRoot = Path.GetFullPath (tempExtractDir);
-					using (var archive = ZipFile.OpenRead (tempArchivePath)) {
-						foreach (var entry in archive.Entries) {
-							if (string.IsNullOrEmpty (entry.FullName))
-								continue;
-
-							var destinationPath = Path.GetFullPath (
-								Path.Combine (fullExtractRoot, entry.FullName));
-
-							if (!destinationPath.StartsWith (fullExtractRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) &&
-							    !string.Equals (destinationPath, fullExtractRoot, StringComparison.OrdinalIgnoreCase)) {
-								throw new InvalidOperationException ($"Archive entry '{entry.FullName}' would extract outside target directory.");
-							}
-
-							if (entry.FullName.EndsWith ("/", StringComparison.Ordinal) || entry.FullName.EndsWith ("\\", StringComparison.Ordinal)) {
-								Directory.CreateDirectory (destinationPath);
-								continue;
-							}
-
-							var destDir = Path.GetDirectoryName (destinationPath);
-							if (!string.IsNullOrEmpty (destDir))
-								Directory.CreateDirectory (destDir);
-
-							entry.ExtractToFile (destinationPath, overwrite: true);
-						}
-					}
+					DownloadUtils.ExtractZipSafe (tempArchivePath, tempExtractDir, cancellationToken);
 
 					// The zip contains a top-level "cmdline-tools" directory
 					var extractedDir = Path.Combine (tempExtractDir, "cmdline-tools");
