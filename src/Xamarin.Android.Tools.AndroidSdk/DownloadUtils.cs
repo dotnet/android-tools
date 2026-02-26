@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -17,6 +18,9 @@ namespace Xamarin.Android.Tools
 	/// </summary>
 	static class DownloadUtils
 	{
+		const int BufferSize = 81920;
+		const long BytesPerMB = 1024 * 1024;
+
 		/// <summary>Downloads a file from the given URL with optional progress reporting.</summary>
 		public static async Task DownloadFileAsync (HttpClient client, string url, string destinationPath, long expectedSize, IProgress<(double percent, string message)>? progress, CancellationToken cancellationToken)
 		{
@@ -31,20 +35,25 @@ namespace Xamarin.Android.Tools
 			if (!string.IsNullOrEmpty (dirPath))
 				Directory.CreateDirectory (dirPath);
 
-			using var fileStream = new FileStream (destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+			using var fileStream = new FileStream (destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, useAsync: true);
 
-			var buffer = new byte [81920];
-			long totalRead = 0;
-			int bytesRead;
+			var buffer = ArrayPool<byte>.Shared.Rent (BufferSize);
+			try {
+				long totalRead = 0;
+				int bytesRead;
 
-			while ((bytesRead = await contentStream.ReadAsync (buffer, 0, buffer.Length, cancellationToken).ConfigureAwait (false)) > 0) {
-				await fileStream.WriteAsync (buffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
-				totalRead += bytesRead;
+				while ((bytesRead = await contentStream.ReadAsync (buffer, 0, buffer.Length, cancellationToken).ConfigureAwait (false)) > 0) {
+					await fileStream.WriteAsync (buffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
+					totalRead += bytesRead;
 
-				if (progress is not null && totalBytes > 0) {
-					var pct = (double) totalRead / totalBytes * 100;
-					progress.Report ((pct, $"Downloaded {totalRead / (1024 * 1024)} MB / {totalBytes / (1024 * 1024)} MB"));
+					if (progress is not null && totalBytes > 0) {
+						var pct = (double) totalRead / totalBytes * 100;
+						progress.Report ((pct, $"Downloaded {totalRead / BytesPerMB} MB / {totalBytes / BytesPerMB} MB"));
+					}
 				}
+			}
+			finally {
+				ArrayPool<byte>.Shared.Return (buffer);
 			}
 		}
 
