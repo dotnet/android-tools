@@ -120,11 +120,21 @@ namespace Xamarin.Android.Tools
 			try {
 				var envVars = GetEnvironmentVariables ();
 				var envBlock = new StringBuilder ();
-				foreach (var kvp in envVars)
-					envBlock.AppendLine ($"set \"{kvp.Key}={kvp.Value}\"");
+				foreach (var kvp in envVars) {
+					// Sanitize env values: escape % and ! to prevent cmd.exe expansion
+					var safeKey = SanitizeCmdArgument (kvp.Key);
+					var safeValue = SanitizeCmdArgument (kvp.Value);
+					envBlock.AppendLine ($"set \"{safeKey}={safeValue}\"");
+				}
 
-				// Escape each argument for cmd.exe safety
-				var escapedArgs = string.Join (" ", arguments.Select (a => $"\"{a.Replace ("\"", "\\\"")}\""));
+				// Validate and escape each argument for cmd.exe safety.
+				// SDK package IDs should only contain alphanumeric, dots, dashes, semicolons, underscores.
+				foreach (var arg in arguments) {
+					if (arg.IndexOfAny (new[] { '&', '|', '>', '<', '^', '(' , ')' }) >= 0)
+						throw new ArgumentException ($"Unsafe character in argument: {arg}");
+				}
+
+				var escapedArgs = string.Join (" ", arguments.Select (a => $"\"{SanitizeCmdArgument (a)}\""));
 				var licenseInput = acceptLicenses ? "echo y| " : "";
 				var script = $"""
 					@echo off
@@ -205,6 +215,18 @@ namespace Xamarin.Android.Tools
 				Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
 
 			return env;
+		}
+
+		/// <summary>
+		/// Escapes a string for safe interpolation inside a cmd.exe script.
+		/// Handles <c>%</c>, <c>!</c>, and <c>"</c> which have special meaning in batch files.
+		/// </summary>
+		static string SanitizeCmdArgument (string value)
+		{
+			return value
+				.Replace ("\"", "\\\"")
+				.Replace ("%", "%%")
+				.Replace ("!", "^!");
 		}
 	}
 }
