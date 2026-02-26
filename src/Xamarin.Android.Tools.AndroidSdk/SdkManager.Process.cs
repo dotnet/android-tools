@@ -121,7 +121,8 @@ namespace Xamarin.Android.Tools
 					return false;
 				}
 			}
-			catch {
+			catch (Exception ex) {
+				logger (TraceLevel.Verbose, $"Write test failed, elevation required: {ex.Message}");
 				return true;
 			}
 
@@ -176,9 +177,9 @@ namespace Xamarin.Android.Tools
 
 				// Wait for the elevated process to complete
 				await Task.Run (() => {
-					if (!process.WaitForExit ((int) TimeSpan.FromMinutes (10).TotalMilliseconds)) {
+					if (!process.WaitForExit ((int) SdkManagerTimeout.TotalMilliseconds)) {
 						process.Kill ();
-						throw new TimeoutException ("Elevated sdkmanager process timed out after 10 minutes.");
+						throw new TimeoutException ($"Elevated sdkmanager process timed out after {SdkManagerTimeout.TotalMinutes} minutes.");
 					}
 				}, cancellationToken).ConfigureAwait (false);
 
@@ -204,10 +205,14 @@ namespace Xamarin.Android.Tools
 			}
 			finally {
 				// Cleanup temp files
-				try { if (File.Exists (scriptFile)) File.Delete (scriptFile); } catch { }
-				try { if (File.Exists (stdoutFile)) File.Delete (stdoutFile); } catch { }
-				try { if (File.Exists (stderrFile)) File.Delete (stderrFile); } catch { }
-				try { if (File.Exists ($"{stdoutFile}.exit")) File.Delete ($"{stdoutFile}.exit"); } catch { }
+				try { if (File.Exists (scriptFile)) File.Delete (scriptFile); }
+				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup script file: {ex.Message}"); }
+				try { if (File.Exists (stdoutFile)) File.Delete (stdoutFile); }
+				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup stdout file: {ex.Message}"); }
+				try { if (File.Exists (stderrFile)) File.Delete (stderrFile); }
+				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup stderr file: {ex.Message}"); }
+				try { if (File.Exists ($"{stdoutFile}.exit")) File.Delete ($"{stdoutFile}.exit"); }
+				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup exit code file: {ex.Message}"); }
 			}
 		}
 
