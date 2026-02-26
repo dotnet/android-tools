@@ -1,118 +1,62 @@
-# C# Development
+# Copilot Instructions for android-tools
 
-## Project-Specific Context
+Shared .NET libraries for Android SDK/JDK discovery and MSBuild task infrastructure, consumed by [dotnet/android](https://github.com/dotnet/android) and IDE extensions.
 
-This is the **Xamarin.Android.Tools** library - tools for interacting with the Android SDK:
-- Multi-targets: `netstandard2.0` and `$(DotNetTargetFramework)` (currently `net9.0`)
-- **`netstandard2.0` is required** — this package is consumed by .NET Framework hosts (e.g., Visual Studio on Windows). All public API and core logic **must** compile against netstandard2.0. Use `#if NET5_0_OR_GREATER` guards for newer runtime features (e.g., `ArrayPool`, `Process.Kill(true)`)
-- C# Language Version: `LangVersion=latest` — but **feature usage is constrained by `netstandard2.0`**; use only C# features that compile for all targets, with conditional compilation for newer features where needed
-- Nullable reference types are **enabled**
-- Uses SDK-style project format
-- Built with MSBuild
+## Architecture
 
-## C# Instructions
-- Use modern C# language features **where they are compatible with `netstandard2.0`**; use conditional compilation for target-specific enhancements
-- Use **block-scoped namespaces** (`namespace Xamarin.Android.Tools { }`) to match existing codebase convention
-- For JSON parsing, follow the existing patterns used in this repository (if `System.Text.Json` source generators are added in this project, prefer them)
-- Write clear and concise comments for each function, especially for public APIs
+Two independent libraries (neither references the other):
 
-## General Instructions
-- Make only high confidence suggestions when reviewing code changes.
-- Write code with good maintainability practices, including comments on why certain design decisions were made.
-- Handle edge cases and write clear exception handling.
+- **`Xamarin.Android.Tools.AndroidSdk`** — SDK/NDK/JDK path discovery, Android version management, manifest parsing. Multi-targets `netstandard2.0`+`net10.0` (trimming/AOT on modern TFM). Entry: `AndroidSdkInfo` → `AndroidSdkWindows`/`AndroidSdkUnix` via `OS.IsWindows`.
+- **`Microsoft.Android.Build.BaseTasks`** — MSBuild task bases and build utilities. `netstandard2.0` only. `RootNamespace` = `Microsoft.Android.Build.Tasks` (differs from project name).
 
-## Formatting
+**Patterns:**
+- **Platform polymorphism**: `AndroidSdkBase` → `AndroidSdkWindows`/`AndroidSdkUnix` (Template Method). JDK: vendor classes inherit `JdkLocations` partial, aggregated by priority in `JdkInfo.GetKnownSystemJdkInfos()`. Platform files: `Jdks/JdkLocations.{Windows,MacOS}.cs`, `Sdks/AndroidSdk{Windows,Unix}.cs`.
+- **Task base types**: `AndroidTask` (common `Task`-based MSBuild tasks), `AndroidToolTask` (`ToolTask`-based wrappers for external tools), and `AsyncTask` (long-running, UI-safe `Task`-based tasks). All use `UnhandledExceptionLogger` for XA error codes.
+- **Incremental builds**: `Files.CopyIf*Changed()` skips unchanged writes. `ObjectPool<T>`/`MemoryStreamPool` reduces GC. `JdkInfo` uses `Lazy<T>` for expensive parsing.
 
-- Apply code-formatting style defined in `.editorconfig`
-- Use **tabs** for indentation in C# files (as per `.editorconfig`)
-- Use **block-scoped namespaces** (`namespace Xamarin.Android.Tools { }`) to match existing codebase convention
-- Insert a newline before the opening brace of **methods and types only** (per `.editorconfig`: `csharp_new_line_before_open_brace = methods,types`)
-- Ensure that the final return statement of a method is on its own line
-- Use pattern matching and switch expressions wherever possible
-- Use `nameof` instead of string literals when referring to member names
-- Ensure that XML doc comments are created for any public APIs. When applicable, include `<example>` and `<code>` documentation in the comments
+## Build & Test
 
-## File Organization
+```sh
+dotnet build Xamarin.Android.Tools.sln
+dotnet test tests/Xamarin.Android.Tools.AndroidSdk-Tests/Xamarin.Android.Tools.AndroidSdk-Tests.csproj
+dotnet test tests/Microsoft.Android.Build.BaseTasks-Tests/Microsoft.Android.Build.BaseTasks-Tests.csproj
+```
 
-- **One type per file**: Each public type (class, struct, enum, interface, record) should be in its own file
-- **File naming**: File name should match the type name (e.g., `SdkManager.cs` for `class SdkManager`)
-- **Nested types exception**: Small, tightly-coupled nested types can remain in the parent type's file
-- **File size guideline**: Keep files under ~500 lines when practical; consider splitting larger files by responsibility
+Output: `bin\$(Configuration)\` (redistributables), `bin\Test$(Configuration)\` (tests). `$(DotNetTargetFrameworkVersion)` = `10.0` in `Directory.Build.props`. Versioning: `nuget.version` has `major.minor`; patch = git commit count since file changed.
 
-## Project Setup and Structure
+## Android Environment Variables
 
-- This project uses `Directory.Build.props` and `Directory.Build.targets` for shared configuration
-- Output paths are customized: `$(ToolOutputFullPath)`, `$(BuildToolOutputFullPath)`, `$(TestOutputFullPath)`
-- Multi-targeting is supported via `$(AndroidToolsDisableMultiTargeting)` flag
-- Tests follow the pattern: `[ProjectName]-Tests` (e.g., `Xamarin.Android.Tools.AndroidSdk-Tests`)
-- Uses Azure Pipelines for CI/CD (see `azure-pipelines.yaml`)
+Per the [official Android docs](https://developer.android.com/tools/variables#envar):
 
-## Nullable Reference Types
+- **`ANDROID_HOME`** — the canonical variable for the Android SDK root path. Use this everywhere.
+- **`ANDROID_SDK_ROOT`** — **deprecated**. Do not introduce new usages. Existing code may still read it for backward compatibility but always prefer `ANDROID_HOME`.
+- **`ANDROID_USER_HOME`** — user-level config/AVD storage (defaults to `~/.android`).
+- **`ANDROID_EMULATOR_HOME`** — emulator config (defaults to `$ANDROID_USER_HOME`).
+- **`ANDROID_AVD_HOME`** — AVD data (defaults to `$ANDROID_USER_HOME/avd`).
 
-- Nullable reference types are **ENABLED** in this project (`<Nullable>enable</Nullable>`)
-- Declare variables non-nullable, and check for `null` at entry points
-- Always use `is null` or `is not null` instead of `== null` or `!= null`
-- Trust the C# null annotations and don't add null checks when the type system says a value cannot be null
-- For netstandard2.0 target, uses `INTERNAL_NULLABLE_ATTRIBUTES` to polyfill nullable annotations
-- For nullable warnings with `string` in netstandard2.0, use the null-coalescing operator with `string.Empty`:
-  ```csharp
-  string nonNullValue = possiblyNullValue ?? string.Empty;
-  ```
+When setting environment variables for SDK tools (e.g. `sdkmanager`, `avdmanager`), set `ANDROID_HOME`. The `EnvironmentVariableNames` class in this repo defines the constants.
 
-## Data Access Patterns
+## Conventions
 
-- This is a **library project** for Android SDK interaction - not a typical data access layer
-- Focus on file system operations, process execution, and XML/JSON parsing
-- No Entity Framework Core - uses file-based data (XML manifests, JSON feeds)
+- **One type per file**: each public class, struct, enum, or interface must be in its own `.cs` file named after the type (e.g. `JdkVersionInfo` → `JdkVersionInfo.cs`). Do not combine multiple top-level types in a single file.
+- [Mono Coding Guidelines](http://www.mono-project.com/community/contributing/coding-guidelines/): tabs, K&R braces, `PascalCase` public members.
+- Nullable enabled in `AndroidSdk`. `NullableAttributes.cs` excluded on `net10.0+`.
+- Strong-named via `product.snk`. In the AndroidSdk project, tests use `InternalsVisibleTo` with full public key (`Properties/AssemblyInfo.cs`).
+- Assembly names support `$(VendorPrefix)`/`$(VendorSuffix)` for branding forks.
+- `.resx` localization in multiple languages via OneLocBuild (`Localize/`). Do not hand-edit satellite `.resx`.
 
-## Build and Test Commands
+## Tests
 
-- **Build**: `dotnet build Xamarin.Android.Tools.sln`
-- **Test**: `dotnet test tests/Xamarin.Android.Tools.AndroidSdk-Tests/`
-- **Full build with Makefile**: `make all` (on Unix-like systems)
-- Tests use **NUnit** framework
+NUnit 3 (`[TestFixture]`, `[Test]`, `[TestCase]`). Tests create isolated temp dirs with faux JDK/SDK structures (`.bat` on Windows, shell scripts on Unix), cleaned in teardown. `AndroidSdk-Tests`: `[OneTimeSetUp]`/`[OneTimeTearDown]`. `BaseTasks-Tests`: imports `MSBuildReferences.projitems` for MSBuild types.
 
-## Validation and Error Handling
+## Key Files
 
-- Validate inputs at public API boundaries using guard clauses
-- Use `ArgumentNullException.ThrowIfNull(param)` on net6.0+; use `if (param is null) throw new ArgumentNullException(nameof(param));` for netstandard2.0
-- Use `string.IsNullOrEmpty()` or `string.IsNullOrWhiteSpace()` for string validation
-- Use specific exception types (`ArgumentException`, `InvalidOperationException`, `FileNotFoundException`)
-- Don't swallow exceptions silently - log and rethrow or let them propagate
+- **SDK discovery**: `AndroidSdkInfo.cs`, `Sdks/AndroidSdk{Windows,Unix}.cs`
+- **JDK discovery**: `JdkInfo.cs`, `Jdks/` directory
+- **Android versions**: `AndroidVersions.cs` (hardcoded `KnownVersions` table)
+- **MSBuild tasks**: `AndroidTask.cs`, `AsyncTask.cs`, `Files.cs`
+- **Build config**: `Directory.Build.props`, `Directory.Build.targets`, `nuget.version`
 
-## API Design and Documentation
+## Adding Android API Levels
 
-- This is a **public library** - all public APIs must have XML documentation comments
-- Use `<summary>`, `<param>`, `<returns>`, `<exception>` tags
-- Include `<example>` sections for complex APIs
-- Keep API surface minimal - prefer `internal` unless explicitly needed as public
-- Assembly is **strongly named** (uses `product.snk`)
-
-## Logging and Monitoring
-
-- Use `Action<TraceLevel, string>` delegates for logging (standard pattern in this project)
-- Default logger: `AndroidSdkInfo.DefaultConsoleLogger`
-- Keep logging opt-in via constructor parameters
-- Avoid direct `Console.WriteLine` - use logging delegates
-- Log important operations like process execution, file I/O, and SDK detection
-
-## Testing
-
-- Always include test cases for critical paths
-- Follow the Arrange-Act-Assert (AAA) pattern, but avoid explicit "Arrange", "Act", or "Assert" comments; use structure and test method names instead
-- Copy existing style in nearby files for test method names and capitalization
-- Tests use **NUnit** framework — assertions use `Assert.That` style
-
-## Performance
-
-- Use asynchronous programming patterns for I/O-bound operations (process execution, file I/O, network)
-- Use `ArrayPool<byte>` for large buffers (behind `#if NET5_0_OR_GREATER` when needed)
-- Supports trimming and AOT for non-netstandard2.0 targets (`<IsTrimmable>true</IsTrimmable>`)
-
-## Deployment
-
-- This is a **NuGet library package** - not a deployable application
-- Builds produce NuGet packages for consumption by other projects
-- Uses Azure Pipelines for CI/CD (see `azure-pipelines.yaml`)
-- Multi-targets for compatibility: netstandard2.0 (.NET Framework / Visual Studio hosts) + latest .NET (performance, modern APIs)
-- Supports trimming and AOT for non-netstandard2.0 targets
+Update `KnownVersions` in `AndroidVersions.cs` — add tuple with ApiLevel, Id, CodeName, OSVersion, TargetFrameworkVersion, Stable flag.
