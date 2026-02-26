@@ -108,7 +108,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Checks if the target path is writable by testing write access on the nearest existing ancestor.</summary>
-		public static bool IsTargetPathWritable (string targetPath, Action<TraceLevel, string> logger)
+		internal static bool IsTargetPathWritable (string targetPath, Action<TraceLevel, string> logger)
 		{
 			if (string.IsNullOrEmpty (targetPath))
 				return false;

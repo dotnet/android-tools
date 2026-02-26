@@ -351,7 +351,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
-		public static bool IsElevated ()
+		internal static bool IsElevated ()
 		{
 			if (OS.IsWindows) {
 #if NET5_0_OR_GREATER
