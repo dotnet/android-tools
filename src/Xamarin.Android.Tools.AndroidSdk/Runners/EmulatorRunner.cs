@@ -29,7 +29,7 @@ namespace Xamarin.Android.Tools
 			this.getJdkPath = getJdkPath;
 		}
 
-		internal string? EmulatorPath {
+		public string? EmulatorPath {
 			get {
 				var sdkPath = getSdkPath ();
 				if (string.IsNullOrEmpty (sdkPath))
