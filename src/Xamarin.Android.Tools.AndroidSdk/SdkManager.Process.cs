@@ -135,7 +135,11 @@ namespace Xamarin.Android.Tools
 				}
 
 				var escapedArgs = string.Join (" ", arguments.Select (a => $"\"{SanitizeCmdArgument (a)}\""));
-				var licenseInput = acceptLicenses ? "echo y| " : "";
+				// Use a loop to feed continuous 'y' responses for multi-license prompts.
+				// 'echo y|' only sends a single 'y' and hits EOF after the first prompt.
+				var licenseInput = acceptLicenses
+					? $"(for /L %%i in (1,1,100) do @echo y) | "
+					: "";
 				var script = $"""
 					@echo off
 					{envBlock}
