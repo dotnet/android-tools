@@ -20,6 +20,7 @@ namespace Xamarin.Android.Tools
 	{
 		const int BufferSize = 81920;
 		const long BytesPerMB = 1024 * 1024;
+		static readonly char[] WhitespaceChars = [' ', '\t', '\n', '\r'];
 
 		/// <summary>Downloads a file from the given URL with optional progress reporting.</summary>
 		public static async Task DownloadFileAsync (HttpClient client, string url, string destinationPath, long expectedSize, IProgress<(double percent, string message)>? progress, CancellationToken cancellationToken)
@@ -145,7 +146,7 @@ namespace Xamarin.Android.Tools
 				return null;
 
 			var trimmed = content.Trim ();
-			var end = trimmed.IndexOfAny (new [] { ' ', '\t', '\n', '\r' });
+			var end = trimmed.IndexOfAny (WhitespaceChars);
 			return end >= 0 ? trimmed.Substring (0, end) : trimmed;
 		}
 	}
