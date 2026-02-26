@@ -88,8 +88,9 @@ namespace Xamarin.Android.Tools
 			catch (OperationCanceledException) {
 				throw;
 			}
-			catch {
+			catch (Exception ex) {
 				// sdkmanager may exit with non-zero when declining licenses - that's expected
+				logger (TraceLevel.Verbose, $"License check exited non-zero (expected): {ex.GetType ().Name}");
 			}
 
 			return ParseLicenseOutput (stdout.ToString ());
