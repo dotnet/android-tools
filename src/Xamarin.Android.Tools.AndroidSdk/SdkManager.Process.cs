@@ -92,8 +92,8 @@ namespace Xamarin.Android.Tools
 
 		/// <summary>
 		/// Determines whether the current SDK path requires elevated (Administrator) permissions
-		/// for write operations. This is typically the case when the SDK is installed in
-		/// system-protected locations like <c>C:\Program Files</c>.
+		/// for write operations. Reuses <see cref="FileUtil.IsTargetPathWritable"/> and
+		/// <see cref="ProcessUtils.IsElevated"/> to avoid duplicating path-check logic.
 		/// </summary>
 		bool RequiresElevation ()
 		{
@@ -104,29 +104,7 @@ namespace Xamarin.Android.Tools
 			if (string.IsNullOrEmpty (sdkPath))
 				return false;
 
-			// Check if path is in a system-protected location
-			if (OS.IsWindows) {
-				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles) ?? "";
-				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86) ?? "";
-				if ((!string.IsNullOrEmpty (programFiles) && sdkPath!.StartsWith (programFiles, StringComparison.OrdinalIgnoreCase)) ||
-				    (!string.IsNullOrEmpty (programFilesX86) && sdkPath!.StartsWith (programFilesX86, StringComparison.OrdinalIgnoreCase)))
-					return true;
-			}
-
-			// Try a write test
-			try {
-				if (Directory.Exists (sdkPath)) {
-					var testFile = Path.Combine (sdkPath, $".write-test-{Guid.NewGuid ()}");
-					using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
-					return false;
-				}
-			}
-			catch (Exception ex) {
-				logger (TraceLevel.Verbose, $"Write test failed, elevation required: {ex.Message}");
-				return true;
-			}
-
-			return false;
+			return !FileUtil.IsTargetPathWritable (sdkPath!, logger);
 		}
 
 		/// <summary>
