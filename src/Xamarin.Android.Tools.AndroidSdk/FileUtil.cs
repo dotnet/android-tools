@@ -182,61 +182,61 @@ namespace Xamarin.Android.Tools
 		}
 
 
-/// <summary>Sets Unix file permissions using libc chmod. Returns true if successful.</summary>
-internal static bool Chmod (string path, int mode)
-{
-try {
-return chmod (path, mode) == 0;
-}
-catch {
-return false;
-}
-}
+		/// <summary>Sets Unix file permissions using libc chmod. Returns true if successful.</summary>
+		internal static bool Chmod (string path, int mode)
+		{
+			try {
+				return chmod (path, mode) == 0;
+			}
+			catch {
+				return false;
+			}
+		}
 
-internal static void CopyDirectoryRecursive (string sourceDir, string destinationDir)
-{
-if (!Directory.Exists (destinationDir))
-Directory.CreateDirectory (destinationDir);
+		internal static void CopyDirectoryRecursive (string sourceDir, string destinationDir)
+		{
+			if (!Directory.Exists (destinationDir))
+				Directory.CreateDirectory (destinationDir);
 
-foreach (var file in Directory.GetFiles (sourceDir)) {
-var destFile = Path.Combine (destinationDir, Path.GetFileName (file));
-File.Copy (file, destFile, overwrite: true);
-}
+			foreach (var file in Directory.GetFiles (sourceDir)) {
+				var destFile = Path.Combine (destinationDir, Path.GetFileName (file));
+				File.Copy (file, destFile, overwrite: true);
+			}
 
-foreach (var subDir in Directory.GetDirectories (sourceDir)) {
-var destSubDir = Path.Combine (destinationDir, Path.GetFileName (subDir));
-CopyDirectoryRecursive (subDir, destSubDir);
-}
-}
+			foreach (var subDir in Directory.GetDirectories (sourceDir)) {
+				var destSubDir = Path.Combine (destinationDir, Path.GetFileName (subDir));
+				CopyDirectoryRecursive (subDir, destSubDir);
+			}
+		}
 
-internal static void SetExecutablePermissions (string directory, Action<TraceLevel, string> logger)
-{
-var binDir = Path.Combine (directory, "bin");
-if (!Directory.Exists (binDir))
-return;
+		internal static void SetExecutablePermissions (string directory, Action<TraceLevel, string> logger)
+		{
+			var binDir = Path.Combine (directory, "bin");
+			if (!Directory.Exists (binDir))
+				return;
 
-foreach (var file in Directory.GetFiles (binDir)) {
-if (!Chmod (file, 0x1ED)) { // 0755
-try {
-var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-using var process = Process.Start (psi);
-process?.WaitForExit ();
-if (process is null || process.ExitCode != 0)
-throw new InvalidOperationException ($"chmod failed for '{file}'");
-}
-catch (Exception ex) {
-logger (TraceLevel.Error, $"Failed to set executable permission on '{file}': {ex.Message}");
-throw new InvalidOperationException ($"Failed to set executable permissions on '{file}'.", ex);
-}
-}
-}
-}
+			foreach (var file in Directory.GetFiles (binDir)) {
+				if (!Chmod (file, 0x1ED)) { // 0755
+					try {
+						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
+						using var process = Process.Start (psi);
+						process?.WaitForExit ();
+						if (process is null || process.ExitCode != 0)
+							throw new InvalidOperationException ($"chmod failed for '{file}'");
+					}
+					catch (Exception ex) {
+						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}': {ex.Message}");
+						throw new InvalidOperationException ($"Failed to set executable permissions on '{file}'.", ex);
+					}
+				}
+			}
+		}
 
-[DllImport ("libc", SetLastError=true)]
-static extern int rename (string old, string @new);
+		[DllImport ("libc", SetLastError=true)]
+		static extern int rename (string old, string @new);
 
-[DllImport ("libc", SetLastError = true)]
-static extern int chmod (string pathname, int mode);
-}
+		[DllImport ("libc", SetLastError = true)]
+		static extern int chmod (string pathname, int mode);
+	}
 }
 
