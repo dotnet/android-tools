@@ -226,37 +226,9 @@ namespace Xamarin.Android.Tools
 
 		async Task RunPlatformInstallerAsync (string installerPath, CancellationToken cancellationToken)
 		{
-			ProcessStartInfo psi;
-			if (OS.IsWindows) {
-				psi = new ProcessStartInfo {
-					FileName = "msiexec",
-					UseShellExecute = false,
-					CreateNoWindow = true,
-				};
-#if NET5_0_OR_GREATER
-				psi.ArgumentList.Add ("/i");
-				psi.ArgumentList.Add (installerPath);
-				psi.ArgumentList.Add ("/quiet");
-				psi.ArgumentList.Add ("/norestart");
-#else
-				psi.Arguments = $"/i \"{installerPath}\" /quiet /norestart";
-#endif
-			}
-			else {
-				psi = new ProcessStartInfo {
-					FileName = "/usr/sbin/installer",
-					UseShellExecute = false,
-					CreateNoWindow = true,
-				};
-#if NET5_0_OR_GREATER
-				psi.ArgumentList.Add ("-pkg");
-				psi.ArgumentList.Add (installerPath);
-				psi.ArgumentList.Add ("-target");
-				psi.ArgumentList.Add ("/");
-#else
-				psi.Arguments = $"-pkg \"{installerPath}\" -target /";
-#endif
-			}
+			var psi = OS.IsWindows
+				? ProcessUtils.CreateProcessStartInfo ("msiexec", "/i", installerPath, "/quiet", "/norestart")
+				: ProcessUtils.CreateProcessStartInfo ("/usr/sbin/installer", "-pkg", installerPath, "-target", "/");
 
 			var stdout = new StringWriter ();
 			var stderr = new StringWriter ();
