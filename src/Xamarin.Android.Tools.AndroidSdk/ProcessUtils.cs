@@ -177,31 +177,6 @@ namespace Xamarin.Android.Tools
 		/// On .NET 5+ uses <see cref="ProcessStartInfo.ArgumentList"/> to avoid shell-escaping issues;
 		/// on older frameworks falls back to a single <see cref="ProcessStartInfo.Arguments"/> string.
 		/// </summary>
-		/// <summary>
-		/// Starts a process with <c>UseShellExecute = true</c> and waits for it to exit.
-		/// Used for elevated (UAC) scenarios where stdout/stderr cannot be redirected.
-		/// </summary>
-		public static async Task<int> StartShellExecuteProcessAsync (
-			ProcessStartInfo psi, TimeSpan timeout, CancellationToken cancellationToken)
-		{
-			cancellationToken.ThrowIfCancellationRequested ();
-			psi.UseShellExecute = true;
-
-			using var process = Process.Start (psi);
-			if (process is null)
-				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
-
-			await Task.Run (() => {
-				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
-					KillProcess (process);
-					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
-				}
-			}, cancellationToken).ConfigureAwait (false);
-
-			cancellationToken.ThrowIfCancellationRequested ();
-			return process.ExitCode;
-		}
-
 		public static ProcessStartInfo CreateProcessStartInfo (string fileName, params string[] args)
 		{
 			var psi = new ProcessStartInfo {
@@ -269,6 +244,31 @@ namespace Xamarin.Android.Tools
 			foreach (var ext in ExecutableFileExtensions)
 				yield return Path.ChangeExtension (executable, ext);
 			yield return executable;
+		}
+
+		/// <summary>
+		/// Starts a process with <c>UseShellExecute = true</c> and waits for it to exit.
+		/// Used for elevated (UAC) scenarios where stdout/stderr cannot be redirected.
+		/// </summary>
+		public static async Task<int> StartShellExecuteProcessAsync (
+			ProcessStartInfo psi, TimeSpan timeout, CancellationToken cancellationToken)
+		{
+			cancellationToken.ThrowIfCancellationRequested ();
+			psi.UseShellExecute = true;
+
+			using var process = Process.Start (psi);
+			if (process is null)
+				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
+
+			await Task.Run (() => {
+				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
+					KillProcess (process);
+					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
+				}
+			}, cancellationToken).ConfigureAwait (false);
+
+			cancellationToken.ThrowIfCancellationRequested ();
+			return process.ExitCode;
 		}
 
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>

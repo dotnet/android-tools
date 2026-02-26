@@ -26,7 +26,7 @@ namespace Xamarin.Android.Tools
 		/// <summary>Default manifest feed URL (Xamarin/Microsoft).</summary>
 		public const string DefaultManifestFeedUrl = "https://aka.ms/AndroidManifestFeed/d18-0";
 
-				readonly HttpClient httpClient = new HttpClient ();
+		readonly HttpClient httpClient = new HttpClient ();
 		readonly Action<TraceLevel, string> logger;
 		bool disposed;
 

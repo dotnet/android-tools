@@ -28,7 +28,7 @@ namespace Xamarin.Android.Tools
 
 			logger (TraceLevel.Info, "Accepting SDK licenses...");
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
-				sdkManagerPath, "--licenses", acceptLicenses: true, cancellationToken: cancellationToken).ConfigureAwait (false);
+				sdkManagerPath, new[] { "--licenses" }, acceptLicenses: true, cancellationToken: cancellationToken).ConfigureAwait (false);
 
 			logger (TraceLevel.Verbose, $"sdkmanager --licenses exited with code {exitCode}.");
 
