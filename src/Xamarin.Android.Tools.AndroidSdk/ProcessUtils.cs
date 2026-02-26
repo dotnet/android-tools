@@ -260,12 +260,15 @@ namespace Xamarin.Android.Tools
 			if (process is null)
 				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
 
+			// Register cancellation to kill the process so elevated cmd.exe doesn't linger
+			using var registration = cancellationToken.Register (() => KillProcess (process));
+
 			await Task.Run (() => {
 				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
 					KillProcess (process);
 					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
 				}
-			}, cancellationToken).ConfigureAwait (false);
+			}, CancellationToken.None).ConfigureAwait (false);
 
 			cancellationToken.ThrowIfCancellationRequested ();
 			return process.ExitCode;
