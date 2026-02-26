@@ -71,15 +71,8 @@ namespace Xamarin.Android.Tools
 			var envVars = GetEnvironmentVariables ();
 
 			// Run --licenses without auto-accept to get the license text
-			var psi = new ProcessStartInfo {
-				FileName = sdkManagerPath,
-				Arguments = "--licenses",
-				CreateNoWindow = true,
-				UseShellExecute = false,
-				RedirectStandardOutput = true,
-				RedirectStandardError = true,
-				RedirectStandardInput = true,
-			};
+			var psi = ProcessUtils.CreateProcessStartInfo (sdkManagerPath, "--licenses");
+			psi.RedirectStandardInput = true;
 
 			using var stdout = new StringWriter ();
 			using var stderr = new StringWriter ();
@@ -150,6 +143,22 @@ namespace Xamarin.Android.Tools
 					logger (TraceLevel.Info, $"Accepted license: {license.Id}");
 				}
 			}
+		}
+
+		/// <summary>
+		/// Checks whether SDK licenses have been accepted by checking the licenses directory.
+		/// </summary>
+		/// <returns><c>true</c> if at least one license file exists; otherwise <c>false</c>.</returns>
+		public bool AreLicensesAccepted ()
+		{
+			if (string.IsNullOrEmpty (AndroidSdkPath))
+				return false;
+
+			var licensesPath = Path.Combine (AndroidSdkPath, "licenses");
+			if (!Directory.Exists (licensesPath))
+				return false;
+
+			return Directory.GetFiles (licensesPath).Length > 0;
 		}
 
 		/// <summary>
@@ -227,20 +236,5 @@ namespace Xamarin.Android.Tools
 			return BitConverter.ToString (hash).Replace ("-", "").ToLowerInvariant ();
 		}
 
-		/// <summary>
-		/// Checks whether SDK licenses have been accepted by checking the licenses directory.
-		/// </summary>
-		/// <returns><c>true</c> if at least one license file exists; otherwise <c>false</c>.</returns>
-		public bool AreLicensesAccepted ()
-		{
-			if (string.IsNullOrEmpty (AndroidSdkPath))
-				return false;
-
-			var licensesPath = Path.Combine (AndroidSdkPath, "licenses");
-			if (!Directory.Exists (licensesPath))
-				return false;
-
-			return Directory.GetFiles (licensesPath).Length > 0;
-		}
 	}
 }

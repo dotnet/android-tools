@@ -76,14 +76,8 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>Verifies a file's SHA-256 hash against an expected value.</summary>
-		public static void VerifyChecksum (string filePath, string expectedChecksum)
-		{
-			VerifyChecksum (filePath, expectedChecksum, "sha256");
-		}
-
 		/// <summary>Verifies a file's hash against an expected value using the specified algorithm (sha256 or sha1).</summary>
-		public static void VerifyChecksum (string filePath, string expectedChecksum, string checksumType)
+		public static void VerifyChecksum (string filePath, string expectedChecksum, string checksumType = "sha256")
 		{
 			using var hasher = CreateHashAlgorithm (checksumType);
 			using var stream = File.OpenRead (filePath);
