@@ -135,9 +135,9 @@ namespace Xamarin.Android.Tools
 			if (string.IsNullOrWhiteSpace (content))
 				return null;
 
-			var line = content.Trim ().Split ('\n') [0].Trim ();
-			var parts = line.Split (new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-			return parts.Length > 0 ? parts [0] : null;
+			var trimmed = content.Trim ();
+			var end = trimmed.IndexOfAny ([' ', '\t', '\n', '\r']);
+			return end >= 0 ? trimmed[..end] : trimmed;
 		}
 	}
 }
