@@ -22,6 +22,24 @@ namespace Xamarin.Android.Tools
 		const long BytesPerMB = 1024 * 1024;
 		static readonly char[] WhitespaceChars = [' ', '\t', '\n', '\r'];
 
+		static Task<Stream> ReadAsStreamAsync (HttpContent content, CancellationToken cancellationToken)
+		{
+#if NET5_0_OR_GREATER
+			return content.ReadAsStreamAsync (cancellationToken);
+#else
+			return content.ReadAsStreamAsync ();
+#endif
+		}
+
+		static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
+		{
+#if NET5_0_OR_GREATER
+			return content.ReadAsStringAsync (cancellationToken);
+#else
+			return content.ReadAsStringAsync ();
+#endif
+		}
+
 		/// <summary>Downloads a file from the given URL with optional progress reporting.</summary>
 		public static async Task DownloadFileAsync (HttpClient client, string url, string destinationPath, long expectedSize, IProgress<(double percent, string message)>? progress, CancellationToken cancellationToken)
 		{
@@ -30,7 +48,7 @@ namespace Xamarin.Android.Tools
 
 			var totalBytes = response.Content.Headers.ContentLength ?? expectedSize;
 
-			using var contentStream = await response.Content.ReadAsStreamAsync ().ConfigureAwait (false);
+			using var contentStream = await ReadAsStreamAsync (response.Content, cancellationToken).ConfigureAwait (false);
 
 			var dirPath = Path.GetDirectoryName (destinationPath);
 			if (!string.IsNullOrEmpty (dirPath))
@@ -121,11 +139,7 @@ namespace Xamarin.Android.Tools
 			try {
 				using var response = await httpClient.GetAsync (checksumUrl, cancellationToken).ConfigureAwait (false);
 				response.EnsureSuccessStatusCode ();
-#if NET5_0_OR_GREATER
-				var content = await response.Content.ReadAsStringAsync (cancellationToken).ConfigureAwait (false);
-#else
-				var content = await response.Content.ReadAsStringAsync ().ConfigureAwait (false);
-#endif
+				var content = await ReadAsStringAsync (response.Content, cancellationToken).ConfigureAwait (false);
 				var checksum = ParseChecksumFile (content);
 				logger (TraceLevel.Verbose, $"{label}: checksum={checksum}");
 				return checksum;
