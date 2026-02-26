@@ -121,43 +121,39 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>Checks if the target path is writable by testing write access on the nearest existing ancestor.</summary>
+		/// <summary>Checks if the target path is writable by probing write access on the nearest existing ancestor.</summary>
+		/// <remarks>
+		/// Follows the same pattern as dotnet/sdk WorkloadInstallerFactory.CanWriteToDotnetRoot:
+		/// probe with File.Create + DeleteOnClose, only catch UnauthorizedAccessException.
+		/// See https://github.com/dotnet/sdk/blob/db01067a9c4b67dc1806956393ec63b032032166/src/Cli/dotnet/Commands/Workload/Install/WorkloadInstallerFactory.cs
+		/// </remarks>
 		internal static bool IsTargetPathWritable (string targetPath, Action<TraceLevel, string> logger)
 		{
 			if (string.IsNullOrEmpty (targetPath))
 				return false;
 
-			string normalizedPath;
 			try {
-				normalizedPath = Path.GetFullPath (targetPath);
+				targetPath = Path.GetFullPath (targetPath);
 			}
 			catch {
-				normalizedPath = targetPath;
-			}
-
-			if (OS.IsWindows) {
-				var programFiles = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFiles);
-				var programFilesX86 = Environment.GetFolderPath (Environment.SpecialFolder.ProgramFilesX86);
-				if (IsUnderDirectory (normalizedPath, programFiles) || IsUnderDirectory (normalizedPath, programFilesX86)) {
-					logger (TraceLevel.Warning, $"Target path '{targetPath}' is in Program Files which typically requires elevation.");
-					return false;
-				}
+				return false;
 			}
 
 			try {
-				var testDir = normalizedPath;
+				// Walk up to the nearest existing ancestor directory
+				var testDir = targetPath;
 				while (!string.IsNullOrEmpty (testDir) && !Directory.Exists (testDir))
 					testDir = Path.GetDirectoryName (testDir);
 
 				if (string.IsNullOrEmpty (testDir))
 					return false;
 
-				var testFile = Path.Combine (testDir, $".write-test-{Guid.NewGuid ()}");
+				var testFile = Path.Combine (testDir, Path.GetRandomFileName ());
 				using (File.Create (testFile, 1, FileOptions.DeleteOnClose)) { }
 				return true;
 			}
-			catch (Exception ex) {
-				logger (TraceLevel.Warning, $"Target path '{targetPath}' is not writable: {ex.Message}");
+			catch (UnauthorizedAccessException) {
+				logger (TraceLevel.Warning, $"Target path '{targetPath}' is not writable.");
 				return false;
 			}
 		}
