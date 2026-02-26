@@ -19,24 +19,18 @@ namespace Xamarin.Android.Tools
 			["x86_64"] = "x86_64",
 		};
 
-		static readonly Dictionary<string, string> ApiLevelToVersionMap = new Dictionary<string, string> {
-			["21"] = "5.0",
-			["22"] = "5.1",
-			["23"] = "6.0",
-			["24"] = "7.0",
-			["25"] = "7.1",
-			["26"] = "8.0",
-			["27"] = "8.1",
-			["28"] = "9.0",
-			["29"] = "10.0",
-			["30"] = "11.0",
-			["31"] = "12.0",
-			["32"] = "12.1",
-			["33"] = "13.0",
-			["34"] = "14.0",
-			["35"] = "15.0",
-			["36"] = "16.0",
-		};
+		static readonly Dictionary<string, string> ApiLevelToVersionMap = CreateApiLevelToVersionMap ();
+
+		static Dictionary<string, string> CreateApiLevelToVersionMap ()
+		{
+			var map = new Dictionary<string, string> ();
+			foreach (var version in AndroidVersions.KnownVersions) {
+				var key = version.ApiLevel.ToString ();
+				if (!map.ContainsKey (key))
+					map [key] = version.OSVersion;
+			}
+			return map;
+		}
 
 		/// <summary>
 		/// Builds a dictionary of environment variables for Android SDK tool processes.

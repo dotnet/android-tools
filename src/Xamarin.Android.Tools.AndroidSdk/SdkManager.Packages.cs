@@ -85,11 +85,14 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task InstallAsync (IEnumerable<string> packages, bool acceptLicenses = true, CancellationToken cancellationToken = default)
 		{
-			if (packages is null || !packages.Any ())
+			if (packages is null)
+				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
+
+			var packageArray = packages.ToArray ();
+			if (packageArray.Length == 0)
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
 			var sdkManagerPath = RequireSdkManagerPath ();
-			var packageArray = packages.ToArray ();
 			logger (TraceLevel.Info, $"Installing packages: {string.Join (", ", packageArray)}");
 
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
@@ -105,11 +108,14 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task UninstallAsync (IEnumerable<string> packages, CancellationToken cancellationToken = default)
 		{
-			if (packages is null || !packages.Any ())
+			if (packages is null)
+				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
+
+			var packageArray = packages.ToArray ();
+			if (packageArray.Length == 0)
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
 			var sdkManagerPath = RequireSdkManagerPath ();
-			var packageArray = packages.ToArray ();
 			logger (TraceLevel.Info, $"Uninstalling packages: {string.Join (", ", packageArray)}");
 
 			var args = new [] { "--uninstall" }.Concat (packageArray).ToArray ();
