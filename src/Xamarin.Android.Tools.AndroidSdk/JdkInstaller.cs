@@ -85,7 +85,11 @@ namespace Xamarin.Android.Tools
 			return results.AsReadOnly ();
 		}
 
-		/// <summary>Downloads and installs a Microsoft OpenJDK to the target path.</summary>
+		/// <summary>
+		/// Downloads and installs a Microsoft OpenJDK.
+		/// When running elevated, uses the platform installer (.msi/.pkg) which chooses its own install location;
+		/// <paramref name="targetPath"/> is ignored in that case. When non-elevated, extracts to <paramref name="targetPath"/>.
+		/// </summary>
 		public async Task InstallAsync (int majorVersion, string targetPath, IProgress<JdkInstallProgress>? progress = null, CancellationToken cancellationToken = default)
 		{
 			if (!SupportedVersions.Contains (majorVersion))
@@ -145,10 +149,16 @@ namespace Xamarin.Android.Tools
 					FileUtil.TryDeleteDirectory (targetPath, "invalid installation", logger);
 					throw new InvalidOperationException ($"JDK installation at '{targetPath}' failed validation. The extracted files may be corrupted.");
 				}
+
+				// Validation passed — commit the move by cleaning up any backup
+				FileUtil.CommitMove (targetPath, logger);
 				logger (TraceLevel.Info, $"Microsoft OpenJDK {majorVersion} installed successfully at {targetPath}");
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 100, "Validation complete."));
 
 				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
+			}
+			catch (OperationCanceledException) {
+				throw;
 			}
 			catch (Exception ex) when (ex is not ArgumentException and not ArgumentNullException) {
 				logger (TraceLevel.Error, $"JDK installation failed: {ex.Message}");

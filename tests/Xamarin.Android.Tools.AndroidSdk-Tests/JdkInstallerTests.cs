@@ -95,9 +95,11 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			IReadOnlyList<JdkVersionInfo> versions;
 			try {
-				versions = await installer.DiscoverAsync ();
+				using (var cts = new CancellationTokenSource (TimeSpan.FromSeconds (15))) {
+					versions = await installer.DiscoverAsync (cts.Token);
+				}
 			}
-			catch (Exception ex) when (ex is System.Net.Http.HttpRequestException || ex is TaskCanceledException) {
+			catch (Exception ex) when (ex is System.Net.Http.HttpRequestException || ex is TaskCanceledException || ex is OperationCanceledException) {
 				Assert.Ignore ($"Network unavailable: {ex.Message}");
 				return;
 			}

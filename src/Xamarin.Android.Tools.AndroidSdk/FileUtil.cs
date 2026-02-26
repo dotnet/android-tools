@@ -53,7 +53,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Deletes a file if it exists, logging any failure instead of throwing.</summary>
-		public static void TryDeleteFile (string path, Action<TraceLevel, string> logger)
+		internal static void TryDeleteFile (string path, Action<TraceLevel, string> logger)
 		{
 			if (!File.Exists (path))
 				return;
@@ -62,7 +62,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Recursively deletes a directory if it exists, logging any failure instead of throwing.</summary>
-		public static void TryDeleteDirectory (string path, string label, Action<TraceLevel, string> logger)
+		internal static void TryDeleteDirectory (string path, string label, Action<TraceLevel, string> logger)
 		{
 			if (!Directory.Exists (path))
 				return;
@@ -71,7 +71,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Moves a directory to the target path, backing up any existing directory and restoring on failure.</summary>
-		public static void MoveWithRollback (string sourcePath, string targetPath, Action<TraceLevel, string> logger)
+		internal static void MoveWithRollback (string sourcePath, string targetPath, Action<TraceLevel, string> logger)
 		{
 			string? backupPath = null;
 			if (Directory.Exists (targetPath)) {
@@ -85,10 +85,6 @@ namespace Xamarin.Android.Tools
 
 			try {
 				Directory.Move (sourcePath, targetPath);
-
-				// Only delete backup after successful move
-				if (backupPath is not null)
-					TryDeleteDirectory (backupPath, "old backup", logger);
 			}
 			catch (Exception ex) {
 				logger (TraceLevel.Error, $"Failed to move to '{targetPath}': {ex.Message}");
@@ -104,6 +100,24 @@ namespace Xamarin.Android.Tools
 					}
 				}
 				throw;
+			}
+
+			// Delete backup only after move and caller validation succeed
+			if (backupPath is not null)
+				TryDeleteDirectory (backupPath, "old backup", logger);
+		}
+
+		/// <summary>Deletes a backup created by MoveWithRollback. Call after validation succeeds.</summary>
+		internal static void CommitMove (string targetPath, Action<TraceLevel, string> logger)
+		{
+			// Find and clean up any leftover backup directories
+			var parentDir = Path.GetDirectoryName (targetPath);
+			if (string.IsNullOrEmpty (parentDir) || !Directory.Exists (parentDir))
+				return;
+
+			var dirName = Path.GetFileName (targetPath);
+			foreach (var dir in Directory.GetDirectories (parentDir, $"{dirName}.old-*")) {
+				TryDeleteDirectory (dir, "old backup", logger);
 			}
 		}
 
@@ -149,7 +163,7 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>Checks if a path is under a given directory.</summary>
-		public static bool IsUnderDirectory (string path, string directory)
+		internal static bool IsUnderDirectory (string path, string directory)
 		{
 			if (string.IsNullOrEmpty (directory) || string.IsNullOrEmpty (path))
 				return false;
@@ -159,14 +173,14 @@ namespace Xamarin.Android.Tools
 		}
 
 		// Returns .msi (Windows), .pkg (macOS), or null (Linux)
-		public static string? GetInstallerExtension ()
+		internal static string? GetInstallerExtension ()
 		{
 			if (OS.IsWindows) return ".msi";
 			if (OS.IsMac) return ".pkg";
 			return null;
 		}
 
-		public static string GetArchiveExtension ()
+		internal static string GetArchiveExtension ()
 		{
 			return OS.IsWindows ? ".zip" : ".tar.gz";
 		}
