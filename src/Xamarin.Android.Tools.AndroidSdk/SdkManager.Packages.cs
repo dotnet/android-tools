@@ -73,7 +73,7 @@ namespace Xamarin.Android.Tools
 			ThrowIfDisposed ();
 			var sdkManagerPath = FindSdkManagerPath () ?? throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first to install command-line tools.");
 			logger (TraceLevel.Info, "Running sdkmanager --list...");
-			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (sdkManagerPath, "--list", cancellationToken: cancellationToken).ConfigureAwait (false);
+			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (sdkManagerPath, new[] { "--list" }, cancellationToken: cancellationToken).ConfigureAwait (false);
 
 			if (exitCode != 0) {
 				logger (TraceLevel.Error, $"sdkmanager --list failed (exit code {exitCode}): {stderr}");
@@ -96,12 +96,12 @@ namespace Xamarin.Android.Tools
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
 			var sdkManagerPath = FindSdkManagerPath () ?? throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
-			
-			var packageList = string.Join (" ", packages.Select (p => $"\"{p}\""));
-			logger (TraceLevel.Info, $"Installing packages: {packageList}");
+
+			var packageArray = packages.ToArray ();
+			logger (TraceLevel.Info, $"Installing packages: {string.Join (", ", packageArray)}");
 
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
-				sdkManagerPath, packageList, acceptLicenses, cancellationToken).ConfigureAwait (false);
+				sdkManagerPath, packageArray, acceptLicenses, cancellationToken).ConfigureAwait (false);
 
 			if (exitCode != 0) {
 				logger (TraceLevel.Error, $"Package installation failed (exit code {exitCode}): {stderr}");
@@ -126,11 +126,12 @@ namespace Xamarin.Android.Tools
 			if (sdkManagerPath is null)
 				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
 
-			var packageList = string.Join (" ", packages.Select (p => $"\"{p}\""));
-			logger (TraceLevel.Info, $"Uninstalling packages: {packageList}");
+			var packageArray = packages.ToArray ();
+			logger (TraceLevel.Info, $"Uninstalling packages: {string.Join (", ", packageArray)}");
 
+			var args = new [] { "--uninstall" }.Concat (packageArray).ToArray ();
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
-				sdkManagerPath, $"--uninstall {packageList}", cancellationToken: cancellationToken).ConfigureAwait (false);
+				sdkManagerPath, args, cancellationToken: cancellationToken).ConfigureAwait (false);
 
 			if (exitCode != 0) {
 				logger (TraceLevel.Error, $"Package uninstall failed (exit code {exitCode}): {stderr}");
@@ -153,7 +154,7 @@ namespace Xamarin.Android.Tools
 
 			logger (TraceLevel.Info, "Updating all installed packages...");
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
-				sdkManagerPath, "--update", acceptLicenses: true, cancellationToken: cancellationToken).ConfigureAwait (false);
+				sdkManagerPath, new[] { "--update" }, acceptLicenses: true, cancellationToken: cancellationToken).ConfigureAwait (false);
 
 			if (exitCode != 0) {
 				logger (TraceLevel.Error, $"Package update failed (exit code {exitCode}): {stderr}");
