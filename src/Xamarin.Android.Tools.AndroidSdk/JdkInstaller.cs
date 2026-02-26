@@ -100,7 +100,7 @@ namespace Xamarin.Android.Tools
 				throw new ArgumentNullException (nameof (targetPath));
 
 			// When elevated and a platform installer is available, use it and let the installer handle paths
-			if (IsElevated () && FileUtil.GetInstallerExtension () is not null) {
+			if (ProcessUtils.IsElevated () && FileUtil.GetInstallerExtension () is not null) {
 				logger (TraceLevel.Info, "Running elevated — using platform installer (.msi/.pkg).");
 				await InstallWithPlatformInstallerAsync (majorVersion, progress, cancellationToken).ConfigureAwait (false);
 				return;
@@ -332,7 +332,5 @@ namespace Xamarin.Android.Tools
 				_ => throw new PlatformNotSupportedException ($"Unsupported architecture: {RuntimeInformation.OSArchitecture}"),
 			};
 		}
-
-		static bool IsElevated () => ProcessUtils.IsElevated ();
 	}
 }
