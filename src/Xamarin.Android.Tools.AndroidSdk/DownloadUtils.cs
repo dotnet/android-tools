@@ -136,8 +136,8 @@ namespace Xamarin.Android.Tools
 				return null;
 
 			var trimmed = content.Trim ();
-			var end = trimmed.IndexOfAny ([' ', '\t', '\n', '\r']);
-			return end >= 0 ? trimmed[..end] : trimmed;
+			var end = trimmed.IndexOfAny (new [] { ' ', '\t', '\n', '\r' });
+			return end >= 0 ? trimmed.Substring (0, end) : trimmed;
 		}
 	}
 }
