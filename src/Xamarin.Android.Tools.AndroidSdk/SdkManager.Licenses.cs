@@ -30,7 +30,26 @@ namespace Xamarin.Android.Tools
 			var (exitCode, stdout, stderr) = await RunSdkManagerAsync (
 				sdkManagerPath, "--licenses", acceptLicenses: true, cancellationToken: cancellationToken).ConfigureAwait (false);
 
-			// License acceptance may return non-zero when licenses are already accepted
+			logger (TraceLevel.Verbose, $"sdkmanager --licenses exited with code {exitCode}.");
+
+			if (exitCode != 0) {
+				string output = (stdout ?? string.Empty) + Environment.NewLine + (stderr ?? string.Empty);
+
+				bool alreadyAccepted =
+					output.IndexOf ("all sdk package licenses accepted", StringComparison.OrdinalIgnoreCase) >= 0 ||
+					output.IndexOf ("licenses have already been accepted", StringComparison.OrdinalIgnoreCase) >= 0 ||
+					output.IndexOf ("no sdk licenses to review", StringComparison.OrdinalIgnoreCase) >= 0 ||
+					output.IndexOf ("no licenses to review", StringComparison.OrdinalIgnoreCase) >= 0;
+
+				if (!alreadyAccepted) {
+					logger (TraceLevel.Error, $"sdkmanager --licenses failed with exit code {exitCode}. stderr: {stderr}");
+					throw new InvalidOperationException ($"sdkmanager --licenses failed with exit code {exitCode}. stderr: {stderr}");
+				}
+
+				logger (TraceLevel.Info, "SDK licenses are already accepted.");
+				return;
+			}
+
 			logger (TraceLevel.Info, "License acceptance complete.");
 		}
 
