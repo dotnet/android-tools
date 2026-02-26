@@ -27,15 +27,8 @@ namespace Xamarin.Android.Tools
 				return await RunSdkManagerElevatedAsync (sdkManagerPath, arguments, acceptLicenses, cancellationToken).ConfigureAwait (false);
 			}
 
-			var psi = new ProcessStartInfo {
-				FileName = sdkManagerPath,
-				Arguments = arguments,
-				CreateNoWindow = true,
-				UseShellExecute = false,
-				RedirectStandardOutput = true,
-				RedirectStandardError = true,
-				RedirectStandardInput = acceptLicenses,
-			};
+			var psi = ProcessUtils.CreateProcessStartInfo (sdkManagerPath, arguments);
+			psi.RedirectStandardInput = acceptLicenses;
 
 			var envVars = GetEnvironmentVariables ();
 
@@ -139,13 +132,12 @@ namespace Xamarin.Android.Tools
 				File.WriteAllText (scriptFile, script);
 				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {arguments}");
 
-				var psi = new ProcessStartInfo {
-					FileName = "cmd.exe",
-					Arguments = $"/c \"{scriptFile}\"",
-					Verb = "runas",
-					CreateNoWindow = true,
-					WindowStyle = ProcessWindowStyle.Hidden,
-				};
+				var psi = ProcessUtils.CreateProcessStartInfo ("cmd.exe", $"/c \"{scriptFile}\"");
+				psi.UseShellExecute = true;
+				psi.Verb = "runas";
+				psi.RedirectStandardOutput = false;
+				psi.RedirectStandardError = false;
+				psi.WindowStyle = ProcessWindowStyle.Hidden;
 
 				await ProcessUtils.StartShellExecuteProcessAsync (psi, SdkManagerTimeout, cancellationToken)
 					.ConfigureAwait (false);
