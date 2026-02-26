@@ -133,35 +133,40 @@ namespace Xamarin.Android.Tools
 		/// Runs sdkmanager with elevated (Administrator) privileges on Windows using a wrapper
 		/// script that captures stdout/stderr to temp files. UAC prompt will be shown to the user.
 		/// </summary>
+		/// <remarks>
+		/// Uses <c>Process.Start</c> directly because <c>ProcessUtils.StartProcess</c> does not
+		/// support <c>UseShellExecute = true</c> with <c>Verb = "runas"</c> needed for UAC elevation.
+		/// </remarks>
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerElevatedAsync (
 			string sdkManagerPath, string arguments, bool acceptLicenses, CancellationToken cancellationToken)
 		{
-			var stdoutFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stdout-{Guid.NewGuid ()}.txt");
-			var stderrFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stderr-{Guid.NewGuid ()}.txt");
-			var scriptFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-elevated-{Guid.NewGuid ()}.cmd");
+			var uniqueId = Guid.NewGuid ().ToString ("N");
+			var stdoutFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stdout-{uniqueId}.txt");
+			var stderrFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stderr-{uniqueId}.txt");
+			var exitCodeFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-exit-{uniqueId}.txt");
+			var scriptFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-elevated-{uniqueId}.cmd");
+			var tempFiles = new[] { scriptFile, stdoutFile, stderrFile, exitCodeFile };
 
 			try {
-				// Build environment variable block for the elevated process
 				var envBlock = new StringBuilder ();
 				if (!string.IsNullOrEmpty (AndroidSdkPath))
 					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.AndroidHome}={AndroidSdkPath}\"");
 				if (!string.IsNullOrEmpty (JavaSdkPath))
 					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.JavaHome}={JavaSdkPath}\"");
-				var userHome = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
-				envBlock.AppendLine ($"set \"ANDROID_USER_HOME={userHome}\"");
+				envBlock.AppendLine ($"set \"ANDROID_USER_HOME={Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android")}\"");
 
-				// Build the wrapper script
 				var licenseInput = acceptLicenses ? "echo y| " : "";
 				var script = $"""
 					@echo off
 					{envBlock}
 					{licenseInput}"{sdkManagerPath}" {arguments} > "{stdoutFile}" 2> "{stderrFile}"
-					echo %ERRORLEVEL% > "{stdoutFile}.exit"
+					echo %ERRORLEVEL% > "{exitCodeFile}"
 					""";
 
 				File.WriteAllText (scriptFile, script);
 				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {arguments}");
 
+				// UseShellExecute + Verb = "runas" required for UAC elevation
 				var psi = new ProcessStartInfo {
 					FileName = "cmd.exe",
 					Arguments = $"/c \"{scriptFile}\"",
@@ -175,25 +180,19 @@ namespace Xamarin.Android.Tools
 				if (process is null)
 					throw new InvalidOperationException ("Failed to start elevated sdkmanager process.");
 
-				// Wait for the elevated process to complete
 				await Task.Run (() => {
 					if (!process.WaitForExit ((int) SdkManagerTimeout.TotalMilliseconds)) {
 						process.Kill ();
-						throw new TimeoutException ($"Elevated sdkmanager process timed out after {SdkManagerTimeout.TotalMinutes} minutes.");
+						throw new TimeoutException ($"Elevated sdkmanager timed out after {SdkManagerTimeout.TotalMinutes} minutes.");
 					}
 				}, cancellationToken).ConfigureAwait (false);
 
-				// Read captured output
 				var stdoutStr = File.Exists (stdoutFile) ? File.ReadAllText (stdoutFile) : "";
 				var stderrStr = File.Exists (stderrFile) ? File.ReadAllText (stderrFile) : "";
 
-				// Read exit code from the marker file
-				var exitCodeFile = $"{stdoutFile}.exit";
 				int exitCode = process.ExitCode;
-				if (File.Exists (exitCodeFile)) {
-					var exitCodeStr = File.ReadAllText (exitCodeFile).Trim ();
-					int.TryParse (exitCodeStr, out exitCode);
-				}
+				if (File.Exists (exitCodeFile) && int.TryParse (File.ReadAllText (exitCodeFile).Trim (), out var parsed))
+					exitCode = parsed;
 
 				if (exitCode != 0) {
 					logger (TraceLevel.Warning, $"Elevated sdkmanager exited with code {exitCode}");
@@ -204,15 +203,7 @@ namespace Xamarin.Android.Tools
 				return (exitCode, stdoutStr, stderrStr);
 			}
 			finally {
-				// Cleanup temp files
-				try { if (File.Exists (scriptFile)) File.Delete (scriptFile); }
-				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup script file: {ex.Message}"); }
-				try { if (File.Exists (stdoutFile)) File.Delete (stdoutFile); }
-				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup stdout file: {ex.Message}"); }
-				try { if (File.Exists (stderrFile)) File.Delete (stderrFile); }
-				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup stderr file: {ex.Message}"); }
-				try { if (File.Exists ($"{stdoutFile}.exit")) File.Delete ($"{stdoutFile}.exit"); }
-				catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to cleanup exit code file: {ex.Message}"); }
+				FileUtil.TryDeleteFiles (tempFiles, logger);
 			}
 		}
 

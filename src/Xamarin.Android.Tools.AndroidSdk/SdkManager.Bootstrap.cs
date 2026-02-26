@@ -116,7 +116,7 @@ namespace Xamarin.Android.Tools
 							extractedDir = tempExtractDir;
 					}
 
-					// Move extracted files into versioned directory, with rollback on failure and cross-device fallback
+					// Move extracted files into versioned directory with rollback on failure and cross-device fallback
 					string? backupPath = null;
 					if (Directory.Exists (versionDir)) {
 						backupPath = versionDir + $".old-{Guid.NewGuid ():N}";
@@ -128,7 +128,6 @@ namespace Xamarin.Android.Tools
 							Directory.Move (extractedDir, versionDir);
 						}
 						catch (IOException) {
-							// Cross-device fallback: copy recursively then delete source
 							FileUtil.CopyDirectoryRecursive (extractedDir, versionDir);
 							Directory.Delete (extractedDir, recursive: true);
 						}
@@ -136,7 +135,6 @@ namespace Xamarin.Android.Tools
 					}
 					catch (Exception ex) {
 						logger (TraceLevel.Error, $"Failed to install cmdline-tools to '{versionDir}': {ex.Message}");
-						// Attempt to restore previous installation from backup
 						if (!string.IsNullOrEmpty (backupPath) && Directory.Exists (backupPath)) {
 							try {
 								if (Directory.Exists (versionDir))
@@ -151,19 +149,11 @@ namespace Xamarin.Android.Tools
 						throw;
 					}
 					finally {
-						if (!string.IsNullOrEmpty (backupPath) && Directory.Exists (backupPath)) {
-							try { Directory.Delete (backupPath, recursive: true); }
-							catch (Exception ex) {
-								logger (TraceLevel.Warning, $"Could not clean up old cmdline-tools at '{backupPath}': {ex.Message}");
-							}
-						}
+						FileUtil.TryDeleteDirectory (backupPath!, "old cmdline-tools backup", logger);
 					}
 				}
 				finally {
-					if (Directory.Exists (tempExtractDir)) {
-						try { Directory.Delete (tempExtractDir, recursive: true); }
-						catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to clean up temp extract dir: {ex.Message}"); }
-					}
+					FileUtil.TryDeleteDirectory (tempExtractDir, "temp extract dir", logger);
 				}
 
 				// Set executable permissions on Unix
@@ -178,10 +168,7 @@ namespace Xamarin.Android.Tools
 				logger (TraceLevel.Info, "Android SDK bootstrap complete.");
 			}
 			finally {
-				if (File.Exists (tempArchivePath)) {
-					try { File.Delete (tempArchivePath); }
-					catch (Exception ex) { logger (TraceLevel.Verbose, $"Failed to clean up temp archive: {ex.Message}"); }
-				}
+				FileUtil.TryDeleteFile (tempArchivePath, logger);
 			}
 		}
 	}

@@ -61,6 +61,13 @@ namespace Xamarin.Android.Tools
 			catch (Exception ex) { logger (TraceLevel.Warning, $"Could not delete '{path}': {ex.Message}"); }
 		}
 
+		/// <summary>Deletes multiple files, logging any failures instead of throwing.</summary>
+		internal static void TryDeleteFiles (string[] paths, Action<TraceLevel, string> logger)
+		{
+			foreach (var path in paths)
+				TryDeleteFile (path, logger);
+		}
+
 		/// <summary>Recursively deletes a directory if it exists, logging any failure instead of throwing.</summary>
 		internal static void TryDeleteDirectory (string path, string label, Action<TraceLevel, string> logger)
 		{
@@ -219,10 +226,14 @@ namespace Xamarin.Android.Tools
 				if (!Chmod (file, 0x1ED)) { // 0755
 					try {
 						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						using var process = Process.Start (psi);
-						process?.WaitForExit ();
-						if (process is null || process.ExitCode != 0)
-							throw new InvalidOperationException ($"chmod failed for '{file}'");
+						using var stdout = new StringWriter ();
+						using var stderr = new StringWriter ();
+						var exitCode = ProcessUtils.StartProcess (psi, stdout, stderr, default).Result;
+						if (exitCode != 0)
+							throw new InvalidOperationException ($"chmod failed for '{file}': {stderr}");
+					}
+					catch (InvalidOperationException) {
+						throw;
 					}
 					catch (Exception ex) {
 						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}': {ex.Message}");
