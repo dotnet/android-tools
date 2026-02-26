@@ -8,9 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
-#if NET5_0_OR_GREATER
-using System.Security.Principal;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -332,45 +329,6 @@ namespace Xamarin.Android.Tools
 			};
 		}
 
-		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
-		internal static bool IsElevated ()
-		{
-			if (OS.IsWindows) {
-#if NET5_0_OR_GREATER
-#pragma warning disable CA1416 // Guarded by OS.IsWindows runtime check above
-				return IsElevatedWindows ();
-#pragma warning restore CA1416
-#else
-				return false;
-#endif
-			}
-			// Unix: geteuid() == 0 means root
-			return IsElevatedUnix ();
-		}
-
-#if NET5_0_OR_GREATER
-		[System.Runtime.Versioning.SupportedOSPlatform ("windows")]
-		static bool IsElevatedWindows ()
-		{
-			using var identity = WindowsIdentity.GetCurrent ();
-			var principal = new WindowsPrincipal (identity);
-			return principal.IsInRole (WindowsBuiltInRole.Administrator);
-		}
-#endif
-
-		// Separate method so geteuid P/Invoke is never JIT-compiled on Windows
-		static bool IsElevatedUnix ()
-		{
-#if NET5_0_OR_GREATER
-			if (!OperatingSystem.IsWindows ())
-				return geteuid () == 0;
-			return false;
-#else
-			return geteuid () == 0;
-#endif
-		}
-
-		[DllImport ("libc", SetLastError = true)]
-		static extern uint geteuid ();
+		static bool IsElevated () => ProcessUtils.IsElevated ();
 	}
 }

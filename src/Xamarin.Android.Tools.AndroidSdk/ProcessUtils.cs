@@ -6,6 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+#if !NET5_0_OR_GREATER
+using System.Runtime.InteropServices;
+#endif
+
 namespace Xamarin.Android.Tools
 {
 	public static class ProcessUtils
@@ -233,6 +237,27 @@ namespace Xamarin.Android.Tools
 				yield return Path.ChangeExtension (executable, ext);
 			yield return executable;
 		}
+
+		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
+		public static bool IsElevated ()
+		{
+#if NET5_0_OR_GREATER
+			return Environment.IsPrivilegedProcess;
+#else
+			if (OS.IsWindows)
+				return IsUserAnAdmin ();
+			return geteuid () == 0;
+#endif
+		}
+
+#if !NET5_0_OR_GREATER
+		[DllImport ("shell32.dll")]
+		[return: MarshalAs (UnmanagedType.Bool)]
+		static extern bool IsUserAnAdmin ();
+
+		[DllImport ("libc", SetLastError = true)]
+		static extern uint geteuid ();
+#endif
 	}
 }
 
