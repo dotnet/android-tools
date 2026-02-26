@@ -130,7 +130,7 @@ namespace Xamarin.Android.Tools
 
 				// Set executable permissions on Unix
 				if (!OS.IsWindows) {
-					FileUtil.SetExecutablePermissions (versionDir, logger);
+					await FileUtil.SetExecutablePermissionsAsync (versionDir, logger, cancellationToken).ConfigureAwait (false);
 				}
 
 				// Update AndroidSdkPath for subsequent sdkmanager calls
