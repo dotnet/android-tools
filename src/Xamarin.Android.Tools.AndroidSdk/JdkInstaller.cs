@@ -227,8 +227,8 @@ namespace Xamarin.Android.Tools
 				? ProcessUtils.CreateProcessStartInfo ("msiexec", "/i", installerPath, "/quiet", "/norestart")
 				: ProcessUtils.CreateProcessStartInfo ("/usr/sbin/installer", "-pkg", installerPath, "-target", "/");
 
-			var stdout = new StringWriter ();
-			var stderr = new StringWriter ();
+			using var stdout = new StringWriter ();
+			using var stderr = new StringWriter ();
 			var exitCode = await ProcessUtils.StartProcess (psi, stdout: stdout, stderr: stderr, cancellationToken).ConfigureAwait (false);
 
 			if (exitCode != 0) {
