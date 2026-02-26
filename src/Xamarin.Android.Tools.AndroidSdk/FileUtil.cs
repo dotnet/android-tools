@@ -226,11 +226,17 @@ namespace Xamarin.Android.Tools
 				if (!Chmod (file, 0x1ED)) { // 0755
 					try {
 						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						using var stdout = new StringWriter ();
-						using var stderr = new StringWriter ();
-						var exitCode = ProcessUtils.StartProcess (psi, stdout, stderr, default).Result;
-						if (exitCode != 0)
+						psi.RedirectStandardOutput = true;
+						psi.RedirectStandardError = true;
+						psi.UseShellExecute = false;
+						using var process = Process.Start (psi);
+						if (process == null)
+							throw new InvalidOperationException ($"Failed to start chmod for '{file}'.");
+						process.WaitForExit ();
+						if (process.ExitCode != 0) {
+							var stderr = process.StandardError.ReadToEnd ();
 							throw new InvalidOperationException ($"chmod failed for '{file}': {stderr}");
+						}
 					}
 					catch (InvalidOperationException) {
 						throw;
