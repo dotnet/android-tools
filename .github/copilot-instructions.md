@@ -40,7 +40,7 @@ When setting environment variables for SDK tools (e.g. `sdkmanager`, `avdmanager
 
 - **One type per file**: each public class, struct, enum, or interface must be in its own `.cs` file named after the type (e.g. `JdkVersionInfo` → `JdkVersionInfo.cs`). Do not combine multiple top-level types in a single file.
 - **Minimal public API**: prefer `internal` for new methods/classes unless they are consumed by external projects (dotnet/android, IDE extensions). Use `InternalsVisibleTo` for test access.
-- **Use `ProcessUtils`**: never use `System.Diagnostics.Process` directly. Always use `ProcessUtils.RunAsync()` / `ProcessUtils.StartBackground()` for launching external tools. This ensures consistent logging, timeout handling, and cancellation.
+- **Use `ProcessUtils`**: never use `System.Diagnostics.Process` directly. Use the existing helpers such as `ProcessUtils.CreateProcessStartInfo()`, `ProcessUtils.StartProcess()`, and `ProcessUtils.ExecuteToolAsync()` for launching external tools. This ensures consistent logging, timeout handling, and cancellation.
 - **Use `ArgumentList.Add()`**: when building process arguments, use `ProcessStartInfo.ArgumentList.Add()` instead of string interpolation. This avoids shell-escaping bugs with paths containing spaces or special characters.
 - **Use `FileUtil`**: file operations like extraction, downloads, checksum verification, and path checks belong in `FileUtil.cs`. Don't duplicate file helpers in domain classes.
 - **Concise XML docs**: omit `<summary>` tags for self-explanatory methods. Only add doc comments when the behavior is non-obvious. Avoid restating the method name.
