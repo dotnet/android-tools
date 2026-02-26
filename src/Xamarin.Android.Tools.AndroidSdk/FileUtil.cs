@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Xamarin.Android.Tools
 {
@@ -226,17 +227,10 @@ namespace Xamarin.Android.Tools
 				if (!Chmod (file, 0x1ED)) { // 0755
 					try {
 						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						psi.RedirectStandardOutput = true;
-						psi.RedirectStandardError = true;
-						psi.UseShellExecute = false;
-						using var process = Process.Start (psi);
-						if (process == null)
-							throw new InvalidOperationException ($"Failed to start chmod for '{file}'.");
-						process.WaitForExit ();
-						if (process.ExitCode != 0) {
-							var stderr = process.StandardError.ReadToEnd ();
-							throw new InvalidOperationException ($"chmod failed for '{file}': {stderr}");
-						}
+						int exitCode = ProcessUtils.StartProcess (psi, null, null, CancellationToken.None)
+							.GetAwaiter ().GetResult ();
+						if (exitCode != 0)
+							throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
 					}
 					catch (InvalidOperationException) {
 						throw;
