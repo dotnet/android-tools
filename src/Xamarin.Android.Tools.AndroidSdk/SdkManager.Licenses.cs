@@ -21,6 +21,7 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task AcceptLicensesAsync (CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			var sdkManagerPath = FindSdkManagerPath ();
 			if (sdkManagerPath is null)
 				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
@@ -41,6 +42,7 @@ namespace Xamarin.Android.Tools
 		/// <returns>A list of pending licenses with their ID and full text content.</returns>
 		public async Task<IReadOnlyList<SdkLicense>> GetPendingLicensesAsync (CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			var sdkManagerPath = FindSdkManagerPath ();
 			if (sdkManagerPath is null)
 				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
@@ -100,8 +102,12 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task AcceptLicensesAsync (IEnumerable<string> licenseIds, CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			if (licenseIds is null || !licenseIds.Any ())
 				return;
+
+			if (string.IsNullOrEmpty (AndroidSdkPath))
+				throw new InvalidOperationException ("AndroidSdkPath must be set before accepting individual licenses.");
 
 			var sdkManagerPath = FindSdkManagerPath ();
 			if (sdkManagerPath is null)

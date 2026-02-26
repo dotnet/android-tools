@@ -70,6 +70,7 @@ namespace Xamarin.Android.Tools
 		/// <returns>A tuple of (installed packages, available packages).</returns>
 		public async Task<(IReadOnlyList<SdkPackage> Installed, IReadOnlyList<SdkPackage> Available)> ListAsync (CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			var sdkManagerPath = FindSdkManagerPath ();
 			if (sdkManagerPath is null)
 				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first to install command-line tools.");
@@ -93,6 +94,7 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task InstallAsync (IEnumerable<string> packages, bool acceptLicenses = true, CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			if (packages is null || !packages.Any ())
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
@@ -121,6 +123,7 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task UninstallAsync (IEnumerable<string> packages, CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			if (packages is null || !packages.Any ())
 				throw new ArgumentException ("At least one package must be specified.", nameof (packages));
 
@@ -148,6 +151,7 @@ namespace Xamarin.Android.Tools
 		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task UpdateAsync (CancellationToken cancellationToken = default)
 		{
+			ThrowIfDisposed ();
 			var sdkManagerPath = FindSdkManagerPath ();
 			if (sdkManagerPath is null)
 				throw new InvalidOperationException ("sdkmanager not found. Run BootstrapAsync first.");
