@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Xamarin.Android.Tools
 {
@@ -217,7 +218,7 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		internal static void SetExecutablePermissions (string directory, Action<TraceLevel, string> logger)
+		internal static async Task SetExecutablePermissionsAsync (string directory, Action<TraceLevel, string> logger, CancellationToken cancellationToken = default)
 		{
 			var binDir = Path.Combine (directory, "bin");
 			if (!Directory.Exists (binDir))
@@ -227,8 +228,8 @@ namespace Xamarin.Android.Tools
 				if (!Chmod (file, 0x1ED)) { // 0755
 					try {
 						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						int exitCode = ProcessUtils.StartProcess (psi, null, null, CancellationToken.None)
-							.GetAwaiter ().GetResult ();
+						int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
+							.ConfigureAwait (false);
 						if (exitCode != 0)
 							throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
 					}
