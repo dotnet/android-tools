@@ -92,25 +92,7 @@ namespace Xamarin.Android.Tools
 		/// <summary>Extracts a tar.gz archive using the system tar command.</summary>
 		public static async Task ExtractTarGzAsync (string archivePath, string destinationPath, Action<TraceLevel, string> logger, CancellationToken cancellationToken)
 		{
-			var psi = new ProcessStartInfo {
-				FileName = "/usr/bin/tar",
-				UseShellExecute = false,
-				CreateNoWindow = true,
-			};
-#if NET5_0_OR_GREATER
-			psi.ArgumentList.Add ("-xzf");
-			psi.ArgumentList.Add (archivePath);
-			psi.ArgumentList.Add ("-C");
-			psi.ArgumentList.Add (destinationPath);
-#else
-			// ArgumentList is not available on netstandard2.0, so we build Arguments manually.
-			// Reject characters that could allow argument injection through the shell.
-			if (archivePath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
-				throw new ArgumentException ($"Archive path contains unsafe characters: '{archivePath}'", nameof (archivePath));
-			if (destinationPath.IndexOfAny (new[] { '"', '\'', '`', '$' }) >= 0)
-				throw new ArgumentException ($"Destination path contains unsafe characters: '{destinationPath}'", nameof (destinationPath));
-			psi.Arguments = $"-xzf \"{archivePath}\" -C \"{destinationPath}\"";
-#endif
+			var psi = ProcessUtils.CreateProcessStartInfo ("/usr/bin/tar", "-xzf", archivePath, "-C", destinationPath);
 
 			var stdout = new StringWriter ();
 			var stderr = new StringWriter ();
