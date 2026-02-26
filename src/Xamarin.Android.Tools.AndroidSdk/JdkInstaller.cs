@@ -28,6 +28,8 @@ namespace Xamarin.Android.Tools
 		/// <summary>Gets the supported JDK major versions available for installation.</summary>
 		public static IReadOnlyList<int> SupportedVersions { get; } = [ RecommendedMajorVersion ];
 
+		static readonly IProgress<JdkInstallProgress> NullProgress = new Progress<JdkInstallProgress> ();
+
 		readonly HttpClient httpClient = new();
 		readonly Action<TraceLevel, string> logger;
 
@@ -89,6 +91,8 @@ namespace Xamarin.Android.Tools
 		/// </summary>
 		public async Task InstallAsync (int majorVersion, string targetPath, IProgress<JdkInstallProgress>? progress = null, CancellationToken cancellationToken = default)
 		{
+			progress ??= NullProgress;
+
 			if (!SupportedVersions.Contains (majorVersion))
 				throw new ArgumentException ($"JDK version {majorVersion} is not supported. Supported versions: {string.Join (", ", SupportedVersions)}", nameof (majorVersion));
 
@@ -120,27 +124,27 @@ namespace Xamarin.Android.Tools
 			try {
 				// Download
 				logger (TraceLevel.Info, $"Downloading Microsoft OpenJDK {majorVersion} from {versionInfo.DownloadUrl}");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, 0, $"Downloading Microsoft OpenJDK {majorVersion}..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, 0, $"Downloading Microsoft OpenJDK {majorVersion}..."));
 				await DownloadUtils.DownloadFileAsync (httpClient, versionInfo.DownloadUrl, tempArchivePath, versionInfo.Size,
-					progress is null ? null : new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
+					new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
 					cancellationToken).ConfigureAwait (false);
 				logger (TraceLevel.Info, $"Download complete: {tempArchivePath}");
 
 				// Verify checksum
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
 				DownloadUtils.VerifyChecksum (tempArchivePath, versionInfo.Checksum!);
 				logger (TraceLevel.Info, "Checksum verified.");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
 
 				// Extract
 				logger (TraceLevel.Info, $"Extracting JDK to {targetPath}");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 0, "Extracting JDK..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 0, "Extracting JDK..."));
 				await ExtractArchiveAsync (tempArchivePath, targetPath, cancellationToken).ConfigureAwait (false);
 				logger (TraceLevel.Info, "Extraction complete.");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 100, "Extraction complete."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 100, "Extraction complete."));
 
 				// Validate
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 0, "Validating installation..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 0, "Validating installation..."));
 				if (!IsValid (targetPath)) {
 					logger (TraceLevel.Error, $"JDK installation at '{targetPath}' failed validation.");
 					FileUtil.TryDeleteDirectory (targetPath, "invalid installation", logger);
@@ -150,9 +154,9 @@ namespace Xamarin.Android.Tools
 				// Validation passed — commit the move by cleaning up any backup
 				FileUtil.CommitMove (targetPath, logger);
 				logger (TraceLevel.Info, $"Microsoft OpenJDK {majorVersion} installed successfully at {targetPath}");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 100, "Validation complete."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Validating, 100, "Validation complete."));
 
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
 			}
 			catch (OperationCanceledException) {
 				throw;
@@ -184,7 +188,7 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		async Task InstallWithPlatformInstallerAsync (int majorVersion, IProgress<JdkInstallProgress>? progress, CancellationToken cancellationToken)
+		async Task InstallWithPlatformInstallerAsync (int majorVersion, IProgress<JdkInstallProgress> progress, CancellationToken cancellationToken)
 		{
 			var installerExt = FileUtil.GetInstallerExtension ()!;
 			var info = BuildVersionInfo (majorVersion, installerExt);
@@ -200,21 +204,21 @@ namespace Xamarin.Android.Tools
 			try {
 				// Download installer
 				logger (TraceLevel.Info, $"Downloading installer from {info.DownloadUrl}");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, 0, $"Downloading Microsoft OpenJDK {majorVersion} installer..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, 0, $"Downloading Microsoft OpenJDK {majorVersion} installer..."));
 				await DownloadUtils.DownloadFileAsync (httpClient, info.DownloadUrl, tempInstallerPath, info.Size,
-					progress is null ? null : new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
+					new Progress<(double pct, string msg)> (p => progress.Report (new JdkInstallProgress (JdkInstallPhase.Downloading, p.pct, p.msg))),
 					cancellationToken).ConfigureAwait (false);
 
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 0, "Verifying SHA-256 checksum..."));
 				DownloadUtils.VerifyChecksum (tempInstallerPath, info.Checksum!);
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Verifying, 100, "Checksum verified."));
 
 				// Run the installer silently
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 0, "Running platform installer..."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Extracting, 0, "Running platform installer..."));
 				await RunPlatformInstallerAsync (tempInstallerPath, cancellationToken).ConfigureAwait (false);
 
 				logger (TraceLevel.Info, $"Microsoft OpenJDK {majorVersion} installed successfully via platform installer.");
-				progress?.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
+				progress.Report (new JdkInstallProgress (JdkInstallPhase.Complete, 100, $"Microsoft OpenJDK {majorVersion} installed successfully."));
 			}
 			finally {
 				FileUtil.TryDeleteFile (tempInstallerPath, logger);
