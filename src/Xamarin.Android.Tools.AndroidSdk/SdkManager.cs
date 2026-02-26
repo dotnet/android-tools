@@ -26,10 +26,7 @@ namespace Xamarin.Android.Tools
 		/// <summary>Default manifest feed URL (Xamarin/Microsoft).</summary>
 		public const string DefaultManifestFeedUrl = "https://aka.ms/AndroidManifestFeed/d18-0";
 
-		/// <summary>Buffer size for download operations (80 KB).</summary>
-		const int DownloadBufferSize = 81920;
-
-		readonly HttpClient httpClient = new HttpClient ();
+				readonly HttpClient httpClient = new HttpClient ();
 		readonly Action<TraceLevel, string> logger;
 		bool disposed;
 

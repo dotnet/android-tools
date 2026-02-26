@@ -2,13 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-#if NET5_0_OR_GREATER
-using System.Buffers;
-#endif
+using System.Collections.Generic;
+
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +37,7 @@ namespace Xamarin.Android.Tools
 				RedirectStandardInput = acceptLicenses,
 			};
 
-			ConfigureEnvironment (psi);
+			var envVars = GetEnvironmentVariables ();
 
 			using var stdout = new StringWriter ();
 			using var stderr = new StringWriter ();
@@ -67,7 +64,7 @@ namespace Xamarin.Android.Tools
 			logger (TraceLevel.Verbose, $"Running: {sdkManagerPath} {arguments}");
 			int exitCode;
 			try {
-				exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, onStarted).ConfigureAwait (false);
+				exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, envVars, onStarted).ConfigureAwait (false);
 			}
 			catch (OperationCanceledException) {
 				throw;
@@ -112,7 +109,7 @@ namespace Xamarin.Android.Tools
 		/// script that captures stdout/stderr to temp files. UAC prompt will be shown to the user.
 		/// </summary>
 		/// <remarks>
-		/// Uses <c>Process.Start</c> directly because <c>ProcessUtils.StartProcess</c> does not
+		/// Uses <c>ProcessUtils.StartShellExecuteProcessAsync</c> because elevation requires
 		/// support <c>UseShellExecute = true</c> with <c>Verb = "runas"</c> needed for UAC elevation.
 		/// </remarks>
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerElevatedAsync (
@@ -126,12 +123,10 @@ namespace Xamarin.Android.Tools
 			var tempFiles = new[] { scriptFile, stdoutFile, stderrFile, exitCodeFile };
 
 			try {
+				var envVars = GetEnvironmentVariables ();
 				var envBlock = new StringBuilder ();
-				if (!string.IsNullOrEmpty (AndroidSdkPath))
-					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.AndroidHome}={AndroidSdkPath}\"");
-				if (!string.IsNullOrEmpty (JavaSdkPath))
-					envBlock.AppendLine ($"set \"{EnvironmentVariableNames.JavaHome}={JavaSdkPath}\"");
-				envBlock.AppendLine ($"set \"ANDROID_USER_HOME={Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android")}\"");
+				foreach (var kvp in envVars)
+					envBlock.AppendLine ($"set \"{kvp.Key}={kvp.Value}\"");
 
 				var licenseInput = acceptLicenses ? "echo y| " : "";
 				var script = $"""
@@ -144,31 +139,21 @@ namespace Xamarin.Android.Tools
 				File.WriteAllText (scriptFile, script);
 				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {arguments}");
 
-				// UseShellExecute + Verb = "runas" required for UAC elevation
 				var psi = new ProcessStartInfo {
 					FileName = "cmd.exe",
 					Arguments = $"/c \"{scriptFile}\"",
-					UseShellExecute = true,
 					Verb = "runas",
 					CreateNoWindow = true,
 					WindowStyle = ProcessWindowStyle.Hidden,
 				};
 
-				using var process = Process.Start (psi);
-				if (process is null)
-					throw new InvalidOperationException ("Failed to start elevated sdkmanager process.");
-
-				await Task.Run (() => {
-					if (!process.WaitForExit ((int) SdkManagerTimeout.TotalMilliseconds)) {
-						process.Kill ();
-						throw new TimeoutException ($"Elevated sdkmanager timed out after {SdkManagerTimeout.TotalMinutes} minutes.");
-					}
-				}, cancellationToken).ConfigureAwait (false);
+				await ProcessUtils.StartShellExecuteProcessAsync (psi, SdkManagerTimeout, cancellationToken)
+					.ConfigureAwait (false);
 
 				var stdoutStr = File.Exists (stdoutFile) ? File.ReadAllText (stdoutFile) : "";
 				var stderrStr = File.Exists (stderrFile) ? File.ReadAllText (stderrFile) : "";
 
-				int exitCode = process.ExitCode;
+				int exitCode = 0;
 				if (File.Exists (exitCodeFile) && int.TryParse (File.ReadAllText (exitCodeFile).Trim (), out var parsed))
 					exitCode = parsed;
 
@@ -189,97 +174,41 @@ namespace Xamarin.Android.Tools
 		{
 			logger (TraceLevel.Info, $"Downloading {url}...");
 
-			using var response = await httpClient.GetAsync (url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait (false);
-			response.EnsureSuccessStatusCode ();
-
-			var totalSize = response.Content.Headers.ContentLength ?? expectedSize;
-
-			// In netstandard2.0, ReadAsStreamAsync() has no CancellationToken overload.
-			// Register to dispose the response on cancellation so the stream read will abort.
-			// Note: HttpResponseMessage.Dispose() is idempotent, so the using + registration is safe.
-			cancellationToken.ThrowIfCancellationRequested ();
-			using var registration = cancellationToken.Register (() => { try { response.Dispose (); } catch { } });
-			using var stream = await response.Content.ReadAsStreamAsync ().ConfigureAwait (false);
-			using var fileStream = File.Create (destinationPath);
-
-#if NET5_0_OR_GREATER
-			// Use ArrayPool for buffer to reduce allocations (requires System.Buffers)
-			var buffer = ArrayPool<byte>.Shared.Rent (DownloadBufferSize);
-			try {
-#else
-			var buffer = new byte[DownloadBufferSize];
-			{
-#endif
-				long totalRead = 0;
-				int bytesRead;
-
-				while ((bytesRead = await stream.ReadAsync (buffer, 0, buffer.Length, cancellationToken).ConfigureAwait (false)) > 0) {
-					await fileStream.WriteAsync (buffer, 0, bytesRead, cancellationToken).ConfigureAwait (false);
-					totalRead += bytesRead;
-
-					if (totalSize > 0 && progress is not null) {
-						var percent = (int) ((totalRead * 100) / totalSize);
-						progress.Report (new SdkBootstrapProgress {
-							Phase = SdkBootstrapPhase.Downloading,
-							PercentComplete = percent,
-							Message = $"Downloading... {percent}% ({totalRead / (1024 * 1024)}MB / {totalSize / (1024 * 1024)}MB)"
-						});
-					}
-				}
-
-				logger (TraceLevel.Info, $"Downloaded {totalRead} bytes to {destinationPath}.");
-			}
-#if NET5_0_OR_GREATER
-			finally {
-				ArrayPool<byte>.Shared.Return (buffer);
-			}
-#endif
-		}
-
-		bool VerifyChecksum (string filePath, string expectedChecksum, string? checksumType)
-		{
-			// Validate checksumType - only SHA1 is currently supported
-			var type = checksumType ?? "sha1";
-			if (!string.Equals (type, "sha1", StringComparison.OrdinalIgnoreCase)) {
-				throw new NotSupportedException ($"Unsupported checksum type: '{checksumType}'. Only 'sha1' is currently supported.");
+			// Adapt SdkBootstrapProgress to the generic progress type used by DownloadUtils
+			IProgress<(double percent, string message)>? downloadProgress = null;
+			if (progress is not null) {
+				downloadProgress = new Progress<(double percent, string message)> (p => {
+					progress.Report (new SdkBootstrapProgress {
+						Phase = SdkBootstrapPhase.Downloading,
+						PercentComplete = (int) p.percent,
+						Message = p.message,
+					});
+				});
 			}
 
-			logger (TraceLevel.Verbose, $"Verifying {type} checksum for {filePath}...");
-
-			using var stream = File.OpenRead (filePath);
-			using var hasher = SHA1.Create ();
-			var hashBytes = hasher.ComputeHash (stream);
-			var actualChecksum = BitConverter.ToString (hashBytes).Replace ("-", "");
-
-			var match = string.Equals (actualChecksum, expectedChecksum, StringComparison.OrdinalIgnoreCase);
-			if (!match) {
-				logger (TraceLevel.Error, $"Checksum mismatch: expected={expectedChecksum}, actual={actualChecksum}");
-			}
-			return match;
+			await DownloadUtils.DownloadFileAsync (httpClient, url, destinationPath, expectedSize, downloadProgress, cancellationToken).ConfigureAwait (false);
+			logger (TraceLevel.Info, $"Download complete: {destinationPath}");
 		}
 
 		/// <summary>
-		/// Configures environment variables on a ProcessStartInfo for Android SDK tools.
+		/// Returns environment variables needed by Android SDK tools.
 		/// </summary>
-		void ConfigureEnvironment (ProcessStartInfo psi)
+		Dictionary<string, string> GetEnvironmentVariables ()
 		{
-			if (!string.IsNullOrEmpty (AndroidSdkPath)) {
-				psi.EnvironmentVariables[EnvironmentVariableNames.AndroidHome] = AndroidSdkPath;
-				// Note: ANDROID_SDK_ROOT is deprecated per https://developer.android.com/tools/variables#envar
-				// Only set ANDROID_HOME
-			}
-			if (!string.IsNullOrEmpty (JavaSdkPath)) {
-				psi.EnvironmentVariables[EnvironmentVariableNames.JavaHome] = JavaSdkPath;
-			}
+			var env = new Dictionary<string, string> ();
 
-			// Ensure ANDROID_USER_HOME is set so sdkmanager can write install properties and
-			// preferences to a user-writable location. Without this, sdkmanager fails with
-			// "Failed to read or create install properties file" when the SDK is installed in
-			// a system-protected path (e.g., C:\Program Files).
-			if (!psi.EnvironmentVariables.ContainsKey ("ANDROID_USER_HOME") || string.IsNullOrEmpty (psi.EnvironmentVariables["ANDROID_USER_HOME"])) {
-				var userHome = Path.Combine (Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
-				psi.EnvironmentVariables["ANDROID_USER_HOME"] = userHome;
-			}
+			if (!string.IsNullOrEmpty (AndroidSdkPath))
+				env[EnvironmentVariableNames.AndroidHome] = AndroidSdkPath!;
+
+			if (!string.IsNullOrEmpty (JavaSdkPath))
+				env[EnvironmentVariableNames.JavaHome] = JavaSdkPath!;
+
+			// Ensure ANDROID_USER_HOME is set so sdkmanager can write install properties
+			// to a user-writable location instead of the (possibly read-only) SDK path.
+			env["ANDROID_USER_HOME"] = Path.Combine (
+				Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
+
+			return env;
 		}
 	}
 }
