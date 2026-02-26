@@ -34,36 +34,38 @@ namespace Xamarin.Android.Tools
 					if (File.Exists (sdkAdb))
 						return sdkAdb;
 				}
-
 				return ProcessUtils.FindExecutablesInPath ("adb").FirstOrDefault ();
 			}
 		}
 
-		/// <summary>
-		/// Gets whether ADB is available.
-		/// </summary>
 		public bool IsAvailable => AdbPath is not null;
 
-		void ConfigureEnvironment (ProcessStartInfo psi)
+		string RequireAdb ()
 		{
+			return AdbPath ?? throw new InvalidOperationException ("ADB not found.");
+		}
+
+		ProcessStartInfo CreateAdbProcess (string adbPath, params string [] args)
+		{
+			var psi = new ProcessStartInfo {
+				FileName = adbPath,
+				Arguments = string.Join (" ", args),
+				UseShellExecute = false,
+				CreateNoWindow = true
+			};
+
 			var sdkPath = getSdkPath ();
 			if (!string.IsNullOrEmpty (sdkPath))
 				psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
+
+			return psi;
 		}
 
 		public async Task<List<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 		{
-			if (!IsAvailable)
-				throw new InvalidOperationException ("ADB not found.");
-
+			var adb = RequireAdb ();
 			var stdout = new StringWriter ();
-			var psi = new ProcessStartInfo {
-				FileName = AdbPath!,
-				Arguments = "devices -l",
-				UseShellExecute = false,
-				CreateNoWindow = true
-			};
-			ConfigureEnvironment (psi);
+			var psi = CreateAdbProcess (adb, "devices", "-l");
 			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
 			var devices = new List<AdbDeviceInfo> ();
@@ -85,25 +87,19 @@ namespace Xamarin.Android.Tools
 				}
 				devices.Add (device);
 			}
-
 			return devices;
 		}
 
 		public async Task WaitForDeviceAsync (string? serial = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
 		{
-			if (!IsAvailable)
-				throw new InvalidOperationException ("ADB not found.");
-
+			var adb = RequireAdb ();
 			var effectiveTimeout = timeout ?? TimeSpan.FromSeconds (60);
-			var args = string.IsNullOrEmpty (serial) ? "wait-for-device" : $"-s \"{serial}\" wait-for-device";
 
-			var psi = new ProcessStartInfo {
-				FileName = AdbPath!,
-				Arguments = args,
-				UseShellExecute = false,
-				CreateNoWindow = true
-			};
-			ConfigureEnvironment (psi);
+			var args = string.IsNullOrEmpty (serial)
+				? new [] { "wait-for-device" }
+				: new [] { "-s", serial, "wait-for-device" };
+
+			var psi = CreateAdbProcess (adb, args);
 
 			using var cts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
 			cts.CancelAfter (effectiveTimeout);
@@ -117,16 +113,11 @@ namespace Xamarin.Android.Tools
 
 		public async Task StopEmulatorAsync (string serial, CancellationToken cancellationToken = default)
 		{
-			if (!IsAvailable)
-				throw new InvalidOperationException ("ADB not found.");
+			if (string.IsNullOrWhiteSpace (serial))
+				throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
-			var psi = new ProcessStartInfo {
-				FileName = AdbPath!,
-				Arguments = $"-s \"{serial}\" emu kill",
-				UseShellExecute = false,
-				CreateNoWindow = true
-			};
-			ConfigureEnvironment (psi);
+			var adb = RequireAdb ();
+			var psi = CreateAdbProcess (adb, "-s", serial, "emu", "kill");
 			await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
 		}
 	}
