@@ -18,32 +18,18 @@ namespace Xamarin.Android.Tools
 		readonly Func<string?> getSdkPath;
 		readonly Func<string?>? getJdkPath;
 
-		/// <summary>
-		/// Creates a new <see cref="EmulatorRunner"/>.
-		/// </summary>
-		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
-		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public EmulatorRunner (Func<string?> getSdkPath)
 			: this (getSdkPath, null)
 		{
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="EmulatorRunner"/>.
-		/// </summary>
-		/// <param name="getSdkPath">Function that returns the Android SDK path.</param>
-		/// <param name="getJdkPath">Optional function that returns the JDK path. When provided, sets JAVA_HOME for emulator processes.</param>
-		/// <exception cref="ArgumentNullException">Thrown when <paramref name="getSdkPath"/> is null.</exception>
 		public EmulatorRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
 		{
 			this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
 			this.getJdkPath = getJdkPath;
 		}
 
-		/// <summary>
-		/// Gets the path to the emulator executable, or null if not found.
-		/// </summary>
-		public string? EmulatorPath {
+		internal string? EmulatorPath {
 			get {
 				var sdkPath = getSdkPath ();
 				if (string.IsNullOrEmpty (sdkPath))
@@ -56,9 +42,6 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>
-		/// Gets whether the Android Emulator is available.
-		/// </summary>
 		public bool IsAvailable => EmulatorPath is not null;
 
 		void ConfigureEnvironment (ProcessStartInfo psi)
@@ -72,14 +55,6 @@ namespace Xamarin.Android.Tools
 				psi.EnvironmentVariables ["JAVA_HOME"] = jdkPath;
 		}
 
-		/// <summary>
-		/// Starts an AVD and returns the process.
-		/// </summary>
-		/// <param name="avdName">The name of the AVD to start.</param>
-		/// <param name="coldBoot">Whether to perform a cold boot (ignore snapshots).</param>
-		/// <param name="additionalArgs">Additional command-line arguments.</param>
-		/// <returns>The emulator process.</returns>
-		/// <exception cref="InvalidOperationException">Thrown when Android Emulator is not found.</exception>
 		public Process StartAvd (string avdName, bool coldBoot = false, string? additionalArgs = null)
 		{
 			if (!IsAvailable)
@@ -105,12 +80,6 @@ namespace Xamarin.Android.Tools
 			return process;
 		}
 
-		/// <summary>
-		/// Lists the names of installed AVDs.
-		/// </summary>
-		/// <param name="cancellationToken">Cancellation token.</param>
-		/// <returns>A list of AVD names.</returns>
-		/// <exception cref="InvalidOperationException">Thrown when Android Emulator is not found.</exception>
 		public async Task<List<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
 		{
 			if (!IsAvailable)
