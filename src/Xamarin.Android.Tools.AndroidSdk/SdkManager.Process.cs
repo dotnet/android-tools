@@ -3,9 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,11 +15,13 @@ namespace Xamarin.Android.Tools
 	public partial class SdkManager
 	{
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerAsync (
-			string sdkManagerPath, string arguments, bool acceptLicenses = false, CancellationToken cancellationToken = default)
+			string sdkManagerPath, string[] arguments, bool acceptLicenses = false, CancellationToken cancellationToken = default)
 		{
+			var argumentsStr = string.Join (" ", arguments);
+
 			// Check if the SDK path requires elevated permissions for write operations
-			bool needsElevation = !string.IsNullOrEmpty (arguments)
-				&& !arguments.TrimStart ().StartsWith ("--list", StringComparison.Ordinal)
+			bool needsElevation = arguments.Length > 0
+				&& !arguments[0].StartsWith ("--list", StringComparison.Ordinal)
 				&& RequiresElevation ();
 
 			if (needsElevation && OS.IsWindows) {
@@ -54,7 +56,7 @@ namespace Xamarin.Android.Tools
 				};
 			}
 
-			logger (TraceLevel.Verbose, $"Running: {sdkManagerPath} {arguments}");
+			logger (TraceLevel.Verbose, $"Running: {sdkManagerPath} {argumentsStr}");
 			int exitCode;
 			try {
 				exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, envVars, onStarted).ConfigureAwait (false);
@@ -106,7 +108,7 @@ namespace Xamarin.Android.Tools
 		/// support <c>UseShellExecute = true</c> with <c>Verb = "runas"</c> needed for UAC elevation.
 		/// </remarks>
 		async Task<(int ExitCode, string Stdout, string Stderr)> RunSdkManagerElevatedAsync (
-			string sdkManagerPath, string arguments, bool acceptLicenses, CancellationToken cancellationToken)
+			string sdkManagerPath, string[] arguments, bool acceptLicenses, CancellationToken cancellationToken)
 		{
 			var uniqueId = Guid.NewGuid ().ToString ("N");
 			var stdoutFile = Path.Combine (Path.GetTempPath (), $"sdkmanager-stdout-{uniqueId}.txt");
@@ -121,18 +123,20 @@ namespace Xamarin.Android.Tools
 				foreach (var kvp in envVars)
 					envBlock.AppendLine ($"set \"{kvp.Key}={kvp.Value}\"");
 
+				// Escape each argument for cmd.exe safety
+				var escapedArgs = string.Join (" ", arguments.Select (a => $"\"{a.Replace ("\"", "\\\"")}\""));
 				var licenseInput = acceptLicenses ? "echo y| " : "";
 				var script = $"""
 					@echo off
 					{envBlock}
-					{licenseInput}"{sdkManagerPath}" {arguments} > "{stdoutFile}" 2> "{stderrFile}"
+					{licenseInput}"{sdkManagerPath}" {escapedArgs} > "{stdoutFile}" 2> "{stderrFile}"
 					echo %ERRORLEVEL% > "{exitCodeFile}"
 					""";
 
 				File.WriteAllText (scriptFile, script);
-				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {arguments}");
+				logger (TraceLevel.Verbose, $"Running elevated: {sdkManagerPath} {string.Join (" ", arguments)}");
 
-				var psi = ProcessUtils.CreateProcessStartInfo ("cmd.exe", $"/c \"{scriptFile}\"");
+				var psi = ProcessUtils.CreateProcessStartInfo ("cmd.exe", "/c", $"\"{scriptFile}\"");
 				psi.UseShellExecute = true;
 				psi.Verb = "runas";
 				psi.RedirectStandardOutput = false;

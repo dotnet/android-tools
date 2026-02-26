@@ -119,7 +119,9 @@ namespace Xamarin.Android.Tools
 						throw;
 					}
 					finally {
-						FileUtil.TryDeleteDirectory (backupPath!, "old cmdline-tools backup", logger);
+						if (backupPath != null) {
+							FileUtil.TryDeleteDirectory (backupPath, "old cmdline-tools backup", logger);
+						}
 					}
 				}
 				finally {
