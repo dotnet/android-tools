@@ -24,10 +24,7 @@ namespace Xamarin.Android.Tools
 			ExecutableFileExtensions    = pathExts;
 		}
 
-		public static Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
-			=> StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables: null, onStarted: onStarted);
-
-		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables, Action<Process>? onStarted = null)
+		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables = null, Action<Process>? onStarted = null)
 		{
 			cancellationToken.ThrowIfCancellationRequested ();
 			psi.UseShellExecute = false;
@@ -113,7 +110,7 @@ namespace Xamarin.Android.Tools
 			psi.CreateNoWindow = true;
 			psi.RedirectStandardInput = onStarted != null;
 
-			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted);
+			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted: onStarted);
 			var exeName = Path.GetFileName (exe);
 
 			processTask.ContinueWith (t => {
