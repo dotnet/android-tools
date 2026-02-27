@@ -47,11 +47,6 @@ namespace Xamarin.Android.Tools
 		public string? JavaSdkPath { get; set; }
 
 		/// <summary>
-		/// Gets or sets the timeout for sdkmanager operations. Defaults to 30 minutes.
-		/// </summary>
-		public TimeSpan SdkManagerTimeout { get; set; } = TimeSpan.FromMinutes (30);
-
-		/// <summary>
 		/// Creates a new <see cref="SdkManager"/> instance.
 		/// </summary>
 		/// <param name="logger">Optional logger callback. Defaults to <see cref="AndroidSdkInfo.DefaultConsoleLogger"/>.</param>

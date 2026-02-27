@@ -63,13 +63,6 @@ namespace Xamarin.Android.Tools
 			catch (Exception ex) { logger (TraceLevel.Warning, $"Could not delete '{path}': {ex.Message}"); }
 		}
 
-		/// <summary>Deletes multiple files, logging any failures instead of throwing.</summary>
-		internal static void TryDeleteFiles (string[] paths, Action<TraceLevel, string> logger)
-		{
-			foreach (var path in paths)
-				TryDeleteFile (path, logger);
-		}
-
 		/// <summary>Recursively deletes a directory if it exists, logging any failure instead of throwing.</summary>
 		internal static void TryDeleteDirectory (string path, string label, Action<TraceLevel, string> logger)
 		{
@@ -241,27 +234,6 @@ namespace Xamarin.Android.Tools
 			}
 			catch {
 				return false;
-			}
-		}
-
-		/// <summary>
-		/// Recursively copies a directory tree. Based on patterns from dotnet/sdk
-		/// (see https://github.com/dotnet/sdk/blob/main/src/Cli/dotnet/NuGetPackageDownloader).
-		/// </summary>
-		internal static void CopyDirectoryRecursive (string sourceDir, string destinationDir)
-		{
-			var source = new DirectoryInfo (sourceDir);
-			if (!source.Exists)
-				throw new DirectoryNotFoundException ($"Source directory not found: '{sourceDir}'.");
-
-			Directory.CreateDirectory (destinationDir);
-
-			foreach (var file in source.GetFiles ()) {
-				file.CopyTo (Path.Combine (destinationDir, file.Name), overwrite: true);
-			}
-
-			foreach (var subDir in source.GetDirectories ()) {
-				CopyDirectoryRecursive (subDir.FullName, Path.Combine (destinationDir, subDir.Name));
 			}
 		}
 
