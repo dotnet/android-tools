@@ -191,33 +191,59 @@ namespace Xamarin.Android.Tools
 		}
 
 
-		/// <summary>Sets Unix file permissions using libc chmod. Returns true if successful.</summary>
+		/// <summary>
+		/// Sets Unix file permissions. Uses File.SetUnixFileMode on net7.0+ (see
+		/// https://learn.microsoft.com/dotnet/api/system.io.file.setunixfilemode),
+		/// falls back to libc P/Invoke on netstandard2.0.
+		/// </summary>
 		internal static bool Chmod (string path, int mode)
 		{
+			if (OS.IsWindows)
+				return true; // No-op on Windows
+
 			try {
+#if NET7_0_OR_GREATER
+				// Managed API avoids P/Invoke overhead and works on all .NET 7+ Unix platforms.
+				// See https://learn.microsoft.com/dotnet/api/system.io.file.setunixfilemode
+				if (!OperatingSystem.IsWindows ()) {
+					File.SetUnixFileMode (path, (UnixFileMode) mode);
+					return true;
+				}
+				return true;
+#else
 				return chmod (path, mode) == 0;
+#endif
 			}
 			catch {
 				return false;
 			}
 		}
 
+		/// <summary>
+		/// Recursively copies a directory tree. Based on patterns from dotnet/sdk
+		/// (see https://github.com/dotnet/sdk/blob/main/src/Cli/dotnet/NuGetPackageDownloader).
+		/// </summary>
 		internal static void CopyDirectoryRecursive (string sourceDir, string destinationDir)
 		{
-			if (!Directory.Exists (destinationDir))
-				Directory.CreateDirectory (destinationDir);
+			var source = new DirectoryInfo (sourceDir);
+			if (!source.Exists)
+				throw new DirectoryNotFoundException ($"Source directory not found: '{sourceDir}'.");
 
-			foreach (var file in Directory.GetFiles (sourceDir)) {
-				var destFile = Path.Combine (destinationDir, Path.GetFileName (file));
-				File.Copy (file, destFile, overwrite: true);
+			Directory.CreateDirectory (destinationDir);
+
+			foreach (var file in source.GetFiles ()) {
+				file.CopyTo (Path.Combine (destinationDir, file.Name), overwrite: true);
 			}
 
-			foreach (var subDir in Directory.GetDirectories (sourceDir)) {
-				var destSubDir = Path.Combine (destinationDir, Path.GetFileName (subDir));
-				CopyDirectoryRecursive (subDir, destSubDir);
+			foreach (var subDir in source.GetDirectories ()) {
+				CopyDirectoryRecursive (subDir.FullName, Path.Combine (destinationDir, subDir.Name));
 			}
 		}
 
+		/// <summary>
+		/// Sets executable permissions on all files in the bin/ subdirectory.
+		/// Uses File.SetUnixFileMode on net7.0+, falls back to chmod process on netstandard2.0.
+		/// </summary>
 		internal static async Task SetExecutablePermissionsAsync (string directory, Action<TraceLevel, string> logger, CancellationToken cancellationToken = default)
 		{
 			var binDir = Path.Combine (directory, "bin");
@@ -225,20 +251,15 @@ namespace Xamarin.Android.Tools
 				return;
 
 			foreach (var file in Directory.GetFiles (binDir)) {
+				cancellationToken.ThrowIfCancellationRequested ();
 				if (!Chmod (file, 0x1ED)) { // 0755
-					try {
-						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
-							.ConfigureAwait (false);
-						if (exitCode != 0)
-							throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
-					}
-					catch (InvalidOperationException) {
-						throw;
-					}
-					catch (Exception ex) {
-						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}': {ex.Message}");
-						throw new InvalidOperationException ($"Failed to set executable permissions on '{file}'.", ex);
+					// Managed chmod failed, fall back to process
+					var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
+					int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
+						.ConfigureAwait (false);
+					if (exitCode != 0) {
+						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}' (exit code {exitCode}).");
+						throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
 					}
 				}
 			}
@@ -247,8 +268,10 @@ namespace Xamarin.Android.Tools
 		[DllImport ("libc", SetLastError=true)]
 		static extern int rename (string old, string @new);
 
+#if !NET7_0_OR_GREATER
 		[DllImport ("libc", SetLastError = true)]
 		static extern int chmod (string pathname, int mode);
+#endif
 	}
 }
 
