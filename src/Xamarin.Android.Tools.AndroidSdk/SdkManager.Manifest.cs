@@ -84,7 +84,11 @@ namespace Xamarin.Android.Tools
 									if (!string.IsNullOrEmpty (urlHostArch) && !string.Equals (urlHostArch, hostArch, StringComparison.OrdinalIgnoreCase))
 										continue;
 
-									component.ChecksumType = reader.GetAttribute ("checksum-type");
+									var checksumTypeStr = reader.GetAttribute ("checksum-type");
+									if (string.Equals (checksumTypeStr, "sha-256", StringComparison.OrdinalIgnoreCase))
+										component.ChecksumType = ChecksumType.Sha256;
+									else
+										component.ChecksumType = ChecksumType.Sha1;
 									component.Checksum = reader.GetAttribute ("checksum");
 
 									var sizeStr = reader.GetAttribute ("size");
