@@ -243,34 +243,6 @@ namespace Xamarin.Android.Tools
 			yield return executable;
 		}
 
-		/// <summary>
-		/// Starts a process with <c>UseShellExecute = true</c> and waits for it to exit.
-		/// Used for elevated (UAC) scenarios where stdout/stderr cannot be redirected.
-		/// </summary>
-		public static async Task<int> StartShellExecuteProcessAsync (
-			ProcessStartInfo psi, TimeSpan timeout, CancellationToken cancellationToken)
-		{
-			cancellationToken.ThrowIfCancellationRequested ();
-			psi.UseShellExecute = true;
-
-			using var process = Process.Start (psi);
-			if (process is null)
-				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
-
-			// Register cancellation to kill the process so elevated cmd.exe doesn't linger
-			using var registration = cancellationToken.Register (() => KillProcess (process));
-
-			await Task.Run (() => {
-				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
-					KillProcess (process);
-					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
-				}
-			}, CancellationToken.None).ConfigureAwait (false);
-
-			cancellationToken.ThrowIfCancellationRequested ();
-			return process.ExitCode;
-		}
-
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
 		public static bool IsElevated ()
 		{
@@ -293,4 +265,3 @@ namespace Xamarin.Android.Tools
 #endif
 	}
 }
-
