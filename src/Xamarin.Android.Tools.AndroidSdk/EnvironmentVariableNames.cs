@@ -7,7 +7,7 @@ namespace Xamarin.Android.Tools
 	/// Constants for environment variable names used by Android SDK tooling.
 	/// See https://developer.android.com/tools/variables#envar
 	/// </summary>
-	public static class EnvironmentVariableNames
+	internal static class EnvironmentVariableNames
 	{
 		/// <summary>
 		/// The preferred variable for the Android SDK root directory.
