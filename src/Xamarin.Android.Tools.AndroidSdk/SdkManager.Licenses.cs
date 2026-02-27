@@ -74,10 +74,9 @@ namespace Xamarin.Android.Tools
 			Action<Process> onStarted = process => {
 				Task.Run (async () => {
 					try {
-						await Task.Delay (500, cancellationToken).ConfigureAwait (false);
 						while (!process.HasExited && !cancellationToken.IsCancellationRequested) {
-							process.StandardInput.WriteLine ("n");
 							await Task.Delay (200, cancellationToken).ConfigureAwait (false);
+							process.StandardInput.WriteLine ("n");
 						}
 					}
 					catch (Exception ex) {
@@ -114,8 +113,6 @@ namespace Xamarin.Android.Tools
 
 			if (string.IsNullOrEmpty (AndroidSdkPath))
 				throw new InvalidOperationException ("AndroidSdkPath must be set before accepting individual licenses.");
-
-			var sdkManagerPath = RequireSdkManagerPath ();
 
 			// Accept licenses by writing the hash to the licenses directory
 			var licensesDir = Path.Combine (AndroidSdkPath!, "licenses");
@@ -171,10 +168,7 @@ namespace Xamarin.Android.Tools
 				if (line.StartsWith ("License ", StringComparison.OrdinalIgnoreCase) && line.TrimEnd ().EndsWith (":")) {
 					// Save previous license if any
 					if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-						licenses.Add (new SdkLicense {
-							Id = currentLicenseId,
-							Text = currentLicenseText.ToString ().Trim ()
-						});
+						licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 					}
 
 					var trimmedLine = line.TrimEnd ();
@@ -187,10 +181,7 @@ namespace Xamarin.Android.Tools
 				// End of license text when we see the accept prompt
 				if (line.Contains ("Accept?") || line.Contains ("(y/N)")) {
 					if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-						licenses.Add (new SdkLicense {
-							Id = currentLicenseId,
-							Text = currentLicenseText.ToString ().Trim ()
-						});
+						licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 					}
 					currentLicenseId = null;
 					currentLicenseText.Clear ();
@@ -209,10 +200,7 @@ namespace Xamarin.Android.Tools
 
 			// Add last license if not yet added
 			if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-				licenses.Add (new SdkLicense {
-					Id = currentLicenseId,
-					Text = currentLicenseText.ToString ().Trim ()
-				});
+				licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 			}
 
 			return licenses.AsReadOnly ();

@@ -18,16 +18,13 @@ namespace Xamarin.Android.Tools
 
 		static ProcessUtils ()
 		{
-			var pathExt     = Environment.GetEnvironmentVariable (EnvironmentVariableNames.PathExt);
+			var pathExt     = Environment.GetEnvironmentVariable ("PATHEXT");
 			var pathExts    = pathExt?.Split (new char [] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries) ?? new string [0];
 
 			ExecutableFileExtensions    = pathExts;
 		}
 
-		public static Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
-			=> StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables: null, onStarted: onStarted);
-
-		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables, Action<Process>? onStarted = null)
+		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables = null, Action<Process>? onStarted = null)
 		{
 			cancellationToken.ThrowIfCancellationRequested ();
 			psi.UseShellExecute = false;
@@ -113,7 +110,7 @@ namespace Xamarin.Android.Tools
 			psi.CreateNoWindow = true;
 			psi.RedirectStandardInput = onStarted != null;
 
-			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted);
+			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted: onStarted);
 			var exeName = Path.GetFileName (exe);
 
 			processTask.ContinueWith (t => {
@@ -208,7 +205,7 @@ namespace Xamarin.Android.Tools
 
 		internal static IEnumerable<string> FindExecutablesInPath (string executable)
 		{
-			var path        = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";
+			var path        = Environment.GetEnvironmentVariable ("PATH") ?? "";
 			var pathDirs    = path.Split (new char[] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries);
 
 			foreach (var dir in pathDirs) {
@@ -246,34 +243,6 @@ namespace Xamarin.Android.Tools
 			yield return executable;
 		}
 
-		/// <summary>
-		/// Starts a process with <c>UseShellExecute = true</c> and waits for it to exit.
-		/// Used for elevated (UAC) scenarios where stdout/stderr cannot be redirected.
-		/// </summary>
-		public static async Task<int> StartShellExecuteProcessAsync (
-			ProcessStartInfo psi, TimeSpan timeout, CancellationToken cancellationToken)
-		{
-			cancellationToken.ThrowIfCancellationRequested ();
-			psi.UseShellExecute = true;
-
-			using var process = Process.Start (psi);
-			if (process is null)
-				throw new InvalidOperationException ($"Failed to start process: {psi.FileName}");
-
-			// Register cancellation to kill the process so elevated cmd.exe doesn't linger
-			using var registration = cancellationToken.Register (() => KillProcess (process));
-
-			await Task.Run (() => {
-				if (!process.WaitForExit ((int) timeout.TotalMilliseconds)) {
-					KillProcess (process);
-					throw new TimeoutException ($"Process timed out after {timeout.TotalMinutes} minutes.");
-				}
-			}, CancellationToken.None).ConfigureAwait (false);
-
-			cancellationToken.ThrowIfCancellationRequested ();
-			return process.ExitCode;
-		}
-
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
 		public static bool IsElevated ()
 		{
@@ -296,4 +265,3 @@ namespace Xamarin.Android.Tools
 #endif
 	}
 }
-

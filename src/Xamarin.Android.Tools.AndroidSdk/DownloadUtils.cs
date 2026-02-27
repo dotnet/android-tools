@@ -31,7 +31,7 @@ namespace Xamarin.Android.Tools
 #endif
 		}
 
-		static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
+		internal static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
 		{
 #if NET5_0_OR_GREATER
 			return content.ReadAsStringAsync (cancellationToken);
@@ -76,10 +76,14 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>Verifies a file's hash against an expected value using the specified algorithm (sha256 or sha1).</summary>
-		public static void VerifyChecksum (string filePath, string expectedChecksum, string checksumType = "sha256")
+		/// <summary>Verifies a file's hash against an expected value using the specified algorithm.</summary>
+		public static void VerifyChecksum (string filePath, string expectedChecksum, ChecksumType checksumType = ChecksumType.Sha256)
 		{
-			using var hasher = CreateHashAlgorithm (checksumType);
+			using var hasher = checksumType switch {
+				ChecksumType.Sha256 => (HashAlgorithm) SHA256.Create (),
+				ChecksumType.Sha1 => SHA1.Create (),
+				_ => throw new NotSupportedException ($"Unsupported checksum type: '{checksumType}'."),
+			};
 			using var stream = File.OpenRead (filePath);
 
 			var hash = hasher.ComputeHash (stream);
@@ -87,15 +91,6 @@ namespace Xamarin.Android.Tools
 
 			if (!string.Equals (actual, expectedChecksum, StringComparison.OrdinalIgnoreCase))
 				throw new InvalidOperationException ($"Checksum verification failed. Expected: {expectedChecksum}, Actual: {actual}");
-		}
-
-		static HashAlgorithm CreateHashAlgorithm (string checksumType)
-		{
-			switch (checksumType.ToLowerInvariant ()) {
-				case "sha256": return SHA256.Create ();
-				case "sha1": return SHA1.Create ();
-				default: throw new NotSupportedException ($"Unsupported checksum type: '{checksumType}'.");
-			}
 		}
 
 		/// <summary>Extracts a ZIP archive with Zip Slip protection.</summary>

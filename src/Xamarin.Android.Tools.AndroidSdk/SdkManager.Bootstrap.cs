@@ -16,131 +16,66 @@ namespace Xamarin.Android.Tools
 		/// Downloads command-line tools from the manifest feed and extracts them to
 		/// <c>&lt;targetPath&gt;/cmdline-tools/&lt;version&gt;/</c>.
 		/// </summary>
-		/// <param name="targetPath">The Android SDK root directory to bootstrap.</param>
-		/// <param name="progress">Optional progress reporter.</param>
-		/// <param name="cancellationToken">Cancellation token.</param>
 		public async Task BootstrapAsync (string targetPath, IProgress<SdkBootstrapProgress>? progress = null, CancellationToken cancellationToken = default)
 		{
 			ThrowIfDisposed ();
 			if (string.IsNullOrEmpty (targetPath))
 				throw new ArgumentNullException (nameof (targetPath));
 
-			// Step 1: Read manifest
-			progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.ReadingManifest, Message = "Reading manifest feed..." });
+			var cmdlineTools = await FindLatestCmdlineToolsAsync (progress, cancellationToken).ConfigureAwait (false);
+			var tempArchivePath = Path.Combine (Path.GetTempPath (), $"cmdline-tools-{Guid.NewGuid ()}.zip");
+
+			try {
+				await DownloadAndVerifyAsync (cmdlineTools, tempArchivePath, progress, cancellationToken).ConfigureAwait (false);
+
+				var versionDir = Path.Combine (targetPath, "cmdline-tools", cmdlineTools.Revision);
+				Directory.CreateDirectory (Path.Combine (targetPath, "cmdline-tools"));
+
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Extracting, Message: "Extracting cmdline-tools..."));
+				FileUtil.ExtractAndInstall (tempArchivePath, versionDir, "cmdline-tools", logger, cancellationToken);
+
+				if (!OS.IsWindows)
+					await FileUtil.SetExecutablePermissionsAsync (versionDir, logger, cancellationToken).ConfigureAwait (false);
+
+				AndroidSdkPath = targetPath;
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Complete, 100, "Bootstrap complete."));
+				logger (TraceLevel.Info, "Android SDK bootstrap complete.");
+			}
+			finally {
+				FileUtil.TryDeleteFile (tempArchivePath, logger);
+			}
+		}
+
+		async Task<SdkManifestComponent> FindLatestCmdlineToolsAsync (IProgress<SdkBootstrapProgress>? progress, CancellationToken cancellationToken)
+		{
+			progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.ReadingManifest, Message: "Reading manifest feed..."));
 			logger (TraceLevel.Info, $"Reading manifest from {ManifestFeedUrl}...");
 
 			var components = await GetManifestComponentsAsync (cancellationToken).ConfigureAwait (false);
 			var cmdlineTools = components
 				.Where (c => string.Equals (c.ElementName, "cmdline-tools", StringComparison.OrdinalIgnoreCase) && !c.IsObsolete)
-				.OrderByDescending (c => {
-					if (Version.TryParse (c.Revision, out var v))
-						return v;
-					return new Version (0, 0);
-				})
+				.OrderByDescending (c => Version.TryParse (c.Revision, out var v) ? v : new Version (0, 0))
 				.FirstOrDefault ();
 
-			if (cmdlineTools is null || string.IsNullOrEmpty (cmdlineTools.DownloadUrl)) {
+			if (cmdlineTools is null || string.IsNullOrEmpty (cmdlineTools.DownloadUrl))
 				throw new InvalidOperationException ("Could not find command-line tools in the Android manifest feed.");
-			}
 
 			logger (TraceLevel.Info, $"Found cmdline-tools {cmdlineTools.Revision}: {cmdlineTools.DownloadUrl}");
+			return cmdlineTools;
+		}
 
-			// Step 2: Download
-			var tempArchivePath = Path.Combine (Path.GetTempPath (), $"cmdline-tools-{Guid.NewGuid ()}.zip");
-			try {
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Downloading, Message = $"Downloading cmdline-tools {cmdlineTools.Revision}..." });
-				await DownloadFileAsync (cmdlineTools.DownloadUrl!, tempArchivePath, cmdlineTools.Size, progress, cancellationToken).ConfigureAwait (false);
+		async Task DownloadAndVerifyAsync (SdkManifestComponent component, string archivePath, IProgress<SdkBootstrapProgress>? progress, CancellationToken cancellationToken)
+		{
+			progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Downloading, Message: $"Downloading cmdline-tools {component.Revision}..."));
+			await DownloadFileAsync (component.DownloadUrl!, archivePath, component.Size, progress, cancellationToken).ConfigureAwait (false);
 
-				// Step 3: Verify checksum
-				if (!string.IsNullOrEmpty (cmdlineTools.Checksum)) {
-					progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Verifying, Message = "Verifying checksum..." });
-					DownloadUtils.VerifyChecksum (tempArchivePath, cmdlineTools.Checksum!, cmdlineTools.ChecksumType ?? "sha1");
-					logger (TraceLevel.Info, "Checksum verification passed.");
-				}
-				else {
-					logger (TraceLevel.Warning, "No checksum available for cmdline-tools; skipping verification.");
-				}
-
-				// Step 4: Extract to cmdline-tools/<version>/ (use version number, not "latest" symlink)
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Extracting, Message = "Extracting cmdline-tools..." });
-				var cmdlineToolsDir = Path.Combine (targetPath, "cmdline-tools");
-				var versionDir = Path.Combine (cmdlineToolsDir, cmdlineTools.Revision);
-
-				Directory.CreateDirectory (cmdlineToolsDir);
-
-				// Extract to temp dir first
-				var tempExtractDir = Path.Combine (Path.GetTempPath (), $"cmdline-tools-extract-{Guid.NewGuid ()}");
-				try {
-					Directory.CreateDirectory (tempExtractDir);
-
-					DownloadUtils.ExtractZipSafe (tempArchivePath, tempExtractDir, cancellationToken);
-
-					// The zip contains a top-level "cmdline-tools" directory
-					var extractedDir = Path.Combine (tempExtractDir, "cmdline-tools");
-					if (!Directory.Exists (extractedDir)) {
-						// Try to find the single top-level directory
-						var dirs = Directory.GetDirectories (tempExtractDir);
-						if (dirs.Length == 1)
-							extractedDir = dirs[0];
-						else
-							extractedDir = tempExtractDir;
-					}
-
-					// Move extracted files into versioned directory with rollback on failure and cross-device fallback
-					string? backupPath = null;
-					if (Directory.Exists (versionDir)) {
-						backupPath = versionDir + $".old-{Guid.NewGuid ():N}";
-						Directory.Move (versionDir, backupPath);
-					}
-
-					try {
-						try {
-							Directory.Move (extractedDir, versionDir);
-						}
-						catch (IOException) {
-							FileUtil.CopyDirectoryRecursive (extractedDir, versionDir);
-							Directory.Delete (extractedDir, recursive: true);
-						}
-						logger (TraceLevel.Info, $"Extracted cmdline-tools to '{versionDir}'.");
-					}
-					catch (Exception ex) {
-						logger (TraceLevel.Error, $"Failed to install cmdline-tools to '{versionDir}': {ex.Message}");
-						if (!string.IsNullOrEmpty (backupPath) && Directory.Exists (backupPath)) {
-							try {
-								if (Directory.Exists (versionDir))
-									Directory.Delete (versionDir, recursive: true);
-								Directory.Move (backupPath, versionDir);
-								logger (TraceLevel.Warning, "Restored previous cmdline-tools from backup.");
-							}
-							catch (Exception restoreEx) {
-								logger (TraceLevel.Error, $"Failed to restore backup: {restoreEx.Message}");
-							}
-						}
-						throw;
-					}
-					finally {
-						if (backupPath != null) {
-							FileUtil.TryDeleteDirectory (backupPath, "old cmdline-tools backup", logger);
-						}
-					}
-				}
-				finally {
-					FileUtil.TryDeleteDirectory (tempExtractDir, "temp extract dir", logger);
-				}
-
-				// Set executable permissions on Unix
-				if (!OS.IsWindows) {
-					await FileUtil.SetExecutablePermissionsAsync (versionDir, logger, cancellationToken).ConfigureAwait (false);
-				}
-
-				// Update AndroidSdkPath for subsequent sdkmanager calls
-				AndroidSdkPath = targetPath;
-
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Complete, PercentComplete = 100, Message = "Bootstrap complete." });
-				logger (TraceLevel.Info, "Android SDK bootstrap complete.");
+			if (!string.IsNullOrEmpty (component.Checksum)) {
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Verifying, Message: "Verifying checksum..."));
+				DownloadUtils.VerifyChecksum (archivePath, component.Checksum!, component.ChecksumType);
+				logger (TraceLevel.Info, "Checksum verification passed.");
 			}
-			finally {
-				FileUtil.TryDeleteFile (tempArchivePath, logger);
+			else {
+				logger (TraceLevel.Warning, "No checksum available; skipping verification.");
 			}
 		}
 	}

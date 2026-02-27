@@ -21,14 +21,14 @@ namespace Xamarin.Android.Tools
 		/// </summary>
 		/// <param name="cancellationToken">Cancellation token.</param>
 		/// <returns>A list of manifest components available for the current platform.</returns>
-		public async Task<IReadOnlyList<SdkManifestComponent>> GetManifestComponentsAsync (CancellationToken cancellationToken = default)
+		internal async Task<IReadOnlyList<SdkManifestComponent>> GetManifestComponentsAsync (CancellationToken cancellationToken = default)
 		{
 			ThrowIfDisposed ();
 			logger (TraceLevel.Info, $"Downloading manifest from {ManifestFeedUrl}...");
 			// netstandard2.0 GetStringAsync has no CancellationToken overload; use GetAsync instead
 			using var response = await httpClient.GetAsync (ManifestFeedUrl, cancellationToken).ConfigureAwait (false);
 			response.EnsureSuccessStatusCode ();
-			var xml = await response.Content.ReadAsStringAsync ().ConfigureAwait (false);
+			var xml = await DownloadUtils.ReadAsStringAsync (response.Content, cancellationToken).ConfigureAwait (false);
 			return ParseManifest (xml);
 		}
 
@@ -84,7 +84,11 @@ namespace Xamarin.Android.Tools
 									if (!string.IsNullOrEmpty (urlHostArch) && !string.Equals (urlHostArch, hostArch, StringComparison.OrdinalIgnoreCase))
 										continue;
 
-									component.ChecksumType = reader.GetAttribute ("checksum-type");
+									var checksumTypeStr = reader.GetAttribute ("checksum-type");
+									if (string.Equals (checksumTypeStr, "sha-256", StringComparison.OrdinalIgnoreCase))
+										component.ChecksumType = ChecksumType.Sha256;
+									else
+										component.ChecksumType = ChecksumType.Sha1;
 									component.Checksum = reader.GetAttribute ("checksum");
 
 									var sizeStr = reader.GetAttribute ("size");

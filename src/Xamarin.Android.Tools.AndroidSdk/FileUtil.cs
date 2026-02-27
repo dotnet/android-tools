@@ -63,13 +63,6 @@ namespace Xamarin.Android.Tools
 			catch (Exception ex) { logger (TraceLevel.Warning, $"Could not delete '{path}': {ex.Message}"); }
 		}
 
-		/// <summary>Deletes multiple files, logging any failures instead of throwing.</summary>
-		internal static void TryDeleteFiles (string[] paths, Action<TraceLevel, string> logger)
-		{
-			foreach (var path in paths)
-				TryDeleteFile (path, logger);
-		}
-
 		/// <summary>Recursively deletes a directory if it exists, logging any failure instead of throwing.</summary>
 		internal static void TryDeleteDirectory (string path, string label, Action<TraceLevel, string> logger)
 		{
@@ -114,6 +107,31 @@ namespace Xamarin.Android.Tools
 			// Delete backup only after move and caller validation succeed
 			if (backupPath is not null)
 				TryDeleteDirectory (backupPath, "old backup", logger);
+		}
+
+		/// <summary>
+		/// Extracts a zip archive to a temp directory, locates the expected top-level folder,
+		/// and moves it to the target path with rollback support.
+		/// </summary>
+		internal static void ExtractAndInstall (string archivePath, string targetPath, string expectedTopDir, Action<TraceLevel, string> logger, CancellationToken cancellationToken)
+		{
+			var tempExtractDir = Path.Combine (Path.GetTempPath (), $"extract-{Guid.NewGuid ()}");
+			try {
+				Directory.CreateDirectory (tempExtractDir);
+				DownloadUtils.ExtractZipSafe (archivePath, tempExtractDir, cancellationToken);
+
+				var extractedDir = Path.Combine (tempExtractDir, expectedTopDir);
+				if (!Directory.Exists (extractedDir)) {
+					var dirs = Directory.GetDirectories (tempExtractDir);
+					extractedDir = dirs.Length == 1 ? dirs[0] : tempExtractDir;
+				}
+
+				MoveWithRollback (extractedDir, targetPath, logger);
+				logger (TraceLevel.Info, $"Installed to '{targetPath}'.");
+			}
+			finally {
+				TryDeleteDirectory (tempExtractDir, "temp extract dir", logger);
+			}
 		}
 
 		/// <summary>Deletes a backup created by MoveWithRollback. Call after validation succeeds.</summary>
@@ -191,33 +209,38 @@ namespace Xamarin.Android.Tools
 		}
 
 
-		/// <summary>Sets Unix file permissions using libc chmod. Returns true if successful.</summary>
+		/// <summary>
+		/// Sets Unix file permissions. Uses File.SetUnixFileMode on net7.0+ (see
+		/// https://learn.microsoft.com/dotnet/api/system.io.file.setunixfilemode),
+		/// falls back to libc P/Invoke on netstandard2.0.
+		/// </summary>
 		internal static bool Chmod (string path, int mode)
 		{
+			if (OS.IsWindows)
+				return true; // No-op on Windows
+
 			try {
+#if NET7_0_OR_GREATER
+				// Managed API avoids P/Invoke overhead and works on all .NET 7+ Unix platforms.
+				// See https://learn.microsoft.com/dotnet/api/system.io.file.setunixfilemode
+				if (!OperatingSystem.IsWindows ()) {
+					File.SetUnixFileMode (path, (UnixFileMode) mode);
+					return true;
+				}
+				return true;
+#else
 				return chmod (path, mode) == 0;
+#endif
 			}
 			catch {
 				return false;
 			}
 		}
 
-		internal static void CopyDirectoryRecursive (string sourceDir, string destinationDir)
-		{
-			if (!Directory.Exists (destinationDir))
-				Directory.CreateDirectory (destinationDir);
-
-			foreach (var file in Directory.GetFiles (sourceDir)) {
-				var destFile = Path.Combine (destinationDir, Path.GetFileName (file));
-				File.Copy (file, destFile, overwrite: true);
-			}
-
-			foreach (var subDir in Directory.GetDirectories (sourceDir)) {
-				var destSubDir = Path.Combine (destinationDir, Path.GetFileName (subDir));
-				CopyDirectoryRecursive (subDir, destSubDir);
-			}
-		}
-
+		/// <summary>
+		/// Sets executable permissions on all files in the bin/ subdirectory.
+		/// Uses File.SetUnixFileMode on net7.0+, falls back to chmod process on netstandard2.0.
+		/// </summary>
 		internal static async Task SetExecutablePermissionsAsync (string directory, Action<TraceLevel, string> logger, CancellationToken cancellationToken = default)
 		{
 			var binDir = Path.Combine (directory, "bin");
@@ -225,20 +248,15 @@ namespace Xamarin.Android.Tools
 				return;
 
 			foreach (var file in Directory.GetFiles (binDir)) {
-				if (!Chmod (file, 0x1ED)) { // 0755
-					try {
-						var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
-						int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
-							.ConfigureAwait (false);
-						if (exitCode != 0)
-							throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
-					}
-					catch (InvalidOperationException) {
-						throw;
-					}
-					catch (Exception ex) {
-						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}': {ex.Message}");
-						throw new InvalidOperationException ($"Failed to set executable permissions on '{file}'.", ex);
+				cancellationToken.ThrowIfCancellationRequested ();
+				if (!Chmod (file, 0x1ED)) { // 0755 C# does not have octal literals
+					// Managed chmod failed, fall back to process
+					var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
+					int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
+						.ConfigureAwait (false);
+					if (exitCode != 0) {
+						logger (TraceLevel.Error, $"Failed to set executable permission on '{file}' (exit code {exitCode}).");
+						throw new InvalidOperationException ($"chmod failed for '{file}' with exit code {exitCode}.");
 					}
 				}
 			}
@@ -247,8 +265,10 @@ namespace Xamarin.Android.Tools
 		[DllImport ("libc", SetLastError=true)]
 		static extern int rename (string old, string @new);
 
+#if !NET7_0_OR_GREATER
 		[DllImport ("libc", SetLastError = true)]
 		static extern int chmod (string pathname, int mode);
+#endif
 	}
 }
 

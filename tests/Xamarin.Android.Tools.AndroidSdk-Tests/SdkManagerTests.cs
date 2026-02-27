@@ -65,7 +65,7 @@ namespace Xamarin.Android.Tools.Tests
 			Assert.AreEqual ("19.0", cmdline!.Revision);
 			Assert.IsNotEmpty (cmdline.DownloadUrl!);
 			Assert.IsNotEmpty (cmdline.Checksum!);
-			Assert.AreEqual ("sha1", cmdline.ChecksumType);
+			Assert.AreEqual (ChecksumType.Sha1, cmdline.ChecksumType);
 			Assert.Greater (cmdline.Size, 0);
 
 			var platformTools = components.FirstOrDefault (c => c.ElementName == "platform-tools");
