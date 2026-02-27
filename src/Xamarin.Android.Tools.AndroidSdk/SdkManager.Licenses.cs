@@ -114,8 +114,6 @@ namespace Xamarin.Android.Tools
 			if (string.IsNullOrEmpty (AndroidSdkPath))
 				throw new InvalidOperationException ("AndroidSdkPath must be set before accepting individual licenses.");
 
-			var sdkManagerPath = RequireSdkManagerPath ();
-
 			// Accept licenses by writing the hash to the licenses directory
 			var licensesDir = Path.Combine (AndroidSdkPath!, "licenses");
 			Directory.CreateDirectory (licensesDir);

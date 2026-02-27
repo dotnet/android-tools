@@ -21,7 +21,7 @@ namespace Xamarin.Android.Tools
 		/// </summary>
 		/// <param name="cancellationToken">Cancellation token.</param>
 		/// <returns>A list of manifest components available for the current platform.</returns>
-		public async Task<IReadOnlyList<SdkManifestComponent>> GetManifestComponentsAsync (CancellationToken cancellationToken = default)
+		internal async Task<IReadOnlyList<SdkManifestComponent>> GetManifestComponentsAsync (CancellationToken cancellationToken = default)
 		{
 			ThrowIfDisposed ();
 			logger (TraceLevel.Info, $"Downloading manifest from {ManifestFeedUrl}...");

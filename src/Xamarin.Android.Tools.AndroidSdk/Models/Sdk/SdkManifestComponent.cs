@@ -3,7 +3,7 @@
 
 namespace Xamarin.Android.Tools
 {
-	public record SdkManifestComponent
+	internal record SdkManifestComponent
 	{
 		public string ElementName { get; set; } = "";
 		public string Revision { get; set; } = "";
