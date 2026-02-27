@@ -31,7 +31,7 @@ namespace Xamarin.Android.Tools
 #endif
 		}
 
-		static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
+		internal static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
 		{
 #if NET5_0_OR_GREATER
 			return content.ReadAsStringAsync (cancellationToken);

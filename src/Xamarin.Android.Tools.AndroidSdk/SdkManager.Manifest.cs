@@ -28,7 +28,7 @@ namespace Xamarin.Android.Tools
 			// netstandard2.0 GetStringAsync has no CancellationToken overload; use GetAsync instead
 			using var response = await httpClient.GetAsync (ManifestFeedUrl, cancellationToken).ConfigureAwait (false);
 			response.EnsureSuccessStatusCode ();
-			var xml = await response.Content.ReadAsStringAsync ().ConfigureAwait (false);
+			var xml = await DownloadUtils.ReadAsStringAsync (response.Content, cancellationToken).ConfigureAwait (false);
 			return ParseManifest (xml);
 		}
 
