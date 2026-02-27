@@ -116,6 +116,31 @@ namespace Xamarin.Android.Tools
 				TryDeleteDirectory (backupPath, "old backup", logger);
 		}
 
+		/// <summary>
+		/// Extracts a zip archive to a temp directory, locates the expected top-level folder,
+		/// and moves it to the target path with rollback support.
+		/// </summary>
+		internal static void ExtractAndInstall (string archivePath, string targetPath, string expectedTopDir, Action<TraceLevel, string> logger, CancellationToken cancellationToken)
+		{
+			var tempExtractDir = Path.Combine (Path.GetTempPath (), $"extract-{Guid.NewGuid ()}");
+			try {
+				Directory.CreateDirectory (tempExtractDir);
+				DownloadUtils.ExtractZipSafe (archivePath, tempExtractDir, cancellationToken);
+
+				var extractedDir = Path.Combine (tempExtractDir, expectedTopDir);
+				if (!Directory.Exists (extractedDir)) {
+					var dirs = Directory.GetDirectories (tempExtractDir);
+					extractedDir = dirs.Length == 1 ? dirs[0] : tempExtractDir;
+				}
+
+				MoveWithRollback (extractedDir, targetPath, logger);
+				logger (TraceLevel.Info, $"Installed to '{targetPath}'.");
+			}
+			finally {
+				TryDeleteDirectory (tempExtractDir, "temp extract dir", logger);
+			}
+		}
+
 		/// <summary>Deletes a backup created by MoveWithRollback. Call after validation succeeds.</summary>
 		internal static void CommitMove (string targetPath, Action<TraceLevel, string> logger)
 		{
@@ -252,7 +277,7 @@ namespace Xamarin.Android.Tools
 
 			foreach (var file in Directory.GetFiles (binDir)) {
 				cancellationToken.ThrowIfCancellationRequested ();
-				if (!Chmod (file, 0x1ED)) { // 0755
+				if (!Chmod (file, 0x1ED)) { // 0755 C# does not have octal literals
 					// Managed chmod failed, fall back to process
 					var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", file);
 					int exitCode = await ProcessUtils.StartProcess (psi, null, null, cancellationToken)
