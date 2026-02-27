@@ -25,9 +25,9 @@ namespace Xamarin.Android.Tools
 		{
 			var env = new Dictionary<string, string> ();
 			if (!string.IsNullOrEmpty (sdkPath))
-				env [EnvironmentVariableNames.AndroidHome] = sdkPath!;
+				env ["ANDROID_HOME"] = sdkPath!;
 			if (!string.IsNullOrEmpty (jdkPath))
-				env [EnvironmentVariableNames.JavaHome] = jdkPath!;
+				env ["JAVA_HOME"] = jdkPath!;
 			return env.Count > 0 ? env : null;
 		}
 

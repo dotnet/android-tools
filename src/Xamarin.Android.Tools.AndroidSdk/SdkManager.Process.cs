@@ -192,11 +192,7 @@ namespace Xamarin.Android.Tools
 			IProgress<(double percent, string message)>? downloadProgress = null;
 			if (progress is not null) {
 				downloadProgress = new Progress<(double percent, string message)> (p => {
-					progress.Report (new SdkBootstrapProgress {
-						Phase = SdkBootstrapPhase.Downloading,
-						PercentComplete = (int) p.percent,
-						Message = p.message,
-					});
+						progress.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Downloading, (int) p.percent, p.message));
 				});
 			}
 
@@ -212,10 +208,10 @@ namespace Xamarin.Android.Tools
 			};
 
 			if (!string.IsNullOrEmpty (AndroidSdkPath))
-				env[EnvironmentVariableNames.AndroidHome] = AndroidSdkPath!;
+				env["ANDROID_HOME"] = AndroidSdkPath!;
 
 			if (!string.IsNullOrEmpty (JavaSdkPath))
-				env[EnvironmentVariableNames.JavaHome] = JavaSdkPath!;
+				env["JAVA_HOME"] = JavaSdkPath!;
 
 			return env;
 		}

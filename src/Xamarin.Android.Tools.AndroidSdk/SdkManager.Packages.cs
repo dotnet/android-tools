@@ -138,12 +138,12 @@ namespace Xamarin.Android.Tools
 				if (string.IsNullOrEmpty (path))
 					continue;
 
-				var pkg = new SdkPackage {
-					Path = path,
-					Version = parts[1].Trim (),
-					Description = parts.Length > 2 ? parts[2].Trim () : null,
-					IsInstalled = currentSection == "installed"
-				};
+				var pkg = new SdkPackage (
+					path,
+					Version: parts[1].Trim (),
+					Description: parts.Length > 2 ? parts[2].Trim () : null,
+					IsInstalled: currentSection == "installed"
+				);
 
 				if (currentSection == "installed")
 					installed.Add (pkg);
