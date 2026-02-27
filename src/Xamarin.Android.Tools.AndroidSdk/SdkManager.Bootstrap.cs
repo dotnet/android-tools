@@ -31,14 +31,14 @@ namespace Xamarin.Android.Tools
 				var versionDir = Path.Combine (targetPath, "cmdline-tools", cmdlineTools.Revision);
 				Directory.CreateDirectory (Path.Combine (targetPath, "cmdline-tools"));
 
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Extracting, Message = "Extracting cmdline-tools..." });
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Extracting, Message: "Extracting cmdline-tools..."));
 				FileUtil.ExtractAndInstall (tempArchivePath, versionDir, "cmdline-tools", logger, cancellationToken);
 
 				if (!OS.IsWindows)
 					await FileUtil.SetExecutablePermissionsAsync (versionDir, logger, cancellationToken).ConfigureAwait (false);
 
 				AndroidSdkPath = targetPath;
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Complete, PercentComplete = 100, Message = "Bootstrap complete." });
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Complete, 100, "Bootstrap complete."));
 				logger (TraceLevel.Info, "Android SDK bootstrap complete.");
 			}
 			finally {
@@ -48,7 +48,7 @@ namespace Xamarin.Android.Tools
 
 		async Task<SdkManifestComponent> FindLatestCmdlineToolsAsync (IProgress<SdkBootstrapProgress>? progress, CancellationToken cancellationToken)
 		{
-			progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.ReadingManifest, Message = "Reading manifest feed..." });
+			progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.ReadingManifest, Message: "Reading manifest feed..."));
 			logger (TraceLevel.Info, $"Reading manifest from {ManifestFeedUrl}...");
 
 			var components = await GetManifestComponentsAsync (cancellationToken).ConfigureAwait (false);
@@ -66,11 +66,11 @@ namespace Xamarin.Android.Tools
 
 		async Task DownloadAndVerifyAsync (SdkManifestComponent component, string archivePath, IProgress<SdkBootstrapProgress>? progress, CancellationToken cancellationToken)
 		{
-			progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Downloading, Message = $"Downloading cmdline-tools {component.Revision}..." });
+			progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Downloading, Message: $"Downloading cmdline-tools {component.Revision}..."));
 			await DownloadFileAsync (component.DownloadUrl!, archivePath, component.Size, progress, cancellationToken).ConfigureAwait (false);
 
 			if (!string.IsNullOrEmpty (component.Checksum)) {
-				progress?.Report (new SdkBootstrapProgress { Phase = SdkBootstrapPhase.Verifying, Message = "Verifying checksum..." });
+				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Verifying, Message: "Verifying checksum..."));
 				DownloadUtils.VerifyChecksum (archivePath, component.Checksum!, component.ChecksumType ?? "sha1");
 				logger (TraceLevel.Info, "Checksum verification passed.");
 			}

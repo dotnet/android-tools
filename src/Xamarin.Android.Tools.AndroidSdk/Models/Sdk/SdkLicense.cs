@@ -3,9 +3,5 @@
 
 namespace Xamarin.Android.Tools
 {
-	public record SdkLicense
-	{
-		public string Id { get; set; } = "";
-		public string Text { get; set; } = "";
-	}
+	public record SdkLicense (string Id, string Text);
 }

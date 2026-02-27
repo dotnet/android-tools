@@ -170,10 +170,7 @@ namespace Xamarin.Android.Tools
 				if (line.StartsWith ("License ", StringComparison.OrdinalIgnoreCase) && line.TrimEnd ().EndsWith (":")) {
 					// Save previous license if any
 					if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-						licenses.Add (new SdkLicense {
-							Id = currentLicenseId,
-							Text = currentLicenseText.ToString ().Trim ()
-						});
+						licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 					}
 
 					var trimmedLine = line.TrimEnd ();
@@ -186,10 +183,7 @@ namespace Xamarin.Android.Tools
 				// End of license text when we see the accept prompt
 				if (line.Contains ("Accept?") || line.Contains ("(y/N)")) {
 					if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-						licenses.Add (new SdkLicense {
-							Id = currentLicenseId,
-							Text = currentLicenseText.ToString ().Trim ()
-						});
+						licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 					}
 					currentLicenseId = null;
 					currentLicenseText.Clear ();
@@ -208,10 +202,7 @@ namespace Xamarin.Android.Tools
 
 			// Add last license if not yet added
 			if (currentLicenseId is not null && currentLicenseText.Length > 0) {
-				licenses.Add (new SdkLicense {
-					Id = currentLicenseId,
-					Text = currentLicenseText.ToString ().Trim ()
-				});
+				licenses.Add (new SdkLicense (currentLicenseId, currentLicenseText.ToString ().Trim ()));
 			}
 
 			return licenses.AsReadOnly ();
