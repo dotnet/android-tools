@@ -71,7 +71,7 @@ namespace Xamarin.Android.Tools
 
 			if (!string.IsNullOrEmpty (component.Checksum)) {
 				progress?.Report (new SdkBootstrapProgress (SdkBootstrapPhase.Verifying, Message: "Verifying checksum..."));
-				DownloadUtils.VerifyChecksum (archivePath, component.Checksum!, component.ChecksumType ?? "sha1");
+				DownloadUtils.VerifyChecksum (archivePath, component.Checksum!, component.ChecksumType);
 				logger (TraceLevel.Info, "Checksum verification passed.");
 			}
 			else {

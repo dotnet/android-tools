@@ -13,7 +13,7 @@ namespace Xamarin.Android.Tools
 		public string? DownloadUrl { get; set; }
 		public long Size { get; set; }
 		public string? Checksum { get; set; }
-		public string? ChecksumType { get; set; }
+		public ChecksumType ChecksumType { get; set; } = ChecksumType.Sha1;
 		public bool IsObsolete { get; set; }
 	}
 }
