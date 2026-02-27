@@ -7,8 +7,7 @@ using System.Collections.Generic;
 namespace Xamarin.Android.Tools
 {
 	/// <summary>
-	/// Provides utility methods for Android environment configuration, ABI mapping,
-	/// and API level information.
+	/// Provides utility methods for Android environment configuration.
 	/// </summary>
 	public static class AndroidEnvironmentHelper
 	{
@@ -19,25 +18,9 @@ namespace Xamarin.Android.Tools
 			["x86_64"] = "x86_64",
 		};
 
-		static readonly Dictionary<string, string> ApiLevelToVersionMap = CreateApiLevelToVersionMap ();
-
-		static Dictionary<string, string> CreateApiLevelToVersionMap ()
-		{
-			var map = new Dictionary<string, string> ();
-			foreach (var version in AndroidVersions.KnownVersions) {
-				var key = version.ApiLevel.ToString ();
-				if (!map.ContainsKey (key))
-					map [key] = version.OSVersion;
-			}
-			return map;
-		}
-
 		/// <summary>
 		/// Builds a dictionary of environment variables for Android SDK tool processes.
 		/// </summary>
-		/// <param name="sdkPath">The Android SDK path. Sets ANDROID_HOME when provided.</param>
-		/// <param name="jdkPath">The JDK path. Sets JAVA_HOME when provided.</param>
-		/// <returns>A dictionary of environment variables, or null if both paths are null.</returns>
 		public static Dictionary<string, string>? GetEnvironment (string? sdkPath, string? jdkPath)
 		{
 			var env = new Dictionary<string, string> ();
@@ -51,60 +34,11 @@ namespace Xamarin.Android.Tools
 		/// <summary>
 		/// Maps an Android ABI (e.g., "arm64-v8a") to its CPU architecture name (e.g., "aarch64").
 		/// </summary>
-		/// <param name="abi">The Android ABI string.</param>
-		/// <returns>The architecture name, or null if the ABI is not recognized.</returns>
 		public static string? MapAbiToArchitecture (string? abi)
 		{
 			if (abi != null && AbiToArchMap.TryGetValue (abi, out var arch))
 				return arch;
 			return null;
-		}
-
-		/// <summary>
-		/// Gets .NET runtime identifiers for a given CPU architecture.
-		/// </summary>
-		/// <param name="architecture">The CPU architecture (e.g., "x86_64", "aarch64").</param>
-		/// <returns>An array of runtime identifiers, or null if not recognized.</returns>
-		public static string[]? GetRuntimeIdentifiers (string? architecture)
-		{
-			return architecture switch {
-				"x86_64" or "amd64" => new [] { "android-x64" },
-				"aarch64" or "arm64" => new [] { "android-arm64" },
-				"x86" => new [] { "android-x86" },
-				"arm" => new [] { "android-arm" },
-				_ => null,
-			};
-		}
-
-		/// <summary>
-		/// Maps an Android API level to its version string (e.g., "35" → "15.0").
-		/// </summary>
-		/// <param name="apiLevel">The API level as a string.</param>
-		/// <returns>The version string, or null if not recognized.</returns>
-		public static string? MapApiLevelToVersion (string? apiLevel)
-		{
-			if (apiLevel != null && ApiLevelToVersionMap.TryGetValue (apiLevel, out var version))
-				return version;
-			return null;
-		}
-
-		/// <summary>
-		/// Maps a system image tag ID to a human-readable display name.
-		/// </summary>
-		/// <param name="tagId">The tag ID (e.g., "google_apis", "google_apis_playstore").</param>
-		/// <param name="playStoreEnabled">Whether Play Store is enabled for the image.</param>
-		/// <returns>A display name for the tag.</returns>
-		public static string? MapTagIdToDisplayName (string? tagId, bool playStoreEnabled = false)
-		{
-			return tagId switch {
-				"google_apis" => playStoreEnabled ? "Google Play" : "Google APIs",
-				"google_apis_playstore" => "Google Play",
-				"android-wear" => "Wear OS",
-				"android-tv" => "Android TV",
-				"android-automotive" => "Android Automotive",
-				"default" => "Default",
-				_ => tagId,
-			};
 		}
 	}
 }

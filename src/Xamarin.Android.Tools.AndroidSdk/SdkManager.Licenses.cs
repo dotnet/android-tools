@@ -74,10 +74,9 @@ namespace Xamarin.Android.Tools
 			Action<Process> onStarted = process => {
 				Task.Run (async () => {
 					try {
-						await Task.Delay (500, cancellationToken).ConfigureAwait (false);
 						while (!process.HasExited && !cancellationToken.IsCancellationRequested) {
-							process.StandardInput.WriteLine ("n");
 							await Task.Delay (200, cancellationToken).ConfigureAwait (false);
+							process.StandardInput.WriteLine ("n");
 						}
 					}
 					catch (Exception ex) {

@@ -3,19 +3,9 @@
 
 namespace Xamarin.Android.Tools
 {
-	/// <summary>
-	/// Represents an Android SDK license that may need to be accepted.
-	/// </summary>
-	public class SdkLicense
+	public record SdkLicense
 	{
-		/// <summary>
-		/// Gets or sets the license identifier (e.g., "android-sdk-license", "android-sdk-preview-license").
-		/// </summary>
 		public string Id { get; set; } = "";
-
-		/// <summary>
-		/// Gets or sets the full license text that should be presented to the user.
-		/// </summary>
 		public string Text { get; set; } = "";
 	}
 }
