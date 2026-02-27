@@ -109,25 +109,16 @@ namespace Xamarin.Android.Tools
 		{
 			var installed = new List<SdkPackage> ();
 			var available = new List<SdkPackage> ();
-			string? currentSection = null;
+			List<SdkPackage>? target = null;
 
 			foreach (var line in output.Split (new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)) {
 				var trimmed = line.Trim ();
 
-				if (trimmed.IndexOf ("Installed packages:", StringComparison.Ordinal) >= 0) {
-					currentSection = "installed";
-					continue;
-				} else if (trimmed.IndexOf ("Available Packages:", StringComparison.Ordinal) >= 0) {
-					currentSection = "available";
-					continue;
-				} else if (trimmed.IndexOf ("Available Updates:", StringComparison.Ordinal) >= 0) {
-					currentSection = null;
-					continue;
-				}
+				if (trimmed.Contains ("Installed packages:")) { target = installed; continue; }
+				if (trimmed.Contains ("Available Packages:")) { target = available; continue; }
+				if (trimmed.Contains ("Available Updates:")) { target = null; continue; }
 
-				if (currentSection is null || string.IsNullOrWhiteSpace (trimmed))
-					continue;
-				if (trimmed.StartsWith ("Path", StringComparison.Ordinal) || trimmed.StartsWith ("---", StringComparison.Ordinal))
+				if (target is null || trimmed.StartsWith ("Path", StringComparison.Ordinal) || trimmed.StartsWith ("---", StringComparison.Ordinal))
 					continue;
 
 				var parts = trimmed.Split ('|');
@@ -138,17 +129,12 @@ namespace Xamarin.Android.Tools
 				if (string.IsNullOrEmpty (path))
 					continue;
 
-				var pkg = new SdkPackage (
+				target.Add (new SdkPackage (
 					path,
 					Version: parts[1].Trim (),
 					Description: parts.Length > 2 ? parts[2].Trim () : null,
-					IsInstalled: currentSection == "installed"
-				);
-
-				if (currentSection == "installed")
-					installed.Add (pkg);
-				else
-					available.Add (pkg);
+					IsInstalled: target == installed
+				));
 			}
 
 			return (installed.AsReadOnly (), available.AsReadOnly ());
