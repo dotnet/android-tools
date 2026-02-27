@@ -31,7 +31,7 @@ namespace Xamarin.Android.Tools
 #endif
 		}
 
-		static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
+		internal static Task<string> ReadAsStringAsync (HttpContent content, CancellationToken cancellationToken)
 		{
 #if NET5_0_OR_GREATER
 			return content.ReadAsStringAsync (cancellationToken);
@@ -76,13 +76,17 @@ namespace Xamarin.Android.Tools
 			}
 		}
 
-		/// <summary>Verifies a file's SHA-256 hash against an expected value.</summary>
-		public static void VerifyChecksum (string filePath, string expectedChecksum)
+		/// <summary>Verifies a file's hash against an expected value using the specified algorithm.</summary>
+		public static void VerifyChecksum (string filePath, string expectedChecksum, ChecksumType checksumType = ChecksumType.Sha256)
 		{
-			using var sha256 = SHA256.Create ();
+			using var hasher = checksumType switch {
+				ChecksumType.Sha256 => (HashAlgorithm) SHA256.Create (),
+				ChecksumType.Sha1 => SHA1.Create (),
+				_ => throw new NotSupportedException ($"Unsupported checksum type: '{checksumType}'."),
+			};
 			using var stream = File.OpenRead (filePath);
 
-			var hash = sha256.ComputeHash (stream);
+			var hash = hasher.ComputeHash (stream);
 			var actual = BitConverter.ToString (hash).Replace ("-", "").ToLowerInvariant ();
 
 			if (!string.Equals (actual, expectedChecksum, StringComparison.OrdinalIgnoreCase))
