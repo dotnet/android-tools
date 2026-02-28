@@ -310,6 +310,37 @@ namespace Xamarin.Android.Tools.Tests
 		}
 
 		[Test]
+		public void GetKnownSystemJdkInfos_JiJavaHome_NonDirectoryPath_NoWarning ()
+		{
+			// Reproduce https://github.com/dotnet/android-tools/issues/XXX:
+			// If JI_JAVA_HOME points to a path that exists but is not a directory,
+			// no Warning-level message should be logged.
+			var file = Path.GetTempFileName ();
+			var previous = Environment.GetEnvironmentVariable ("JI_JAVA_HOME", EnvironmentVariableTarget.Process);
+			try {
+				// file exists but is not a directory
+				Environment.SetEnvironmentVariable ("JI_JAVA_HOME", file, EnvironmentVariableTarget.Process);
+
+				var warnings = new List<string> ();
+				Action<TraceLevel, string> logger = (level, message) => {
+					if (level == TraceLevel.Warning)
+						warnings.Add (message);
+				};
+
+				JdkInfo.GetKnownSystemJdkInfos (logger).ToList ();
+
+				// There should be no warning about the non-directory JI_JAVA_HOME path
+				Assert.IsFalse (warnings.Any (w => w.Contains (file)),
+					$"Unexpected warning logged for non-directory JI_JAVA_HOME path: {string.Join ("; ", warnings)}");
+			}
+			finally {
+				Environment.SetEnvironmentVariable ("JI_JAVA_HOME", previous, EnvironmentVariableTarget.Process);
+				if (File.Exists (file))
+					File.Delete (file);
+			}
+		}
+
+		[Test]
 		[TestCase ("microsoft-21.jdk", false)]
 		[TestCase ("jdk-21", true)]
 		[TestCase ("jdk-21.0.8.1-hotspot", true)]
