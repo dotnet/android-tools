@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Xml;
 
 namespace Xamarin.Android.Tools;
+
 public partial class SdkManager
 {
 	// --- Manifest Parsing ---
