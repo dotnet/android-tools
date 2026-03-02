@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -145,7 +144,7 @@ public partial class SdkManager
 		if (!Directory.Exists (licensesPath))
 			return false;
 
-		return Directory.GetFiles (licensesPath).Length > 0;
+		return Directory.EnumerateFiles (licensesPath).Any ();
 	}
 
 	/// <summary>
@@ -207,11 +206,8 @@ public partial class SdkManager
 
 	static string ComputeLicenseHash (string licenseText)
 	{
-		// Android SDK uses SHA-1 hash of the license text
-		using var sha1 = SHA1.Create ();
 		var bytes = Encoding.UTF8.GetBytes (licenseText.Replace ("\r\n", "\n").Trim ());
-		var hash = sha1.ComputeHash (bytes);
-		return BitConverter.ToString (hash).Replace ("-", "").ToLowerInvariant ();
+		return DownloadUtils.ComputeHashString (ChecksumType.Sha1, bytes);
 	}
 
 }

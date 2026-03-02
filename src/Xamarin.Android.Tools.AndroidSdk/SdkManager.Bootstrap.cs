@@ -27,7 +27,7 @@ public partial class SdkManager
 		progress ??= NullProgress;
 
 		var cmdlineTools = await FindLatestCmdlineToolsAsync (progress, cancellationToken).ConfigureAwait (false);
-		var tempArchivePath = Path.Combine (Path.GetTempPath (), $"cmdline-tools-{Guid.NewGuid ()}.zip");
+		var tempArchivePath = Path.GetTempFileName ();
 
 		try {
 			await DownloadAndVerifyAsync (cmdlineTools, tempArchivePath, progress, cancellationToken).ConfigureAwait (false);
