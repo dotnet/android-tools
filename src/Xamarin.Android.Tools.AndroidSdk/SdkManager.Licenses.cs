@@ -74,8 +74,8 @@ public partial class SdkManager
 			Task.Run (async () => {
 				try {
 					while (!process.HasExited && !cancellationToken.IsCancellationRequested) {
-						await Task.Delay (200, cancellationToken).ConfigureAwait (false);
 						process.StandardInput.WriteLine ("n");
+						await Task.Delay (StdinPollDelayMs, cancellationToken).ConfigureAwait (false);
 					}
 				}
 				catch (Exception ex) {

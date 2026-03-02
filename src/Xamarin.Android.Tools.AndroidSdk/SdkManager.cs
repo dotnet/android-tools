@@ -25,6 +25,8 @@ public partial class SdkManager : IDisposable
 	/// <summary>Default manifest feed URL (Xamarin/Microsoft).</summary>
 	public const string DefaultManifestFeedUrl = "https://aka.ms/AndroidManifestFeed/d18-0";
 
+	const int StdinPollDelayMs = 500;
+
 	readonly HttpClient httpClient = new HttpClient ();
 	readonly Action<TraceLevel, string> logger;
 	bool disposed;

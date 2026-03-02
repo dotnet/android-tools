@@ -32,7 +32,6 @@ public class SdkManagerTests
 		manager = null;
 	}
 
-
 	[Test]
 	public void ParseManifest_CmdlineTools_ReturnsComponents ()
 	{
@@ -149,10 +148,6 @@ public class SdkManagerTests
 		Assert.IsNotEmpty (jdk.DownloadUrl!);
 	}
 
-
-
-
-
 	[Test]
 	public void ParseSdkManagerList_ParsesInstalledAndAvailable ()
 	{
@@ -213,10 +208,6 @@ Available Updates:
 		Assert.AreEqual (0, available.Count);
 		Assert.AreEqual ("platform-tools", installed[0].Path);
 	}
-
-
-
-
 
 	[Test]
 	public void FindSdkManagerPath_NullSdkPath_ReturnsNull ()
@@ -307,10 +298,6 @@ Available Updates:
 		}
 	}
 
-
-
-
-
 	[Test]
 	public void DefaultManifestFeedUrl_IsSet ()
 	{
@@ -373,10 +360,6 @@ Available Updates:
 				Directory.Delete (sdkDir, recursive: true);
 		}
 	}
-
-
-
-
 
 	[Test]
 	public async Task GetManifestComponentsAsync_ReturnsComponents ()

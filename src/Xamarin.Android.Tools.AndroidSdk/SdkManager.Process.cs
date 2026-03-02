@@ -42,7 +42,7 @@ public partial class SdkManager
 					try {
 						while (!process.HasExited && !cancellationToken.IsCancellationRequested) {
 							process.StandardInput.WriteLine ("y");
-							await Task.Delay (500, cancellationToken).ConfigureAwait (false);
+							await Task.Delay (StdinPollDelayMs, cancellationToken).ConfigureAwait (false);
 						}
 					}
 					catch (Exception ex) {
