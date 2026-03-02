@@ -99,10 +99,10 @@ public partial class SdkManager
 		};
 
 		if (!string.IsNullOrEmpty (AndroidSdkPath))
-			env["ANDROID_HOME"] = AndroidSdkPath!;
+			env[EnvironmentVariableNames.AndroidHome] = AndroidSdkPath!;
 
 		if (!string.IsNullOrEmpty (JavaSdkPath))
-			env["JAVA_HOME"] = JavaSdkPath!;
+			env[EnvironmentVariableNames.JavaHome] = JavaSdkPath!;
 
 		return env;
 	}
