@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xamarin.Android.Tools;
+
 public partial class SdkManager
 {
 	public string? FindSdkManagerPath ()
