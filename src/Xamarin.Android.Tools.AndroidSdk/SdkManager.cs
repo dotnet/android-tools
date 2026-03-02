@@ -27,7 +27,7 @@ public partial class SdkManager : IDisposable
 
 	const int StdinPollDelayMs = 500;
 
-	readonly HttpClient httpClient = new HttpClient ();
+	static readonly HttpClient httpClient = new HttpClient ();
 	readonly Action<TraceLevel, string> logger;
 	bool disposed;
 
@@ -57,14 +57,13 @@ public partial class SdkManager : IDisposable
 	}
 
 	/// <summary>
-	/// Disposes the <see cref="SdkManager"/> and its owned <see cref="HttpClient"/>.
+	/// Disposes the <see cref="SdkManager"/>.
 	/// </summary>
 	public void Dispose ()
 	{
 		if (disposed)
 			return;
 		disposed = true;
-		httpClient.Dispose ();
 	}
 
 	void ThrowIfDisposed ()
