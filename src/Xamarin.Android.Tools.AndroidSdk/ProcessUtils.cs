@@ -110,7 +110,7 @@ namespace Xamarin.Android.Tools
 			psi.CreateNoWindow = true;
 			psi.RedirectStandardInput = onStarted != null;
 
-			var processTask = ProcessUtils.StartProcess (psi, log, error, token, onStarted: onStarted);
+			var processTask = ProcessUtils.StartProcess (psi, log, error, token, null, onStarted);
 			var exeName = Path.GetFileName (exe);
 
 			processTask.ContinueWith (t => {
