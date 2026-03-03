@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Xamarin.Android.Tools;
@@ -23,15 +24,31 @@ public static class AndroidEnvironmentHelper
 		var env = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
 
 		if (!string.IsNullOrEmpty (sdkPath))
-			env ["ANDROID_HOME"] = sdkPath;
+			env [EnvironmentVariableNames.AndroidHome] = sdkPath;
 
 		if (!string.IsNullOrEmpty (jdkPath)) {
-			env ["JAVA_HOME"] = jdkPath;
+			env [EnvironmentVariableNames.JavaHome] = jdkPath;
 			var jdkBin = Path.Combine (jdkPath, "bin");
-			var currentPath = Environment.GetEnvironmentVariable ("PATH") ?? "";
-			env ["PATH"] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
+			var currentPath = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";
+			env [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
 		}
 
 		return env;
+	}
+
+	/// <summary>
+	/// Configures environment variables on a ProcessStartInfo for running Android SDK tools.
+	/// </summary>
+	public static void ConfigureEnvironment (ProcessStartInfo psi, string? sdkPath, string? jdkPath)
+	{
+		if (!string.IsNullOrEmpty (sdkPath))
+			psi.EnvironmentVariables [EnvironmentVariableNames.AndroidHome] = sdkPath;
+
+		if (!string.IsNullOrEmpty (jdkPath)) {
+			psi.EnvironmentVariables [EnvironmentVariableNames.JavaHome] = jdkPath;
+			var jdkBin = Path.Combine (jdkPath, "bin");
+			var currentPath = psi.EnvironmentVariables [EnvironmentVariableNames.Path] ?? "";
+			psi.EnvironmentVariables [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
+		}
 	}
 }
