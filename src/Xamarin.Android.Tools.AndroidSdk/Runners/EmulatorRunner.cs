@@ -44,34 +44,27 @@ public class EmulatorRunner
 
 	public bool IsAvailable => EmulatorPath is not null;
 
+	string RequireEmulatorPath ()
+	{
+		return EmulatorPath ?? throw new InvalidOperationException ("Android Emulator not found.");
+	}
+
 	void ConfigureEnvironment (ProcessStartInfo psi)
 	{
-		var sdkPath = getSdkPath ();
-		if (!string.IsNullOrEmpty (sdkPath))
-			psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
-
-		var jdkPath = getJdkPath?.Invoke ();
-		if (!string.IsNullOrEmpty (jdkPath))
-			psi.EnvironmentVariables ["JAVA_HOME"] = jdkPath;
+		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), getJdkPath?.Invoke ());
 	}
 
 	public Process StartAvd (string avdName, bool coldBoot = false, string? additionalArgs = null)
 	{
-		if (!IsAvailable)
-			throw new InvalidOperationException ("Android Emulator not found.");
+		var emulatorPath = RequireEmulatorPath ();
 
-		var args = $"-avd \"{avdName}\"";
+		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
-			args += " -no-snapshot-load";
+			args.Add ("-no-snapshot-load");
 		if (!string.IsNullOrEmpty (additionalArgs))
-			args += " " + additionalArgs;
+			args.Add (additionalArgs);
 
-		var psi = new ProcessStartInfo {
-			FileName = EmulatorPath!,
-			Arguments = args,
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
+		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, args.ToArray ());
 		ConfigureEnvironment (psi);
 
 		var process = new Process { StartInfo = psi };
@@ -80,29 +73,27 @@ public class EmulatorRunner
 		return process;
 	}
 
-	public async Task<List<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
+	public async Task<IReadOnlyList<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
 	{
-		if (!IsAvailable)
-			throw new InvalidOperationException ("Android Emulator not found.");
+		var emulatorPath = RequireEmulatorPath ();
 
 		using var stdout = new StringWriter ();
-		var psi = new ProcessStartInfo {
-			FileName = EmulatorPath!,
-			Arguments = "-list-avds",
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
+		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, "-list-avds");
 		ConfigureEnvironment (psi);
 
 		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
+		return ParseListAvdsOutput (stdout.ToString ());
+	}
+
+	internal static List<string> ParseListAvdsOutput (string output)
+	{
 		var avds = new List<string> ();
-		foreach (var line in stdout.ToString ().Split ('\n')) {
+		foreach (var line in output.Split ('\n')) {
 			var trimmed = line.Trim ();
 			if (!string.IsNullOrEmpty (trimmed))
 				avds.Add (trimmed);
 		}
-
 		return avds;
 	}
 }
