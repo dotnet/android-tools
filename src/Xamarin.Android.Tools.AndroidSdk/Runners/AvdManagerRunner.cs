@@ -65,7 +65,7 @@ namespace Xamarin.Android.Tools
 			if (!IsAvailable)
 				throw new InvalidOperationException ("AVD Manager not found.");
 
-			var stdout = new StringWriter ();
+			using var stdout = new StringWriter ();
 			var psi = new ProcessStartInfo {
 				FileName = AvdManagerPath!,
 				Arguments = "list avd",
@@ -110,8 +110,8 @@ namespace Xamarin.Android.Tools
 			if (force)
 				args += " --force";
 
-			var stdout = new StringWriter ();
-			var stderr = new StringWriter ();
+			using var stdout = new StringWriter ();
+			using var stderr = new StringWriter ();
 			var psi = new ProcessStartInfo {
 				FileName = AvdManagerPath!,
 				Arguments = args,
