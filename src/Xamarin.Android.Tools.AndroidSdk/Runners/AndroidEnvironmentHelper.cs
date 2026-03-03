@@ -11,35 +11,12 @@ namespace Xamarin.Android.Tools;
 /// <summary>
 /// Helper for setting up environment variables for Android SDK tools.
 /// </summary>
-public static class AndroidEnvironmentHelper
+internal static class AndroidEnvironmentHelper
 {
-	/// <summary>
-	/// Creates environment variables for running Android SDK tools.
-	/// </summary>
-	public static Dictionary<string, string>? GetToolEnvironment (string? sdkPath, string? jdkPath)
-	{
-		if (string.IsNullOrEmpty (sdkPath) && string.IsNullOrEmpty (jdkPath))
-			return null;
-
-		var env = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
-
-		if (!string.IsNullOrEmpty (sdkPath))
-			env [EnvironmentVariableNames.AndroidHome] = sdkPath;
-
-		if (!string.IsNullOrEmpty (jdkPath)) {
-			env [EnvironmentVariableNames.JavaHome] = jdkPath;
-			var jdkBin = Path.Combine (jdkPath, "bin");
-			var currentPath = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";
-			env [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
-		}
-
-		return env;
-	}
-
 	/// <summary>
 	/// Configures environment variables on a ProcessStartInfo for running Android SDK tools.
 	/// </summary>
-	public static void ConfigureEnvironment (ProcessStartInfo psi, string? sdkPath, string? jdkPath)
+	internal static void ConfigureEnvironment (ProcessStartInfo psi, string? sdkPath, string? jdkPath)
 	{
 		if (!string.IsNullOrEmpty (sdkPath))
 			psi.EnvironmentVariables [EnvironmentVariableNames.AndroidHome] = sdkPath;
@@ -49,6 +26,12 @@ public static class AndroidEnvironmentHelper
 			var jdkBin = Path.Combine (jdkPath, "bin");
 			var currentPath = psi.EnvironmentVariables [EnvironmentVariableNames.Path] ?? "";
 			psi.EnvironmentVariables [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
+		}
+
+		// Set ANDROID_USER_HOME for consistent AVD location across tools (matches SdkManager behavior)
+		if (!psi.EnvironmentVariables.ContainsKey (EnvironmentVariableNames.AndroidUserHome)) {
+			psi.EnvironmentVariables [EnvironmentVariableNames.AndroidUserHome] = Path.Combine (
+				Environment.GetFolderPath (Environment.SpecialFolder.UserProfile), ".android");
 		}
 	}
 }
