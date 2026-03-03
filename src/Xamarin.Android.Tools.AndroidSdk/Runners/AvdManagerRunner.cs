@@ -69,13 +69,7 @@ public class AvdManagerRunner
 
 	void ConfigureEnvironment (ProcessStartInfo psi)
 	{
-		var sdkPath = getSdkPath ();
-		if (!string.IsNullOrEmpty (sdkPath))
-			psi.EnvironmentVariables [EnvironmentVariableNames.AndroidHome] = sdkPath;
-
-		var jdkPath = getJdkPath?.Invoke ();
-		if (!string.IsNullOrEmpty (jdkPath))
-			psi.EnvironmentVariables [EnvironmentVariableNames.JavaHome] = jdkPath;
+		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), getJdkPath?.Invoke ());
 	}
 
 	public async Task<IReadOnlyList<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
