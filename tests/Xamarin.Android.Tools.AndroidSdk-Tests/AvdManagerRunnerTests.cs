@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.IO;
 using NUnit.Framework;
 
@@ -159,5 +160,40 @@ public class AvdManagerRunnerTests
 	{
 		var runner = new AvdManagerRunner (() => "/nonexistent/path", null);
 		Assert.IsNull (runner.AvdManagerPath);
+	}
+
+	[Test]
+	public void CreateAvdAsync_NullName_ThrowsArgumentNullException ()
+	{
+		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		Assert.ThrowsAsync<ArgumentNullException> (() => runner.CreateAvdAsync (null!, "system-image"));
+	}
+
+	[Test]
+	public void CreateAvdAsync_EmptyName_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("", "system-image"));
+	}
+
+	[Test]
+	public void CreateAvdAsync_EmptySystemImage_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", ""));
+	}
+
+	[Test]
+	public void DeleteAvdAsync_NullName_ThrowsArgumentNullException ()
+	{
+		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		Assert.ThrowsAsync<ArgumentNullException> (() => runner.DeleteAvdAsync (null!));
+	}
+
+	[Test]
+	public void DeleteAvdAsync_EmptyName_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		Assert.ThrowsAsync<ArgumentException> (() => runner.DeleteAvdAsync (""));
 	}
 }

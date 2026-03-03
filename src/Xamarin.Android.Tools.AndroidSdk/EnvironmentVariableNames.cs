@@ -40,5 +40,11 @@ namespace Xamarin.Android.Tools
 		/// Executable file extensions (Windows).
 		/// </summary>
 		public const string PathExt = "PATHEXT";
+
+		/// <summary>
+		/// Overrides the default location for Android user-specific data
+		/// (AVDs, preferences, etc.). Defaults to $HOME/.android.
+		/// </summary>
+		public const string AndroidUserHome = "ANDROID_USER_HOME";
 	}
 }

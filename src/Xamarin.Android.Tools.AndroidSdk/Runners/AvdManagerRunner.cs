@@ -91,11 +91,16 @@ public class AvdManagerRunner
 	public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 		bool force = false, CancellationToken cancellationToken = default)
 	{
-		var avdManagerPath = RequireAvdManagerPath ();
-		if (string.IsNullOrEmpty (name))
+		if (name is null)
 			throw new ArgumentNullException (nameof (name));
-		if (string.IsNullOrEmpty (systemImage))
+		if (name.Length == 0)
+			throw new ArgumentException ("Value cannot be an empty string.", nameof (name));
+		if (systemImage is null)
 			throw new ArgumentNullException (nameof (systemImage));
+		if (systemImage.Length == 0)
+			throw new ArgumentException ("Value cannot be an empty string.", nameof (systemImage));
+
+		var avdManagerPath = RequireAvdManagerPath ();
 
 		// Check if AVD already exists — return it instead of failing
 		if (!force) {
@@ -106,9 +111,7 @@ public class AvdManagerRunner
 		}
 
 		// Detect orphaned AVD directory (folder exists without .ini registration).
-		var avdDir = Path.Combine (
-			Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),
-			".android", "avd", $"{name}.avd");
+		var avdDir = Path.Combine (GetAvdRootDirectory (), $"{name}.avd");
 		if (Directory.Exists (avdDir))
 			force = true;
 
@@ -142,15 +145,27 @@ public class AvdManagerRunner
 			throw new InvalidOperationException ($"Failed to create AVD '{name}': {errorOutput}");
 		}
 
+		// Re-list to get the actual path from avdmanager (respects ANDROID_USER_HOME/ANDROID_AVD_HOME)
+		var avds = await ListAvdsAsync (cancellationToken).ConfigureAwait (false);
+		var created = avds.FirstOrDefault (a => string.Equals (a.Name, name, StringComparison.OrdinalIgnoreCase));
+		if (created is not null)
+			return created;
+
+		// Fallback if re-list didn't find it
 		return new AvdInfo {
 			Name = name,
 			DeviceProfile = deviceProfile,
-			Path = avdDir,
+			Path = Path.Combine (GetAvdRootDirectory (), $"{name}.avd"),
 		};
 	}
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
 	{
+		if (name is null)
+			throw new ArgumentNullException (nameof (name));
+		if (name.Length == 0)
+			throw new ArgumentException ("Value cannot be an empty string.", nameof (name));
+
 		var avdManagerPath = RequireAvdManagerPath ();
 
 		using var stderr = new StringWriter ();
@@ -185,6 +200,27 @@ public class AvdManagerRunner
 			avds.Add (new AvdInfo { Name = currentName, DeviceProfile = currentDevice, Path = currentPath });
 
 		return avds;
+	}
+
+	/// <summary>
+	/// Resolves the AVD root directory, respecting ANDROID_AVD_HOME and ANDROID_USER_HOME.
+	/// </summary>
+	static string GetAvdRootDirectory ()
+	{
+		// ANDROID_AVD_HOME takes highest priority
+		var avdHome = Environment.GetEnvironmentVariable ("ANDROID_AVD_HOME");
+		if (!string.IsNullOrEmpty (avdHome))
+			return avdHome;
+
+		// ANDROID_USER_HOME/avd is the next option
+		var userHome = Environment.GetEnvironmentVariable (EnvironmentVariableNames.AndroidUserHome);
+		if (!string.IsNullOrEmpty (userHome))
+			return Path.Combine (userHome, "avd");
+
+		// Default: ~/.android/avd
+		return Path.Combine (
+			Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),
+			".android", "avd");
 	}
 }
 
