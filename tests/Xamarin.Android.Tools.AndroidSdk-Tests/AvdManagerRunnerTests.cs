@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO;
 using NUnit.Framework;
 
 namespace Xamarin.Android.Tools.Tests;
@@ -84,5 +85,79 @@ public class AvdManagerRunnerTests
 		Assert.AreEqual ("Minimal_AVD", avds [0].Name);
 		Assert.IsNull (avds [0].DeviceProfile);
 		Assert.AreEqual ("/home/user/.android/avd/Minimal_AVD.avd", avds [0].Path);
+	}
+
+	[Test]
+	public void AvdManagerPath_FindsVersionedDir ()
+	{
+		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
+		var binDir = Path.Combine (tempDir, "cmdline-tools", "12.0", "bin");
+		Directory.CreateDirectory (binDir);
+
+		try {
+			var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
+			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
+
+			var runner = new AvdManagerRunner (() => tempDir, null);
+			Assert.IsNotNull (runner.AvdManagerPath);
+			Assert.IsTrue (runner.AvdManagerPath!.Contains ("12.0"));
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void AvdManagerPath_PrefersHigherVersion ()
+	{
+		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
+		var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
+
+		var binDir10 = Path.Combine (tempDir, "cmdline-tools", "10.0", "bin");
+		var binDir12 = Path.Combine (tempDir, "cmdline-tools", "12.0", "bin");
+		Directory.CreateDirectory (binDir10);
+		Directory.CreateDirectory (binDir12);
+		File.WriteAllText (Path.Combine (binDir10, avdMgrName), "");
+		File.WriteAllText (Path.Combine (binDir12, avdMgrName), "");
+
+		try {
+			var runner = new AvdManagerRunner (() => tempDir, null);
+			Assert.IsNotNull (runner.AvdManagerPath);
+			Assert.IsTrue (runner.AvdManagerPath!.Contains ("12.0"));
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void AvdManagerPath_FallsBackToLatest ()
+	{
+		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
+		var binDir = Path.Combine (tempDir, "cmdline-tools", "latest", "bin");
+		Directory.CreateDirectory (binDir);
+
+		try {
+			var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
+			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
+
+			var runner = new AvdManagerRunner (() => tempDir, null);
+			Assert.IsNotNull (runner.AvdManagerPath);
+			Assert.IsTrue (runner.AvdManagerPath!.Contains ("latest"));
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void AvdManagerPath_NullSdk_ReturnsNull ()
+	{
+		var runner = new AvdManagerRunner (() => null, null);
+		Assert.IsNull (runner.AvdManagerPath);
+	}
+
+	[Test]
+	public void AvdManagerPath_MissingSdk_ReturnsNull ()
+	{
+		var runner = new AvdManagerRunner (() => "/nonexistent/path", null);
+		Assert.IsNull (runner.AvdManagerPath);
 	}
 }
