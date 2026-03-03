@@ -101,6 +101,8 @@ public class AdbRunner
 					return trimmed;
 				}
 			}
+		} catch (OperationCanceledException) {
+			throw;
 		} catch {
 			// Silently ignore failures (emulator may not support this command)
 		}
