@@ -37,43 +37,59 @@ public class AvdManagerRunner
 				return null;
 
 			var ext = OS.IsWindows ? ".bat" : "";
-			var cmdlineToolsPath = Path.Combine (sdkPath, "cmdline-tools", "latest", "bin", "avdmanager" + ext);
-			if (File.Exists (cmdlineToolsPath))
-				return cmdlineToolsPath;
+			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
 
-			var toolsPath = Path.Combine (sdkPath, "tools", "bin", "avdmanager" + ext);
+			if (Directory.Exists (cmdlineToolsDir)) {
+				// Versioned dirs sorted descending, then "latest" as fallback
+				var searchDirs = Directory.GetDirectories (cmdlineToolsDir)
+					.Select (Path.GetFileName)
+					.Where (n => n != "latest" && !string.IsNullOrEmpty (n))
+					.OrderByDescending (n => Version.TryParse (n, out var v) ? v : new Version (0, 0))
+					.Append ("latest");
 
-			return File.Exists (toolsPath) ? toolsPath : null;
+				foreach (var dir in searchDirs) {
+					var toolPath = Path.Combine (cmdlineToolsDir, dir!, "bin", "avdmanager" + ext);
+					if (File.Exists (toolPath))
+						return toolPath;
+				}
+			}
+
+			// Legacy fallback: tools/bin/avdmanager
+			var legacyPath = Path.Combine (sdkPath, "tools", "bin", "avdmanager" + ext);
+			return File.Exists (legacyPath) ? legacyPath : null;
 		}
 	}
 
 	public bool IsAvailable => !string.IsNullOrEmpty (AvdManagerPath);
 
+	string RequireAvdManagerPath ()
+	{
+		return AvdManagerPath ?? throw new InvalidOperationException ("AVD Manager not found.");
+	}
+
 	void ConfigureEnvironment (ProcessStartInfo psi)
 	{
 		var sdkPath = getSdkPath ();
 		if (!string.IsNullOrEmpty (sdkPath))
-			psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
+			psi.EnvironmentVariables [EnvironmentVariableNames.AndroidHome] = sdkPath;
 
 		var jdkPath = getJdkPath?.Invoke ();
 		if (!string.IsNullOrEmpty (jdkPath))
-			psi.EnvironmentVariables ["JAVA_HOME"] = jdkPath;
+			psi.EnvironmentVariables [EnvironmentVariableNames.JavaHome] = jdkPath;
 	}
 
-	public async Task<List<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
+	public async Task<IReadOnlyList<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
 	{
-		if (!IsAvailable)
-			throw new InvalidOperationException ("AVD Manager not found.");
+		var avdManagerPath = RequireAvdManagerPath ();
 
 		using var stdout = new StringWriter ();
-		var psi = new ProcessStartInfo {
-			FileName = AvdManagerPath!,
-			Arguments = "list avd",
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "list", "avd");
 		ConfigureEnvironment (psi);
-		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken).ConfigureAwait (false);
+
+		if (exitCode != 0)
+			throw new InvalidOperationException ($"avdmanager list avd failed (exit code {exitCode}): {stderr.ToString ().Trim ()}");
 
 		return ParseAvdListOutput (stdout.ToString ());
 	}
@@ -81,8 +97,7 @@ public class AvdManagerRunner
 	public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 		bool force = false, CancellationToken cancellationToken = default)
 	{
-		if (!IsAvailable)
-			throw new InvalidOperationException ("AVD Manager not found.");
+		var avdManagerPath = RequireAvdManagerPath ();
 		if (string.IsNullOrEmpty (name))
 			throw new ArgumentNullException (nameof (name));
 		if (string.IsNullOrEmpty (systemImage))
@@ -97,28 +112,22 @@ public class AvdManagerRunner
 		}
 
 		// Detect orphaned AVD directory (folder exists without .ini registration).
-		// Use --force to overwrite the orphaned directory.
 		var avdDir = Path.Combine (
 			Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),
 			".android", "avd", $"{name}.avd");
 		if (Directory.Exists (avdDir))
 			force = true;
 
-		var args = $"create avd -n \"{name}\" -k \"{systemImage}\"";
+		var args = new List<string> { "create", "avd", "-n", name, "-k", systemImage };
 		if (!string.IsNullOrEmpty (deviceProfile))
-			args += $" -d \"{deviceProfile}\"";
+			args.AddRange (new [] { "-d", deviceProfile });
 		if (force)
-			args += " --force";
+			args.Add ("--force");
 
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var psi = new ProcessStartInfo {
-			FileName = AvdManagerPath!,
-			Arguments = args,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-			RedirectStandardInput = true
-		};
+		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, args.ToArray ());
+		psi.RedirectStandardInput = true;
 		ConfigureEnvironment (psi);
 
 		// avdmanager prompts "Do you wish to create a custom hardware profile?" — answer "no"
@@ -127,7 +136,7 @@ public class AvdManagerRunner
 				try {
 					p.StandardInput.WriteLine ("no");
 					p.StandardInput.Close ();
-				} catch (System.IO.IOException) {
+				} catch (IOException) {
 					// Process may have already exited
 				}
 			}).ConfigureAwait (false);
@@ -142,22 +151,21 @@ public class AvdManagerRunner
 		return new AvdInfo {
 			Name = name,
 			DeviceProfile = deviceProfile,
+			Path = avdDir,
 		};
 	}
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
 	{
-		if (!IsAvailable)
-			throw new InvalidOperationException ("AVD Manager not found.");
+		var avdManagerPath = RequireAvdManagerPath ();
 
-		var psi = new ProcessStartInfo {
-			FileName = AvdManagerPath!,
-			Arguments = $"delete avd --name \"{name}\"",
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "delete", "avd", "--name", name);
 		ConfigureEnvironment (psi);
-		await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken).ConfigureAwait (false);
+
+		if (exitCode != 0)
+			throw new InvalidOperationException ($"Failed to delete AVD '{name}': {stderr.ToString ().Trim ()}");
 	}
 
 	internal static List<AvdInfo> ParseAvdListOutput (string output)
