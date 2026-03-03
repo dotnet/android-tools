@@ -47,47 +47,19 @@ public class AdbRunner
 
 	ProcessStartInfo CreateAdbProcess (string adbPath, params string [] args)
 	{
-		var psi = new ProcessStartInfo {
-			FileName = adbPath,
-			Arguments = string.Join (" ", args),
-			UseShellExecute = false,
-			CreateNoWindow = true
-		};
-
-		var sdkPath = getSdkPath ();
-		if (!string.IsNullOrEmpty (sdkPath))
-			psi.EnvironmentVariables ["ANDROID_HOME"] = sdkPath;
-
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, args);
+		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), null);
 		return psi;
 	}
 
-	public async Task<List<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
+	public async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 	{
 		var adb = RequireAdb ();
 		using var stdout = new StringWriter ();
 		var psi = CreateAdbProcess (adb, "devices", "-l");
 		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
 
-		var devices = new List<AdbDeviceInfo> ();
-		foreach (var line in stdout.ToString ().Split ('\n')) {
-			var trimmed = line.Trim ();
-			if (string.IsNullOrEmpty (trimmed) || trimmed.StartsWith ("List of", StringComparison.OrdinalIgnoreCase))
-				continue;
-
-			var parts = trimmed.Split (new [] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-			if (parts.Length < 2)
-				continue;
-
-			var device = new AdbDeviceInfo { Serial = parts [0], State = parts [1] };
-			foreach (Match match in DetailsRegex.Matches (trimmed)) {
-				switch (match.Groups [1].Value.ToLowerInvariant ()) {
-				case "model": device.Model = match.Groups [2].Value; break;
-				case "device": device.Device = match.Groups [2].Value; break;
-				}
-			}
-			devices.Add (device);
-		}
-		return devices;
+		return ParseDeviceListOutput (stdout.ToString ());
 	}
 
 	public async Task WaitForDeviceAsync (string? serial = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
@@ -119,6 +91,30 @@ public class AdbRunner
 		var adb = RequireAdb ();
 		var psi = CreateAdbProcess (adb, "-s", serial, "emu", "kill");
 		await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
+	}
+
+	internal static List<AdbDeviceInfo> ParseDeviceListOutput (string output)
+	{
+		var devices = new List<AdbDeviceInfo> ();
+		foreach (var line in output.Split ('\n')) {
+			var trimmed = line.Trim ();
+			if (string.IsNullOrEmpty (trimmed) || trimmed.StartsWith ("List of", StringComparison.OrdinalIgnoreCase))
+				continue;
+
+			var parts = trimmed.Split (new [] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length < 2)
+				continue;
+
+			var device = new AdbDeviceInfo { Serial = parts [0], State = parts [1] };
+			foreach (Match match in DetailsRegex.Matches (trimmed)) {
+				switch (match.Groups [1].Value.ToLowerInvariant ()) {
+				case "model": device.Model = match.Groups [2].Value; break;
+				case "device": device.Device = match.Groups [2].Value; break;
+				}
+			}
+			devices.Add (device);
+		}
+		return devices;
 	}
 }
 
