@@ -143,7 +143,7 @@ public class AdbRunner
 	/// Parses the output of 'adb devices -l'.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.ParseAdbDevicesOutput.
 	/// </summary>
-	internal static List<AdbDeviceInfo> ParseAdbDevicesOutput (string output)
+	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (string output)
 	{
 		var devices = new List<AdbDeviceInfo> ();
 
@@ -206,7 +206,7 @@ public class AdbRunner
 	/// Maps adb device states to status values.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.MapAdbStateToStatus.
 	/// </summary>
-	internal static AdbDeviceStatus MapAdbStateToStatus (string adbState)
+	public static AdbDeviceStatus MapAdbStateToStatus (string adbState)
 	{
 		switch (adbState.ToLowerInvariant ()) {
 		case "device": return AdbDeviceStatus.Online;
@@ -222,7 +222,7 @@ public class AdbRunner
 	/// Priority: AVD name (for emulators) > model > product > device > serial.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.BuildDeviceDescription.
 	/// </summary>
-	internal static string BuildDeviceDescription (AdbDeviceInfo device)
+	public static string BuildDeviceDescription (AdbDeviceInfo device)
 	{
 		if (device.Type == AdbDeviceType.Emulator && !string.IsNullOrEmpty (device.AvdName))
 			return FormatDisplayName (device.AvdName!);
@@ -244,7 +244,7 @@ public class AdbRunner
 	/// Replaces underscores with spaces, applies title case, and capitalizes "API".
 	/// Ported from dotnet/android GetAvailableAndroidDevices.FormatDisplayName.
 	/// </summary>
-	internal static string FormatDisplayName (string avdName)
+	public static string FormatDisplayName (string avdName)
 	{
 		if (string.IsNullOrEmpty (avdName))
 			return avdName ?? string.Empty;
