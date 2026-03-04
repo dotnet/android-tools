@@ -171,9 +171,18 @@ public class AdbRunner
 	/// </summary>
 	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (string output)
 	{
+		return ParseAdbDevicesOutput (output.Split ('\n'));
+	}
+
+	/// <summary>
+	/// Parses individual lines from 'adb devices -l' output.
+	/// Accepts an <see cref="IEnumerable{T}"/> to avoid allocating a joined string.
+	/// </summary>
+	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (IEnumerable<string> lines)
+	{
 		var devices = new List<AdbDeviceInfo> ();
 
-		foreach (var line in output.Split ('\n')) {
+		foreach (var line in lines) {
 			var trimmed = line.Trim ();
 			if (string.IsNullOrEmpty (trimmed) ||
 				trimmed.IndexOf ("List of devices", StringComparison.OrdinalIgnoreCase) >= 0 ||
