@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -95,6 +96,136 @@ public class EmulatorRunner
 				avds.Add (trimmed);
 		}
 		return avds;
+	}
+
+	/// <summary>
+	/// Boots an emulator and waits for it to be fully booted.
+	/// Ported from dotnet/android BootAndroidEmulator MSBuild task.
+	/// </summary>
+	public async Task<EmulatorBootResult> BootAndWaitAsync (
+		string deviceOrAvdName,
+		AdbRunner adbRunner,
+		EmulatorBootOptions? options = null,
+		Action<TraceLevel, string>? logger = null,
+		CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (deviceOrAvdName))
+			throw new ArgumentException ("Device or AVD name must not be empty.", nameof (deviceOrAvdName));
+		if (adbRunner == null)
+			throw new ArgumentNullException (nameof (adbRunner));
+
+		options = options ?? new EmulatorBootOptions ();
+		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
+
+		Log (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
+
+		// Phase 1: Check if deviceOrAvdName is already an online ADB device by serial
+		var devices = await adbRunner.ListDevicesAsync (cancellationToken).ConfigureAwait (false);
+		var onlineDevice = devices.FirstOrDefault (d =>
+			d.Status == AdbDeviceStatus.Online &&
+			string.Equals (d.Serial, deviceOrAvdName, StringComparison.OrdinalIgnoreCase));
+
+		if (onlineDevice != null) {
+			Log (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
+			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial };
+		}
+
+		// Phase 2: Check if AVD is already running (possibly still booting)
+		var runningSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
+		if (runningSerial != null) {
+			Log (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
+			return await WaitForFullBootAsync (adbRunner, runningSerial, options, logger, cancellationToken).ConfigureAwait (false);
+		}
+
+		// Phase 3: Launch the emulator
+		if (EmulatorPath == null) {
+			return new EmulatorBootResult {
+				Success = false,
+				ErrorMessage = "Android Emulator not found. Ensure the Android SDK is installed and the emulator is available.",
+			};
+		}
+
+		Log (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
+		Process emulatorProcess;
+		try {
+			emulatorProcess = StartAvd (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
+		} catch (Exception ex) {
+			return new EmulatorBootResult {
+				Success = false,
+				ErrorMessage = $"Failed to launch emulator: {ex.Message}",
+			};
+		}
+
+		// Poll for the new emulator serial to appear
+		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
+		timeoutCts.CancelAfter (options.BootTimeout);
+
+		try {
+			string? newSerial = null;
+			while (newSerial == null) {
+				timeoutCts.Token.ThrowIfCancellationRequested ();
+				await Task.Delay (options.PollInterval, timeoutCts.Token).ConfigureAwait (false);
+
+				devices = await adbRunner.ListDevicesAsync (timeoutCts.Token).ConfigureAwait (false);
+				newSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
+			}
+
+			Log (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
+			return await WaitForFullBootAsync (adbRunner, newSerial, options, logger, timeoutCts.Token).ConfigureAwait (false);
+		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+			return new EmulatorBootResult {
+				Success = false,
+				ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
+			};
+		}
+	}
+
+	static string? FindRunningAvdSerial (IReadOnlyList<AdbDeviceInfo> devices, string avdName)
+	{
+		foreach (var d in devices) {
+			if (d.Type == AdbDeviceType.Emulator &&
+				!string.IsNullOrEmpty (d.AvdName) &&
+				string.Equals (d.AvdName, avdName, StringComparison.OrdinalIgnoreCase)) {
+				return d.Serial;
+			}
+		}
+		return null;
+	}
+
+	async Task<EmulatorBootResult> WaitForFullBootAsync (
+		AdbRunner adbRunner,
+		string serial,
+		EmulatorBootOptions options,
+		Action<TraceLevel, string>? logger,
+		CancellationToken cancellationToken)
+	{
+		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
+
+		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
+		timeoutCts.CancelAfter (options.BootTimeout);
+
+		try {
+			while (true) {
+				timeoutCts.Token.ThrowIfCancellationRequested ();
+
+				var bootCompleted = await adbRunner.GetShellPropertyAsync (serial, "sys.boot_completed", timeoutCts.Token).ConfigureAwait (false);
+				if (string.Equals (bootCompleted, "1", StringComparison.Ordinal)) {
+					var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", timeoutCts.Token).ConfigureAwait (false);
+					if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
+						Log (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
+						return new EmulatorBootResult { Success = true, Serial = serial };
+					}
+				}
+
+				await Task.Delay (options.PollInterval, timeoutCts.Token).ConfigureAwait (false);
+			}
+		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+			return new EmulatorBootResult {
+				Success = false,
+				Serial = serial,
+				ErrorMessage = $"Timed out waiting for emulator '{serial}' to fully boot within {options.BootTimeout.TotalSeconds}s.",
+			};
+		}
 	}
 }
 

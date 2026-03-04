@@ -1,7 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Xamarin.Android.Tools.Tests;
@@ -85,5 +92,235 @@ public class EmulatorRunnerTests
 		var runner = new EmulatorRunner (() => null);
 		Assert.IsNull (runner.EmulatorPath);
 		Assert.IsFalse (runner.IsAvailable);
+	}
+
+	// --- BootAndWaitAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
+
+	[Test]
+	public async Task AlreadyOnlineDevice_PassesThrough ()
+	{
+		var devices = new List<AdbDeviceInfo> {
+			new AdbDeviceInfo {
+				Serial = "emulator-5554",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Pixel_7_API_35",
+			},
+		};
+
+		var mockAdb = new MockAdbRunner (devices);
+		var runner = new EmulatorRunner (() => null);
+
+		var result = await runner.BootAndWaitAsync ("emulator-5554", mockAdb);
+
+		Assert.IsTrue (result.Success);
+		Assert.AreEqual ("emulator-5554", result.Serial);
+		Assert.IsNull (result.ErrorMessage);
+	}
+
+	[Test]
+	public async Task AvdAlreadyRunning_WaitsForFullBoot ()
+	{
+		var devices = new List<AdbDeviceInfo> {
+			new AdbDeviceInfo {
+				Serial = "emulator-5554",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Pixel_7_API_35",
+			},
+		};
+
+		var mockAdb = new MockAdbRunner (devices);
+		mockAdb.ShellProperties ["sys.boot_completed"] = "1";
+		mockAdb.ShellCommands ["pm path android"] = "package:/system/framework/framework-res.apk";
+
+		var runner = new EmulatorRunner (() => null);
+		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
+
+		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+
+		Assert.IsTrue (result.Success);
+		Assert.AreEqual ("emulator-5554", result.Serial);
+	}
+
+	[Test]
+	public async Task BootEmulator_AppearsAfterPolling ()
+	{
+		var devices = new List<AdbDeviceInfo> ();
+		var mockAdb = new MockAdbRunner (devices);
+		mockAdb.ShellProperties ["sys.boot_completed"] = "1";
+		mockAdb.ShellCommands ["pm path android"] = "package:/system/framework/framework-res.apk";
+
+		int pollCount = 0;
+		mockAdb.OnListDevices = () => {
+			pollCount++;
+			if (pollCount >= 2) {
+				devices.Add (new AdbDeviceInfo {
+					Serial = "emulator-5554",
+					Type = AdbDeviceType.Emulator,
+					Status = AdbDeviceStatus.Online,
+					AvdName = "Pixel_7_API_35",
+				});
+			}
+		};
+
+		var tempDir = CreateFakeEmulatorSdk ();
+		try {
+			var runner = new EmulatorRunner (() => tempDir);
+			var options = new EmulatorBootOptions {
+				BootTimeout = TimeSpan.FromSeconds (10),
+				PollInterval = TimeSpan.FromMilliseconds (50),
+			};
+
+			var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+
+			Assert.IsTrue (result.Success);
+			Assert.AreEqual ("emulator-5554", result.Serial);
+			Assert.IsTrue (pollCount >= 2);
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public async Task LaunchFailure_ReturnsError ()
+	{
+		var devices = new List<AdbDeviceInfo> ();
+		var mockAdb = new MockAdbRunner (devices);
+
+		// No emulator path → EmulatorPath returns null → error
+		var runner = new EmulatorRunner (() => null);
+		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (2) };
+
+		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+
+		Assert.IsFalse (result.Success);
+		Assert.IsNotNull (result.ErrorMessage);
+		Assert.IsTrue (result.ErrorMessage!.Contains ("not found"), $"Unexpected error: {result.ErrorMessage}");
+	}
+
+	[Test]
+	public async Task BootTimeout_BootCompletedNeverReaches1 ()
+	{
+		var devices = new List<AdbDeviceInfo> {
+			new AdbDeviceInfo {
+				Serial = "emulator-5554",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Pixel_7_API_35",
+			},
+		};
+
+		var mockAdb = new MockAdbRunner (devices);
+		// boot_completed never returns "1"
+		mockAdb.ShellProperties ["sys.boot_completed"] = "0";
+
+		var runner = new EmulatorRunner (() => null);
+		var options = new EmulatorBootOptions {
+			BootTimeout = TimeSpan.FromMilliseconds (200),
+			PollInterval = TimeSpan.FromMilliseconds (50),
+		};
+
+		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+
+		Assert.IsFalse (result.Success);
+		Assert.IsNotNull (result.ErrorMessage);
+		Assert.IsTrue (result.ErrorMessage!.Contains ("Timed out"), $"Unexpected error: {result.ErrorMessage}");
+	}
+
+	[Test]
+	public async Task MultipleEmulators_FindsCorrectAvd ()
+	{
+		var devices = new List<AdbDeviceInfo> {
+			new AdbDeviceInfo {
+				Serial = "emulator-5554",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Pixel_5_API_30",
+			},
+			new AdbDeviceInfo {
+				Serial = "emulator-5556",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Pixel_7_API_35",
+			},
+			new AdbDeviceInfo {
+				Serial = "emulator-5558",
+				Type = AdbDeviceType.Emulator,
+				Status = AdbDeviceStatus.Online,
+				AvdName = "Nexus_5X_API_28",
+			},
+		};
+
+		var mockAdb = new MockAdbRunner (devices);
+		mockAdb.ShellProperties ["sys.boot_completed"] = "1";
+		mockAdb.ShellCommands ["pm path android"] = "package:/system/framework/framework-res.apk";
+
+		var runner = new EmulatorRunner (() => null);
+		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
+
+		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+
+		Assert.IsTrue (result.Success);
+		Assert.AreEqual ("emulator-5556", result.Serial, "Should find the correct AVD among multiple emulators");
+	}
+
+	// --- Helpers ---
+
+	static string CreateFakeEmulatorSdk ()
+	{
+		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-boot-test-{Path.GetRandomFileName ()}");
+		var emulatorDir = Path.Combine (tempDir, "emulator");
+		Directory.CreateDirectory (emulatorDir);
+
+		var emuName = OS.IsWindows ? "emulator.exe" : "emulator";
+		var emuPath = Path.Combine (emulatorDir, emuName);
+		// Create a fake emulator script that just exits
+		if (OS.IsWindows) {
+			File.WriteAllText (emuPath, "@echo off");
+		} else {
+			File.WriteAllText (emuPath, "#!/bin/sh\nsleep 60\n");
+			// Make executable
+			var psi = new ProcessStartInfo ("chmod", $"+x \"{emuPath}\"") { UseShellExecute = false };
+			Process.Start (psi)?.WaitForExit ();
+		}
+
+		return tempDir;
+	}
+
+	/// <summary>
+	/// Mock AdbRunner for testing BootAndWaitAsync without real adb commands.
+	/// </summary>
+	class MockAdbRunner : AdbRunner
+	{
+		readonly List<AdbDeviceInfo> devices;
+
+		public Dictionary<string, string> ShellProperties { get; } = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+		public Dictionary<string, string> ShellCommands { get; } = new Dictionary<string, string> (StringComparer.OrdinalIgnoreCase);
+		public Action? OnListDevices { get; set; }
+
+		public MockAdbRunner (List<AdbDeviceInfo> devices)
+			: base (() => null)
+		{
+			this.devices = devices;
+		}
+
+		public override Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
+		{
+			OnListDevices?.Invoke ();
+			return Task.FromResult<IReadOnlyList<AdbDeviceInfo>> (devices);
+		}
+
+		public override Task<string?> GetShellPropertyAsync (string serial, string propertyName, CancellationToken cancellationToken = default)
+		{
+			ShellProperties.TryGetValue (propertyName, out var value);
+			return Task.FromResult (value);
+		}
+
+		public override Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
+		{
+			ShellCommands.TryGetValue (command, out var value);
+			return Task.FromResult (value);
+		}
 	}
 }

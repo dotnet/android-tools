@@ -63,7 +63,7 @@ public class AdbRunner
 	/// Lists connected devices using 'adb devices -l'.
 	/// For emulators, queries the AVD name using 'adb -s &lt;serial&gt; emu avd name'.
 	/// </summary>
-	public async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
+	public virtual async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 	{
 		var adb = RequireAdb ();
 		using var stdout = new StringWriter ();
@@ -139,6 +139,42 @@ public class AdbRunner
 		var adb = RequireAdb ();
 		var psi = CreateAdbProcess (adb, "-s", serial, "emu", "kill");
 		await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
+	}
+
+	/// <summary>
+	/// Runs 'adb -s {serial} shell getprop {propertyName}' and returns the first non-empty line, or null.
+	/// </summary>
+	public virtual async Task<string?> GetShellPropertyAsync (string serial, string propertyName, CancellationToken cancellationToken = default)
+	{
+		var adb = RequireAdb ();
+		using var stdout = new StringWriter ();
+		var psi = CreateAdbProcess (adb, "-s", serial, "shell", "getprop", propertyName);
+		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
+
+		return FirstNonEmptyLine (stdout.ToString ());
+	}
+
+	/// <summary>
+	/// Runs 'adb -s {serial} shell {command}' and returns the first non-empty line, or null.
+	/// </summary>
+	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
+	{
+		var adb = RequireAdb ();
+		using var stdout = new StringWriter ();
+		var psi = CreateAdbProcess (adb, "-s", serial, "shell", command);
+		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
+
+		return FirstNonEmptyLine (stdout.ToString ());
+	}
+
+	static string? FirstNonEmptyLine (string output)
+	{
+		foreach (var line in output.Split ('\n')) {
+			var trimmed = line.Trim ();
+			if (!string.IsNullOrEmpty (trimmed))
+				return trimmed;
+		}
+		return null;
 	}
 
 	/// <summary>
