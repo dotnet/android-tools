@@ -24,10 +24,11 @@ public class AdbRunner
 
 	// Pattern to match device lines: <serial> <state> [key:value ...]
 	// Requires 2+ spaces between serial and state (adb pads serials).
-	// Matches known multi-word states (e.g. "no permissions") and any single-word state
-	// so unknown states (recovery, sideload, etc.) are not silently dropped.
+	// Matches known adb device states. Uses \s+ to handle both space and tab separators.
+	// Explicit state list prevents false positives from non-device lines.
 	static readonly Regex AdbDevicesRegex = new Regex (
-		@"^([^\s]+)\s{2,}(no permissions|\S+)\s*(.*)$", RegexOptions.Compiled);
+		@"^([^\s]+)\s+(device|offline|unauthorized|authorizing|no permissions|recovery|sideload|bootloader|connecting|host)\s*(.*)$",
+		RegexOptions.Compiled | RegexOptions.IgnoreCase);
 	static readonly Regex ApiRegex = new Regex (@"\bApi\b", RegexOptions.Compiled);
 
 	public AdbRunner (Func<string?> getSdkPath)

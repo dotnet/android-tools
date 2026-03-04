@@ -216,6 +216,21 @@ public class AdbRunnerTests
 	}
 
 	[Test]
+	public void ParseAdbDevicesOutput_TabSeparator ()
+	{
+		var output =
+			"List of devices attached\n" +
+			"emulator-5554\tdevice\n" +
+			"R5CR10YZQPJ\tdevice\n";
+
+		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+
+		Assert.AreEqual (2, devices.Count);
+		Assert.AreEqual ("emulator-5554", devices [0].Serial);
+		Assert.AreEqual ("R5CR10YZQPJ", devices [1].Serial);
+	}
+
+	[Test]
 	public void ParseAdbDevicesOutput_IpPortDevice ()
 	{
 		var output =
