@@ -21,10 +21,11 @@ public class AdbRunner
 {
 	readonly Func<string?> getSdkPath;
 
-	// Pattern to match device lines: <serial> <state> [key:value ...]
-	// Ported from dotnet/android GetAvailableAndroidDevices.AdbDevicesRegex
+	// Matches known adb device states. Uses \s+ to handle both space and tab separators.
+	// Explicit state list prevents false positives from non-device lines.
 	static readonly Regex AdbDevicesRegex = new Regex (
-		@"^([^\s]+)\s+(device|offline|unauthorized|no permissions)\s*(.*)$", RegexOptions.Compiled);
+		@"^([^\s]+)\s+(device|offline|unauthorized|authorizing|no permissions|recovery|sideload|bootloader|connecting|host)\s*(.*)$",
+		RegexOptions.Compiled | RegexOptions.IgnoreCase);
 	static readonly Regex ApiRegex = new Regex (@"\bApi\b", RegexOptions.Compiled);
 
 	public AdbRunner (Func<string?> getSdkPath)
