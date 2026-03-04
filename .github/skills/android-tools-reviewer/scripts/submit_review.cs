@@ -33,13 +33,15 @@ try {
 	return 1;
 }
 
+using (doc) {
+
 var root = doc.RootElement;
 
 // Validate structure
 var errors = new System.Collections.Generic.List<string> ();
 
 if (!root.TryGetProperty ("event", out var eventProp) || eventProp.ValueKind != JsonValueKind.String) {
-	errors.Add ("Missing 'event' field (should be 'COMMENT')");
+	errors.Add ("Missing or invalid 'event' field — must be COMMENT, APPROVE, or REQUEST_CHANGES");
 } else {
 	var ev = eventProp.GetString ()!;
 	if (ev != "COMMENT" && ev != "APPROVE" && ev != "REQUEST_CHANGES")
@@ -102,9 +104,11 @@ psi.ArgumentList.Add ("--input");
 psi.ArgumentList.Add (jsonPath);
 
 var process = Process.Start (psi)!;
-var stdout = process.StandardOutput.ReadToEnd ();
-var stderr = process.StandardError.ReadToEnd ();
+var stdoutTask = process.StandardOutput.ReadToEndAsync ();
+var stderrTask = process.StandardError.ReadToEndAsync ();
 process.WaitForExit ();
+var stdout = stdoutTask.Result;
+var stderr = stderrTask.Result;
 
 if (process.ExitCode != 0) {
 	Console.Error.WriteLine ($"❌ gh api failed (exit code {process.ExitCode}):");
@@ -112,7 +116,7 @@ if (process.ExitCode != 0) {
 		Console.Error.WriteLine (stderr);
 	if (!string.IsNullOrEmpty (stdout)) {
 		try {
-			var errDoc = JsonDocument.Parse (stdout);
+			using var errDoc = JsonDocument.Parse (stdout);
 			if (errDoc.RootElement.TryGetProperty ("message", out var msg))
 				Console.Error.WriteLine ($"  GitHub says: {msg.GetString ()}");
 		} catch {
@@ -123,7 +127,7 @@ if (process.ExitCode != 0) {
 }
 
 try {
-	var resp = JsonDocument.Parse (stdout);
+	using var resp = JsonDocument.Parse (stdout);
 	if (resp.RootElement.TryGetProperty ("html_url", out var url))
 		Console.WriteLine ($"✅ Review posted: {url.GetString ()}");
 	else
@@ -131,5 +135,7 @@ try {
 } catch {
 	Console.WriteLine ("✅ Review posted.");
 }
+
+} // using (doc)
 
 return 0;
