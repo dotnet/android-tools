@@ -22,7 +22,7 @@ internal static class AndroidEnvironmentHelper
 
 		if (!string.IsNullOrEmpty (jdkPath)) {
 			psi.EnvironmentVariables [EnvironmentVariableNames.JavaHome] = jdkPath;
-			var jdkBin = Path.Combine (jdkPath, "bin");
+			var jdkBin = Path.Combine (jdkPath!, "bin");
 			var currentPath = psi.EnvironmentVariables [EnvironmentVariableNames.Path] ?? "";
 			psi.EnvironmentVariables [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
 		}

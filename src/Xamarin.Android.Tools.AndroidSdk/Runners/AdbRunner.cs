@@ -117,7 +117,7 @@ public class AdbRunner
 
 		var args = string.IsNullOrEmpty (serial)
 			? new [] { "wait-for-device" }
-			: new [] { "-s", serial, "wait-for-device" };
+			: new [] { "-s", serial!, "wait-for-device" };
 
 		var psi = CreateAdbProcess (adb, args);
 
