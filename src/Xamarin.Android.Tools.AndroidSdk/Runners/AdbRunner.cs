@@ -116,8 +116,8 @@ public class AdbRunner
 			}
 		} catch (OperationCanceledException) {
 			throw;
-		} catch {
-			// Silently ignore failures (emulator may not support this command)
+		} catch (Exception ex) {
+			Trace.WriteLine ($"GetEmulatorAvdNameAsync failed for '{serial}': {ex.Message}");
 		}
 
 		return null;
