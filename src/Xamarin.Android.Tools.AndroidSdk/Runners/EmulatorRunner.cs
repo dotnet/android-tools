@@ -68,6 +68,12 @@ public class EmulatorRunner
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, args.ToArray ());
 		ConfigureEnvironment (psi);
 
+		// Redirect stdout/stderr so the emulator process doesn't inherit the
+		// caller's pipes. Without this, parent processes (e.g. VS Code spawn)
+		// never see the 'close' event because the emulator holds the pipes open.
+		psi.RedirectStandardOutput = true;
+		psi.RedirectStandardError = true;
+
 		var process = new Process { StartInfo = psi };
 		process.Start ();
 
