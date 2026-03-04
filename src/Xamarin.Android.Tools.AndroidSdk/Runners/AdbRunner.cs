@@ -259,10 +259,14 @@ public class AdbRunner
 	/// Priority: AVD name (for emulators) > model > product > device > serial.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.BuildDeviceDescription.
 	/// </summary>
-	public static string BuildDeviceDescription (AdbDeviceInfo device)
+	public static string BuildDeviceDescription (AdbDeviceInfo device, Action<TraceLevel, string>? logger = null)
 	{
-		if (device.Type == AdbDeviceType.Emulator && !string.IsNullOrEmpty (device.AvdName))
-			return FormatDisplayName (device.AvdName!);
+		if (device.Type == AdbDeviceType.Emulator && !string.IsNullOrEmpty (device.AvdName)) {
+			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {device.AvdName}");
+			var formatted = FormatDisplayName (device.AvdName!);
+			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, formatted AVD display name: {formatted}");
+			return formatted;
+		}
 
 		if (!string.IsNullOrEmpty (device.Model))
 			return device.Model!.Replace ('_', ' ');
@@ -299,7 +303,7 @@ public class AdbRunner
 	/// Running emulators are not duplicated. Non-running emulators are added with Status=NotRunning.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.MergeDevicesAndEmulators.
 	/// </summary>
-	public static List<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators)
+	public static List<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators, Action<TraceLevel, string>? logger = null)
 	{
 		var result = new List<AdbDeviceInfo> (adbDevices);
 
@@ -310,10 +314,14 @@ public class AdbRunner
 				runningAvdNames.Add (device.AvdName!);
 		}
 
+		logger?.Invoke (TraceLevel.Verbose, $"Running emulators AVD names: {string.Join (", ", runningAvdNames)}");
+
 		// Add non-running emulators
 		foreach (var avdName in availableEmulators) {
-			if (runningAvdNames.Contains (avdName))
+			if (runningAvdNames.Contains (avdName)) {
+				logger?.Invoke (TraceLevel.Verbose, $"Emulator '{avdName}' is already running, skipping");
 				continue;
+			}
 
 			var displayName = FormatDisplayName (avdName);
 			result.Add (new AdbDeviceInfo {
@@ -323,6 +331,7 @@ public class AdbRunner
 				Status = AdbDeviceStatus.NotRunning,
 				AvdName = avdName,
 			});
+			logger?.Invoke (TraceLevel.Verbose, $"Added non-running emulator: {avdName}");
 		}
 
 		// Sort: online devices first, then not-running emulators, alphabetically by description
