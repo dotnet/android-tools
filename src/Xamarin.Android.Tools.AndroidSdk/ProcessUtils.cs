@@ -207,7 +207,7 @@ namespace Xamarin.Android.Tools
 		/// Throws <see cref="InvalidOperationException"/> when <paramref name="exitCode"/> is non-zero.
 		/// Includes stderr/stdout context in the message when available.
 		/// </summary>
-		public static void ThrowIfFailed (int exitCode, string command, string? stderr = null, string? stdout = null)
+		internal static void ThrowIfFailed (int exitCode, string command, string? stderr = null, string? stdout = null)
 		{
 			if (exitCode == 0)
 				return;

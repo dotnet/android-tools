@@ -17,7 +17,6 @@ namespace Xamarin.Android.Tools.Tests;
 ///
 /// These tests only run on CI (TF_BUILD=True or CI=true) where hosted
 /// images have JDK (JAVA_HOME) and Android SDK (ANDROID_HOME) pre-installed.
-/// When the pre-installed SDK lacks cmdline-tools, the tests bootstrap them.
 /// Tests are skipped on local developer machines.
 /// </summary>
 [TestFixture]

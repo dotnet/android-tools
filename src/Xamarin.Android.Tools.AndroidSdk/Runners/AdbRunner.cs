@@ -160,7 +160,9 @@ public class AdbRunner
 		var adb = RequireAdb ();
 		var envVars = GetEnvironmentVariables ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adb, "-s", serial, "emu", "kill");
-		await ProcessUtils.StartProcess (psi, null, null, cancellationToken, envVars).ConfigureAwait (false);
+		using var stderr = new StringWriter ();
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, envVars).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr.ToString ());
 	}
 
 	/// <summary>
