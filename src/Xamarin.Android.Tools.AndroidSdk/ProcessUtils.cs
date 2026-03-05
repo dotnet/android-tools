@@ -207,19 +207,24 @@ namespace Xamarin.Android.Tools
 		/// Throws <see cref="InvalidOperationException"/> when <paramref name="exitCode"/> is non-zero.
 		/// Includes stderr/stdout context in the message when available.
 		/// </summary>
-		public static void ThrowIfFailed (int exitCode, string command, string? stderr = null, string? stdout = null)
+		internal static void ThrowIfFailed (int exitCode, string command, string? stderr = null, string? stdout = null)
 		{
 			if (exitCode == 0)
 				return;
 
 			var message = $"'{command}' failed with exit code {exitCode}.";
 
-			if (!string.IsNullOrEmpty (stderr))
-				message += $" stderr:{Environment.NewLine}{stderr!.Trim ()}";
-			if (!string.IsNullOrEmpty (stdout))
-				message += $" stdout:{Environment.NewLine}{stdout!.Trim ()}";
+			if (stderr is { Length: > 0 })
+				message += $" stderr:{Environment.NewLine}{stderr.Trim ()}";
+			if (stdout is { Length: > 0 })
+				message += $" stdout:{Environment.NewLine}{stdout.Trim ()}";
 
 			throw new InvalidOperationException (message);
+		}
+
+		internal static void ThrowIfFailed (int exitCode, string command, StringWriter? stderr, StringWriter? stdout = null)
+		{
+			ThrowIfFailed (exitCode, command, stderr?.ToString (), stdout?.ToString ());
 		}
 
 		/// <summary>
@@ -227,7 +232,7 @@ namespace Xamarin.Android.Tools
 		/// Throws <see cref="ArgumentNullException"/> for null values and
 		/// <see cref="ArgumentException"/> for empty strings.
 		/// </summary>
-		public static void ValidateNotNullOrEmpty (string? value, string paramName)
+		internal static void ValidateNotNullOrEmpty (string? value, string paramName)
 		{
 			if (value is null)
 				throw new ArgumentNullException (paramName);
@@ -239,7 +244,7 @@ namespace Xamarin.Android.Tools
 		/// Searches versioned cmdline-tools directories (descending) and "latest" for a specific tool binary.
 		/// Falls back to the legacy tools/bin path. Returns null if not found.
 		/// </summary>
-		public static string? FindCmdlineTool (string sdkPath, string toolName, string extension)
+		internal static string? FindCmdlineTool (string sdkPath, string toolName, string extension)
 		{
 			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
 
