@@ -116,8 +116,8 @@ public class AdbRunner
 			using var cts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
 			cts.CancelAfter (TimeSpan.FromSeconds (3));
 
-			// ConnectAsync with CancellationToken not available on netstandard2.0;
-			// use Task.Run + token check instead
+			// ConnectAsync with CancellationToken is not available on netstandard2.0;
+			// simulate cancellation/timeout by racing ConnectAsync against Task.Delay using a linked CTS
 			var connectTask = client.ConnectAsync ("127.0.0.1", port);
 			var completed = await Task.WhenAny (connectTask, Task.Delay (3000, cts.Token)).ConfigureAwait (false);
 			if (completed != connectTask) {

@@ -214,10 +214,10 @@ namespace Xamarin.Android.Tools
 
 			var message = $"'{command}' failed with exit code {exitCode}.";
 
-			if (!string.IsNullOrEmpty (stderr))
-				message += $" stderr:{Environment.NewLine}{stderr!.Trim ()}";
-			if (!string.IsNullOrEmpty (stdout))
-				message += $" stdout:{Environment.NewLine}{stdout!.Trim ()}";
+			if (stderr is { Length: > 0 })
+				message += $" stderr:{Environment.NewLine}{stderr.Trim ()}";
+			if (stdout is { Length: > 0 })
+				message += $" stdout:{Environment.NewLine}{stdout.Trim ()}";
 
 			throw new InvalidOperationException (message);
 		}
