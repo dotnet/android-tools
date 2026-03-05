@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Net.Sockets;
+
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,61 +92,6 @@ public class AdbRunner
 			throw;
 		} catch (Exception ex) {
 			Trace.WriteLine ($"GetEmulatorAvdNameAsync adb query failed for '{serial}': {ex.Message}");
-		}
-
-		// Fallback: query the emulator console directly via TCP.
-		// Emulator serials follow the format "emulator-{port}" where port is the console port.
-		return await QueryAvdNameViaConsoleAsync (serial, cancellationToken).ConfigureAwait (false);
-	}
-
-	/// <summary>
-	/// Queries AVD name by connecting to the emulator console port directly.
-	/// </summary>
-	static async Task<string?> QueryAvdNameViaConsoleAsync (string serial, CancellationToken cancellationToken)
-	{
-		const string EmulatorPrefix = "emulator-";
-		if (!serial.StartsWith (EmulatorPrefix, StringComparison.OrdinalIgnoreCase))
-			return null;
-
-		if (!int.TryParse (serial.Substring (EmulatorPrefix.Length), out var port))
-			return null;
-
-		try {
-			using var client = new TcpClient ();
-			using var cts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
-			cts.CancelAfter (TimeSpan.FromSeconds (3));
-
-			// ConnectAsync with CancellationToken is not available on netstandard2.0;
-			// simulate cancellation/timeout by racing ConnectAsync against Task.Delay using a linked CTS
-			var connectTask = client.ConnectAsync ("127.0.0.1", port);
-			var completed = await Task.WhenAny (connectTask, Task.Delay (3000, cts.Token)).ConfigureAwait (false);
-			if (completed != connectTask) {
-				return null;
-			}
-			await connectTask.ConfigureAwait (false); // observe exceptions
-
-			using var stream = client.GetStream ();
-			stream.ReadTimeout = 3000;
-			stream.WriteTimeout = 3000;
-			using var reader = new StreamReader (stream);
-			using var writer = new StreamWriter (stream) { AutoFlush = true };
-
-			// Read the welcome banner ("Android Console: ...") and "OK"
-			await reader.ReadLineAsync ().ConfigureAwait (false);
-			await reader.ReadLineAsync ().ConfigureAwait (false);
-
-			// Send "avd name" command
-			await writer.WriteLineAsync ("avd name").ConfigureAwait (false);
-
-			// Read AVD name
-			var name = await reader.ReadLineAsync ().ConfigureAwait (false);
-			if (!string.IsNullOrWhiteSpace (name) &&
-				!string.Equals (name, "OK", StringComparison.OrdinalIgnoreCase))
-				return name.Trim ();
-		} catch (OperationCanceledException) {
-			throw;
-		} catch (Exception ex) {
-			Trace.WriteLine ($"QueryAvdNameViaConsoleAsync failed for '{serial}': {ex.Message}");
 		}
 
 		return null;
