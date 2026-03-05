@@ -104,9 +104,9 @@ public class AdbRunner
 		if (effectiveTimeout <= TimeSpan.Zero)
 			throw new ArgumentOutOfRangeException (nameof (timeout), effectiveTimeout, "Timeout must be a positive value.");
 
-		var args = string.IsNullOrEmpty (serial)
-			? new [] { "wait-for-device" }
-			: new [] { "-s", serial, "wait-for-device" };
+		var args = serial is { Length: > 0 } s
+			? new [] { "-s", s, "wait-for-device" }
+			: new [] { "wait-for-device" };
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, args);
 
