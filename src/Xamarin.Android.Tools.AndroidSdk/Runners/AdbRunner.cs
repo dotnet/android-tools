@@ -54,9 +54,9 @@ public class AdbRunner
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "devices", "-l");
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
-		ProcessUtils.ThrowIfFailed (exitCode, "adb devices -l", stderr.ToString ());
+		ProcessUtils.ThrowIfFailed (exitCode, "adb devices -l", stderr);
 
-		var devices = ParseAdbDevicesOutput (stdout.ToString ());
+		var devices = ParseAdbDevicesOutput (stdout.ToString ().Split ('\n'));
 
 		// For each emulator, try to get the AVD name
 		foreach (var device in devices) {
@@ -173,7 +173,7 @@ public class AdbRunner
 
 		try {
 			var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cts.Token, environmentVariables).ConfigureAwait (false);
-			ProcessUtils.ThrowIfFailed (exitCode, "adb wait-for-device", stderr.ToString (), stdout.ToString ());
+			ProcessUtils.ThrowIfFailed (exitCode, "adb wait-for-device", stderr, stdout);
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 			throw new TimeoutException ($"Timed out waiting for device after {effectiveTimeout.TotalSeconds}s.");
 		}
@@ -187,20 +187,11 @@ public class AdbRunner
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "kill");
 		using var stderr = new StringWriter ();
 		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr.ToString ());
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr);
 	}
 
 	/// <summary>
-	/// Parses the output of 'adb devices -l'.
-	/// Ported from dotnet/android GetAvailableAndroidDevices.ParseAdbDevicesOutput.
-	/// </summary>
-	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (string output)
-	{
-		return ParseAdbDevicesOutput (output.Split ('\n'));
-	}
-
-	/// <summary>
-	/// Parses individual lines from 'adb devices -l' output.
+	/// Parses the output lines from 'adb devices -l'.
 	/// Accepts an <see cref="IEnumerable{T}"/> to avoid allocating a joined string.
 	/// </summary>
 	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (IEnumerable<string> lines)

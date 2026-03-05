@@ -222,6 +222,14 @@ namespace Xamarin.Android.Tools
 			throw new InvalidOperationException (message);
 		}
 
+		/// <summary>
+		/// Overload that accepts <see cref="StringWriter"/> directly so callers don't need to call ToString().
+		/// </summary>
+		internal static void ThrowIfFailed (int exitCode, string command, StringWriter? stderr = null, StringWriter? stdout = null)
+		{
+			ThrowIfFailed (exitCode, command, stderr?.ToString (), stdout?.ToString ());
+		}
+
 		internal static IEnumerable<string> FindExecutablesInPath (string executable)
 		{
 			var path        = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";

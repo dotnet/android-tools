@@ -37,7 +37,7 @@ public class AdbRunnerTests
 			"0A041FDD400327         device product:redfin model:Pixel_5 device:redfin transport_id:2\n" +
 			"emulator-5554          device product:sdk_gphone64_x86_64 model:sdk_gphone64_x86_64 device:emu64xa transport_id:1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (2, devices.Count);
 
@@ -66,7 +66,7 @@ public class AdbRunnerTests
 	public void ParseAdbDevicesOutput_EmptyOutput ()
 	{
 		var output = "List of devices attached\n\n";
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 		Assert.AreEqual (0, devices.Count);
 	}
 
@@ -77,7 +77,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"emulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("emulator-5554", devices [0].Serial);
@@ -94,7 +94,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"0A041FDD400327         device usb:1-1 product:raven model:Pixel_6_Pro device:raven transport_id:2\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("0A041FDD400327", devices [0].Serial);
@@ -113,7 +113,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"emulator-5554          offline product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual (AdbDeviceStatus.Offline, devices [0].Status);
@@ -126,7 +126,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"0A041FDD400327         unauthorized usb:1-1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("0A041FDD400327", devices [0].Serial);
@@ -141,7 +141,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"????????????????       no permissions usb:1-1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("????????????????", devices [0].Serial);
@@ -155,7 +155,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"ABC123                 device\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("ABC123", devices [0].Serial);
@@ -176,7 +176,7 @@ public class AdbRunnerTests
 			"* daemon started successfully\n" +
 			"emulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:1\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count, "Should only return valid device lines");
 		Assert.AreEqual ("emulator-5554", devices [0].Serial);
@@ -192,7 +192,7 @@ public class AdbRunnerTests
 			"0A041FDD400327         device usb:1-1 product:raven model:Pixel_6_Pro\n" +
 			"0B123456789ABC         unauthorized usb:1-2\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (4, devices.Count);
 		Assert.AreEqual (AdbDeviceStatus.Online, devices [0].Status);
@@ -209,7 +209,7 @@ public class AdbRunnerTests
 			"emulator-5554          device transport_id:1\r\n" +
 			"\r\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("emulator-5554", devices [0].Serial);
@@ -224,7 +224,7 @@ public class AdbRunnerTests
 			"emulator-5554\tdevice\n" +
 			"R5CR10YZQPJ\tdevice\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (2, devices.Count);
 		Assert.AreEqual ("emulator-5554", devices [0].Serial);
@@ -238,7 +238,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"192.168.1.100:5555     device product:sdk_gphone64_arm64 model:Remote_Device\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("192.168.1.100:5555", devices [0].Serial);
@@ -256,7 +256,7 @@ public class AdbRunnerTests
 			"emulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:1\n" +
 			"0A041FDD400327         device usb:1-1 product:raven model:Pixel_6_Pro device:raven transport_id:2\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (2, devices.Count, "Should parse devices even with daemon startup messages");
 	}
@@ -269,17 +269,17 @@ public class AdbRunnerTests
 	{
 		// Model has highest priority
 		var output1 = "List of devices attached\ndevice1                device product:product_name model:model_name device:device_name\n";
-		var devices1 = AdbRunner.ParseAdbDevicesOutput (output1);
+		var devices1 = AdbRunner.ParseAdbDevicesOutput (output1.Split ('\n'));
 		Assert.AreEqual ("model name", devices1 [0].Description, "Model should have highest priority");
 
 		// Product has second priority
 		var output2 = "List of devices attached\ndevice2                device product:product_name device:device_name\n";
-		var devices2 = AdbRunner.ParseAdbDevicesOutput (output2);
+		var devices2 = AdbRunner.ParseAdbDevicesOutput (output2.Split ('\n'));
 		Assert.AreEqual ("product name", devices2 [0].Description, "Product should have second priority");
 
 		// Device code name has third priority
 		var output3 = "List of devices attached\ndevice3                device device:device_name\n";
-		var devices3 = AdbRunner.ParseAdbDevicesOutput (output3);
+		var devices3 = AdbRunner.ParseAdbDevicesOutput (output3.Split ('\n'));
 		Assert.AreEqual ("device name", devices3 [0].Description, "Device should have third priority");
 	}
 
@@ -511,7 +511,7 @@ public class AdbRunnerTests
 			"List of devices attached\n" +
 			"emulator-5554          device product:aosp_x86_64\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("aosp_x86_64", devices [0].Product);
@@ -527,7 +527,7 @@ public class AdbRunnerTests
 			"emulator-5556          device product:sdk_gphone64_x86_64 model:sdk_gphone64_x86_64 device:emu64x transport_id:3\n" +
 			"0A041FDD400327         device usb:1-1 product:raven model:Pixel_6_Pro device:raven transport_id:2\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (3, devices.Count);
 		Assert.AreEqual ("emulator-5554", devices [0].Serial);
@@ -579,7 +579,7 @@ public class AdbRunnerTests
 		var output = "List of devices attached\n" +
 			"0A041FDD400327         recovery product:redfin model:Pixel_5 device:redfin transport_id:2\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("0A041FDD400327", devices [0].Serial);
@@ -592,7 +592,7 @@ public class AdbRunnerTests
 		var output = "List of devices attached\n" +
 			"0A041FDD400327         sideload\n";
 
-		var devices = AdbRunner.ParseAdbDevicesOutput (output);
+		var devices = AdbRunner.ParseAdbDevicesOutput (output.Split ('\n'));
 
 		Assert.AreEqual (1, devices.Count);
 		Assert.AreEqual ("0A041FDD400327", devices [0].Serial);
