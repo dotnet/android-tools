@@ -25,6 +25,7 @@ public class RunnerIntegrationTests
 {
 	static string sdkPath;
 	static string jdkPath;
+	static string adbPath;
 	static SdkManager sdkManager;
 	static string bootstrappedSdkPath;
 
@@ -88,6 +89,12 @@ public class RunnerIntegrationTests
 			sdkManager.JavaSdkPath = jdkPath;
 			sdkManager.AndroidSdkPath = sdkPath;
 		}
+
+		// Resolve the full path to adb for AdbRunner
+		var adbExe = OS.IsWindows ? "adb.exe" : "adb";
+		adbPath = Path.Combine (sdkPath, "platform-tools", adbExe);
+		if (!File.Exists (adbPath))
+			Assert.Ignore ($"adb not found at {adbPath}");
 	}
 
 	[OneTimeTearDown]
@@ -112,19 +119,16 @@ public class RunnerIntegrationTests
 	// ── AdbRunner integration ──────────────────────────────────────
 
 	[Test]
-	public void AdbRunner_IsAvailable_WithSdk ()
+	public void AdbRunner_Constructor_AcceptsValidPath ()
 	{
-		var runner = new AdbRunner (() => sdkPath);
-
-		Assert.IsTrue (runner.IsAvailable, "AdbRunner should find adb in SDK");
-		Assert.IsNotNull (runner.AdbPath);
-		Assert.IsTrue (File.Exists (runner.AdbPath), $"adb binary should exist at {runner.AdbPath}");
+		var runner = new AdbRunner (adbPath);
+		Assert.IsNotNull (runner);
 	}
 
 	[Test]
 	public async Task AdbRunner_ListDevicesAsync_ReturnsWithoutError ()
 	{
-		var runner = new AdbRunner (() => sdkPath);
+		var runner = new AdbRunner (adbPath);
 
 		// On CI there are no physical devices or emulators, but the command
 		// should succeed and return an empty (or non-null) list.
@@ -137,9 +141,7 @@ public class RunnerIntegrationTests
 	[Test]
 	public void AdbRunner_WaitForDeviceAsync_TimesOut_WhenNoDevice ()
 	{
-		var runner = new AdbRunner (() => sdkPath);
-
-		// With no devices connected, wait-for-device should time out
+		var runner = new AdbRunner (adbPath);
 		var ex = Assert.ThrowsAsync<TimeoutException> (async () =>
 			await runner.WaitForDeviceAsync (timeout: TimeSpan.FromSeconds (5)));
 
@@ -152,11 +154,10 @@ public class RunnerIntegrationTests
 	[Test]
 	public void AllRunners_ToolDiscovery_ConsistentWithSdk ()
 	{
-		var adb = new AdbRunner (() => sdkPath);
-
-		Assert.IsTrue (adb.IsAvailable, "adb should be available");
+		var runner = new AdbRunner (adbPath);
 
 		// adb path should be under the SDK
-		StringAssert.StartsWith (sdkPath, adb.AdbPath!);
+		Assert.IsTrue (File.Exists (adbPath), $"adb should exist at {adbPath}");
+		StringAssert.StartsWith (sdkPath, adbPath);
 	}
 }

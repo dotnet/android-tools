@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
@@ -486,32 +487,21 @@ public class AdbRunnerTests
 	// Consumer: MAUI DevTools Adb provider (AdbPath, IsAvailable properties)
 
 	[Test]
-	public void AdbPath_FindsInSdk ()
+	public void Constructor_NullPath_ThrowsArgumentException ()
 	{
-		var tempDir = Path.Combine (Path.GetTempPath (), $"adb-test-{Path.GetRandomFileName ()}");
-		var platformTools = Path.Combine (tempDir, "platform-tools");
-		Directory.CreateDirectory (platformTools);
-
-		try {
-			var adbName = OS.IsWindows ? "adb.exe" : "adb";
-			File.WriteAllText (Path.Combine (platformTools, adbName), "");
-
-			var runner = new AdbRunner (() => tempDir);
-
-			Assert.IsNotNull (runner.AdbPath);
-			Assert.IsTrue (runner.IsAvailable);
-			Assert.IsTrue (runner.AdbPath!.Contains ("platform-tools"));
-		} finally {
-			Directory.Delete (tempDir, true);
-		}
+		Assert.Throws<ArgumentException> (() => new AdbRunner (null!));
 	}
 
 	[Test]
-	public void AdbPath_NullSdkPath_StillSearchesPath ()
+	public void Constructor_EmptyPath_ThrowsArgumentException ()
 	{
-		var runner = new AdbRunner (() => null);
-		// Should not throw — falls back to PATH search
-		_ = runner.AdbPath;
+		Assert.Throws<ArgumentException> (() => new AdbRunner (""));
+	}
+
+	[Test]
+	public void Constructor_WhitespacePath_ThrowsArgumentException ()
+	{
+		Assert.Throws<ArgumentException> (() => new AdbRunner ("   "));
 	}
 
 	[Test]
@@ -627,7 +617,7 @@ public class AdbRunnerTests
 	[Test]
 	public void WaitForDeviceAsync_NegativeTimeout_ThrowsArgumentOutOfRange ()
 	{
-		var runner = new AdbRunner (() => "/fake/sdk");
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
 			async () => await runner.WaitForDeviceAsync (timeout: System.TimeSpan.FromSeconds (-1)));
 	}
@@ -635,7 +625,7 @@ public class AdbRunnerTests
 	[Test]
 	public void WaitForDeviceAsync_ZeroTimeout_ThrowsArgumentOutOfRange ()
 	{
-		var runner = new AdbRunner (() => "/fake/sdk");
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
 			async () => await runner.WaitForDeviceAsync (timeout: System.TimeSpan.Zero));
 	}

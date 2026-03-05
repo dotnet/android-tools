@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -20,52 +19,28 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public class AdbRunner
 {
-	readonly Func<string?> getSdkPath;
-	readonly Func<string?>? getJdkPath;
+	readonly string adbPath;
+	readonly IDictionary<string, string>? environmentVariables;
 
 	// Pattern to match device lines: <serial> <state> [key:value ...]
-	// Requires 2+ spaces between serial and state (adb pads serials).
-	// Matches known adb device states. Uses \s+ to handle both space and tab separators.
+	// Uses \s+ to handle both space and tab separators.
 	// Explicit state list prevents false positives from non-device lines.
 	static readonly Regex AdbDevicesRegex = new Regex (
 		@"^([^\s]+)\s+(device|offline|unauthorized|authorizing|no permissions|recovery|sideload|bootloader|connecting|host)\s*(.*)$",
 		RegexOptions.Compiled | RegexOptions.IgnoreCase);
 	static readonly Regex ApiRegex = new Regex (@"\bApi\b", RegexOptions.Compiled);
 
-	public AdbRunner (Func<string?> getSdkPath)
-		: this (getSdkPath, null)
+	/// <summary>
+	/// Creates a new AdbRunner with the full path to the adb executable.
+	/// </summary>
+	/// <param name="adbPath">Full path to the adb executable (e.g., "/path/to/sdk/platform-tools/adb").</param>
+	/// <param name="environmentVariables">Optional environment variables to pass to adb processes.</param>
+	public AdbRunner (string adbPath, IDictionary<string, string>? environmentVariables = null)
 	{
-	}
-
-	public AdbRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
-	{
-		this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
-		this.getJdkPath = getJdkPath;
-	}
-
-	public string? AdbPath {
-		get {
-			var sdkPath = getSdkPath ();
-			if (!string.IsNullOrEmpty (sdkPath)) {
-				var ext = OS.IsWindows ? ".exe" : "";
-				var sdkAdb = Path.Combine (sdkPath, "platform-tools", "adb" + ext);
-				if (File.Exists (sdkAdb))
-					return sdkAdb;
-			}
-			return ProcessUtils.FindExecutablesInPath ("adb").FirstOrDefault ();
-		}
-	}
-
-	public bool IsAvailable => AdbPath is not null;
-
-	string RequireAdb ()
-	{
-		return AdbPath ?? throw new InvalidOperationException ("ADB not found.");
-	}
-
-	IDictionary<string, string> GetEnvironmentVariables ()
-	{
-		return AndroidEnvironmentHelper.GetEnvironmentVariables (getSdkPath (), getJdkPath?.Invoke ());
+		if (string.IsNullOrWhiteSpace (adbPath))
+			throw new ArgumentException ("Path to adb must not be empty.", nameof (adbPath));
+		this.adbPath = adbPath;
+		this.environmentVariables = environmentVariables;
 	}
 
 	/// <summary>
@@ -74,12 +49,10 @@ public class AdbRunner
 	/// </summary>
 	public async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 	{
-		var adb = RequireAdb ();
-		var envVars = GetEnvironmentVariables ();
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var psi = ProcessUtils.CreateProcessStartInfo (adb, "devices", "-l");
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, envVars).ConfigureAwait (false);
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "devices", "-l");
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 		ProcessUtils.ThrowIfFailed (exitCode, "adb devices -l", stderr.ToString ());
 
@@ -88,7 +61,7 @@ public class AdbRunner
 		// For each emulator, try to get the AVD name
 		foreach (var device in devices) {
 			if (device.Type == AdbDeviceType.Emulator) {
-				device.AvdName = await GetEmulatorAvdNameAsync (adb, device.Serial, cancellationToken).ConfigureAwait (false);
+				device.AvdName = await GetEmulatorAvdNameAsync (device.Serial, cancellationToken).ConfigureAwait (false);
 				device.Description = BuildDeviceDescription (device);
 			}
 		}
@@ -101,13 +74,12 @@ public class AdbRunner
 	/// falling back to a direct emulator console TCP query if that fails.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.GetEmulatorAvdName.
 	/// </summary>
-	internal async Task<string?> GetEmulatorAvdNameAsync (string adbPath, string serial, CancellationToken cancellationToken = default)
+	internal async Task<string?> GetEmulatorAvdNameAsync (string serial, CancellationToken cancellationToken = default)
 	{
 		try {
-			var envVars = GetEnvironmentVariables ();
 			using var stdout = new StringWriter ();
 			var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "avd", "name");
-			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, envVars).ConfigureAwait (false);
+			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 			foreach (var line in stdout.ToString ().Split ('\n')) {
 				var trimmed = line.Trim ();
@@ -187,14 +159,11 @@ public class AdbRunner
 		if (effectiveTimeout <= TimeSpan.Zero)
 			throw new ArgumentOutOfRangeException (nameof (timeout), effectiveTimeout, "Timeout must be a positive value.");
 
-		var adb = RequireAdb ();
-		var envVars = GetEnvironmentVariables ();
-
 		var args = string.IsNullOrEmpty (serial)
 			? new [] { "wait-for-device" }
-			: new [] { "-s", serial!, "wait-for-device" };
+			: new [] { "-s", serial, "wait-for-device" };
 
-		var psi = ProcessUtils.CreateProcessStartInfo (adb, args);
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, args);
 
 		using var cts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
 		cts.CancelAfter (effectiveTimeout);
@@ -203,7 +172,7 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 
 		try {
-			var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cts.Token, envVars).ConfigureAwait (false);
+			var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cts.Token, environmentVariables).ConfigureAwait (false);
 			ProcessUtils.ThrowIfFailed (exitCode, "adb wait-for-device", stderr.ToString (), stdout.ToString ());
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 			throw new TimeoutException ($"Timed out waiting for device after {effectiveTimeout.TotalSeconds}s.");
@@ -215,11 +184,9 @@ public class AdbRunner
 		if (string.IsNullOrWhiteSpace (serial))
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
-		var adb = RequireAdb ();
-		var envVars = GetEnvironmentVariables ();
-		var psi = ProcessUtils.CreateProcessStartInfo (adb, "-s", serial, "emu", "kill");
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "kill");
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, envVars).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr.ToString ());
 	}
 
