@@ -46,5 +46,11 @@ namespace Xamarin.Android.Tools
 		/// (AVDs, preferences, etc.). Defaults to $HOME/.android.
 		/// </summary>
 		public const string AndroidUserHome = "ANDROID_USER_HOME";
+
+		/// <summary>
+		/// Overrides the AVD storage directory.
+		/// Defaults to $ANDROID_USER_HOME/avd or $HOME/.android/avd.
+		/// </summary>
+		public const string AndroidAvdHome = "ANDROID_AVD_HOME";
 	}
 }

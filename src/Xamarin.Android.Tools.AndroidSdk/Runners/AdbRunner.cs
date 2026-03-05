@@ -67,8 +67,11 @@ public class AdbRunner
 	{
 		var adb = RequireAdb ();
 		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
 		var psi = CreateAdbProcess (adb, "devices", "-l");
-		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken).ConfigureAwait (false);
+
+		ProcessUtils.ThrowIfFailed (exitCode, "adb devices -l", stderr.ToString ());
 
 		var devices = ParseAdbDevicesOutput (stdout.ToString ());
 
@@ -103,8 +106,8 @@ public class AdbRunner
 			}
 		} catch (OperationCanceledException) {
 			throw;
-		} catch {
-			// Silently ignore failures (emulator may not support this command)
+		} catch (Exception) {
+			// Expected: emulator may not support 'emu avd name' command
 		}
 
 		return null;
@@ -125,7 +128,9 @@ public class AdbRunner
 		cts.CancelAfter (effectiveTimeout);
 
 		try {
-			await ProcessUtils.StartProcess (psi, null, null, cts.Token).ConfigureAwait (false);
+			using var stderr = new StringWriter ();
+			var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cts.Token).ConfigureAwait (false);
+			ProcessUtils.ThrowIfFailed (exitCode, "adb wait-for-device", stderr.ToString ());
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 			throw new TimeoutException ($"Timed out waiting for device after {effectiveTimeout.TotalSeconds}s.");
 		}
@@ -137,8 +142,11 @@ public class AdbRunner
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
 		var adb = RequireAdb ();
+		using var stderr = new StringWriter ();
 		var psi = CreateAdbProcess (adb, "-s", serial, "emu", "kill");
-		await ProcessUtils.StartProcess (psi, null, null, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken).ConfigureAwait (false);
+
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr.ToString ());
 	}
 
 	/// <summary>

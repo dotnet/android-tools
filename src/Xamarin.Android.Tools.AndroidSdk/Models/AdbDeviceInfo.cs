@@ -4,28 +4,6 @@
 namespace Xamarin.Android.Tools;
 
 /// <summary>
-/// Represents the type of an Android device.
-/// </summary>
-public enum AdbDeviceType
-{
-	Device,
-	Emulator
-}
-
-/// <summary>
-/// Represents the status of an Android device.
-/// </summary>
-public enum AdbDeviceStatus
-{
-	Online,
-	Offline,
-	Unauthorized,
-	NoPermissions,
-	NotRunning,
-	Unknown
-}
-
-/// <summary>
 /// Represents an Android device or emulator from 'adb devices -l' output.
 /// Mirrors the metadata produced by dotnet/android's GetAvailableAndroidDevices task.
 /// </summary>

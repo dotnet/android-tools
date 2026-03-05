@@ -54,18 +54,24 @@ public class EmulatorRunner
 		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), getJdkPath?.Invoke ());
 	}
 
-	public Process StartAvd (string avdName, bool coldBoot = false, string? additionalArgs = null)
+	public Process StartAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
 	{
 		var emulatorPath = RequireEmulatorPath ();
 
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
 			args.Add ("-no-snapshot-load");
-		if (!string.IsNullOrEmpty (additionalArgs))
-			args.Add (additionalArgs);
+		if (additionalArgs != null)
+			args.AddRange (additionalArgs);
 
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, args.ToArray ());
 		ConfigureEnvironment (psi);
+
+		// Don't redirect stdout/stderr for this long-running background process.
+		// UseShellExecute=false (set by CreateProcessStartInfo) already prevents
+		// pipe inheritance without needing redirect+drain.
+		psi.RedirectStandardOutput = false;
+		psi.RedirectStandardError = false;
 
 		var process = new Process { StartInfo = psi };
 		process.Start ();

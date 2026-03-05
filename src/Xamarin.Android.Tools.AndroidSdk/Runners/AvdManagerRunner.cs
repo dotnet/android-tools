@@ -172,7 +172,7 @@ public class AvdManagerRunner
 	static string GetAvdRootDirectory ()
 	{
 		// ANDROID_AVD_HOME takes highest priority
-		var avdHome = Environment.GetEnvironmentVariable ("ANDROID_AVD_HOME");
+		var avdHome = Environment.GetEnvironmentVariable (EnvironmentVariableNames.AndroidAvdHome);
 		if (!string.IsNullOrEmpty (avdHome))
 			return avdHome;
 
