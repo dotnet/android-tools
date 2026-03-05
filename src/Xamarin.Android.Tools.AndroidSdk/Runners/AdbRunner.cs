@@ -23,7 +23,7 @@ public class AdbRunner
 	readonly IDictionary<string, string>? environmentVariables;
 
 	// Pattern to match device lines: <serial> <state> [key:value ...]
-	// Uses \s+ to handle both space and tab separators.
+	// Uses \s+ to match one or more whitespace characters (spaces or tabs) between fields.
 	// Explicit state list prevents false positives from non-device lines.
 	static readonly Regex AdbDevicesRegex = new Regex (
 		@"^([^\s]+)\s+(device|offline|unauthorized|authorizing|no permissions|recovery|sideload|bootloader|connecting|host)\s*(.*)$",

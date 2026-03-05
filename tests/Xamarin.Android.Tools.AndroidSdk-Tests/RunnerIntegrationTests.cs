@@ -4,8 +4,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 
 using NUnit.Framework;
@@ -27,7 +25,6 @@ public class RunnerIntegrationTests
 	static string jdkPath;
 	static string adbPath;
 	static SdkManager sdkManager;
-	static string bootstrappedSdkPath;
 
 	static void Log (TraceLevel level, string message)
 	{
@@ -36,19 +33,21 @@ public class RunnerIntegrationTests
 
 	static void RequireCi ()
 	{
-		if (Environment.GetEnvironmentVariable ("TF_BUILD") is null &&
-		    Environment.GetEnvironmentVariable ("CI") is null) {
-			Assert.Ignore ("Integration tests only run on CI (TF_BUILD or CI env var must be set).");
+		var tfBuild = Environment.GetEnvironmentVariable ("TF_BUILD");
+		var ci = Environment.GetEnvironmentVariable ("CI");
+
+		if (!string.Equals (tfBuild, "true", StringComparison.OrdinalIgnoreCase) &&
+		    !string.Equals (ci, "true", StringComparison.OrdinalIgnoreCase)) {
+			Assert.Ignore ("Integration tests only run on CI (TF_BUILD=True or CI=true).");
 		}
 	}
 
 	/// <summary>
-	/// One-time setup: use pre-installed JDK/SDK on CI agents, bootstrap
-	/// cmdline-tools only if needed. Azure Pipelines hosted images have
-	/// JAVA_HOME and ANDROID_HOME already configured.
+	/// One-time setup: use pre-installed JDK/SDK on CI agents.
+	/// Azure Pipelines hosted images have JAVA_HOME and ANDROID_HOME already configured.
 	/// </summary>
 	[OneTimeSetUp]
-	public async Task OneTimeSetUp ()
+	public void OneTimeSetUp ()
 	{
 		RequireCi ();
 
@@ -60,35 +59,17 @@ public class RunnerIntegrationTests
 		}
 		TestContext.Progress.WriteLine ($"Using JDK from JAVA_HOME: {jdkPath}");
 
-		// Use pre-installed Android SDK from ANDROID_HOME (available on CI agents)
+		// Use pre-installed Android SDK from ANDROID_HOME (must be available on CI agents)
 		sdkPath = Environment.GetEnvironmentVariable (EnvironmentVariableNames.AndroidHome);
 		if (string.IsNullOrEmpty (sdkPath) || !Directory.Exists (sdkPath)) {
-			// Fall back to bootstrapping our own SDK
-			TestContext.Progress.WriteLine ("ANDROID_HOME not set — bootstrapping SDK...");
-			try {
-				bootstrappedSdkPath = Path.Combine (Path.GetTempPath (), $"runner-integration-{Guid.NewGuid ():N}", "android-sdk");
-				sdkManager = new SdkManager (Log);
-				sdkManager.JavaSdkPath = jdkPath;
-				using var cts = new CancellationTokenSource (TimeSpan.FromMinutes (10));
-				await sdkManager.BootstrapAsync (bootstrappedSdkPath, cancellationToken: cts.Token);
-				sdkPath = bootstrappedSdkPath;
-				sdkManager.AndroidSdkPath = sdkPath;
+			Assert.Ignore ("ANDROID_HOME not set or invalid — cannot run integration tests. Provision Android SDK and set ANDROID_HOME to enable these tests.");
+			return;
+		}
 
-				// Install platform-tools (provides adb)
-				await sdkManager.InstallAsync (new [] { "platform-tools" }, acceptLicenses: true, cancellationToken: cts.Token);
-				TestContext.Progress.WriteLine ($"SDK bootstrapped to: {sdkPath}");
-			}
-			catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is InvalidOperationException) {
-				Assert.Ignore ($"SDK bootstrap failed: {ex.Message}");
-				return;
-			}
-		}
-		else {
-			TestContext.Progress.WriteLine ($"Using SDK from ANDROID_HOME: {sdkPath}");
-			sdkManager = new SdkManager (Log);
-			sdkManager.JavaSdkPath = jdkPath;
-			sdkManager.AndroidSdkPath = sdkPath;
-		}
+		TestContext.Progress.WriteLine ($"Using SDK from ANDROID_HOME: {sdkPath}");
+		sdkManager = new SdkManager (Log);
+		sdkManager.JavaSdkPath = jdkPath;
+		sdkManager.AndroidSdkPath = sdkPath;
 
 		// Resolve the full path to adb for AdbRunner
 		var adbExe = OS.IsWindows ? "adb.exe" : "adb";
@@ -101,22 +82,7 @@ public class RunnerIntegrationTests
 	public void OneTimeTearDown ()
 	{
 		sdkManager?.Dispose ();
-
-		// Only clean up if we bootstrapped our own SDK
-		if (bootstrappedSdkPath != null) {
-			var basePath = Path.GetDirectoryName (bootstrappedSdkPath);
-			if (basePath != null && Directory.Exists (basePath)) {
-				try {
-					Directory.Delete (basePath, recursive: true);
-				}
-				catch {
-					// Best-effort cleanup on CI
-				}
-			}
-		}
 	}
-
-	// ── AdbRunner integration ──────────────────────────────────────
 
 	[Test]
 	public void AdbRunner_Constructor_AcceptsValidPath ()
@@ -145,11 +111,9 @@ public class RunnerIntegrationTests
 		var ex = Assert.ThrowsAsync<TimeoutException> (async () =>
 			await runner.WaitForDeviceAsync (timeout: TimeSpan.FromSeconds (5)));
 
-		Assert.IsNotNull (ex);
-		TestContext.Progress.WriteLine ($"WaitForDeviceAsync timed out as expected: {ex!.Message}");
+		Assert.That (ex, Is.Not.Null);
+		TestContext.Progress.WriteLine ($"WaitForDeviceAsync timed out as expected: {ex?.Message}");
 	}
-
-	// ── Cross-runner: verify tools exist ───────────────────────────
 
 	[Test]
 	public void AllRunners_ToolDiscovery_ConsistentWithSdk ()
