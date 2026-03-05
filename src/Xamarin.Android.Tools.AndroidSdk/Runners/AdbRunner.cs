@@ -259,16 +259,13 @@ public class AdbRunner
 	/// Maps adb device states to status values.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.MapAdbStateToStatus.
 	/// </summary>
-	public static AdbDeviceStatus MapAdbStateToStatus (string adbState)
-	{
-		switch (adbState.ToLowerInvariant ()) {
-		case "device": return AdbDeviceStatus.Online;
-		case "offline": return AdbDeviceStatus.Offline;
-		case "unauthorized": return AdbDeviceStatus.Unauthorized;
-		case "no permissions": return AdbDeviceStatus.NoPermissions;
-		default: return AdbDeviceStatus.Unknown;
-		}
-	}
+	public static AdbDeviceStatus MapAdbStateToStatus (string adbState) => adbState.ToLowerInvariant () switch {
+		"device" => AdbDeviceStatus.Online,
+		"offline" => AdbDeviceStatus.Offline,
+		"unauthorized" => AdbDeviceStatus.Unauthorized,
+		"no permissions" => AdbDeviceStatus.NoPermissions,
+		_ => AdbDeviceStatus.Unknown,
+	};
 
 	/// <summary>
 	/// Builds a human-friendly description for a device.
@@ -277,21 +274,21 @@ public class AdbRunner
 	/// </summary>
 	public static string BuildDeviceDescription (AdbDeviceInfo device, Action<TraceLevel, string>? logger = null)
 	{
-		if (device.Type == AdbDeviceType.Emulator && !string.IsNullOrEmpty (device.AvdName)) {
-			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {device.AvdName}");
-			var formatted = FormatDisplayName (device.AvdName!);
+		if (device.Type == AdbDeviceType.Emulator && device.AvdName is { Length: > 0 } avdName) {
+			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {avdName}");
+			var formatted = FormatDisplayName (avdName);
 			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, formatted AVD display name: {formatted}");
 			return formatted;
 		}
 
-		if (!string.IsNullOrEmpty (device.Model))
-			return device.Model!.Replace ('_', ' ');
+		if (device.Model is { Length: > 0 } model)
+			return model.Replace ('_', ' ');
 
-		if (!string.IsNullOrEmpty (device.Product))
-			return device.Product!.Replace ('_', ' ');
+		if (device.Product is { Length: > 0 } product)
+			return product.Replace ('_', ' ');
 
-		if (!string.IsNullOrEmpty (device.Device))
-			return device.Device!.Replace ('_', ' ');
+		if (device.Device is { Length: > 0 } deviceName)
+			return deviceName.Replace ('_', ' ');
 
 		return device.Serial;
 	}
@@ -326,8 +323,8 @@ public class AdbRunner
 		// Build a set of AVD names that are already running
 		var runningAvdNames = new HashSet<string> (StringComparer.OrdinalIgnoreCase);
 		foreach (var device in adbDevices) {
-			if (!string.IsNullOrEmpty (device.AvdName))
-				runningAvdNames.Add (device.AvdName!);
+			if (device.AvdName is { Length: > 0 } avdName)
+				runningAvdNames.Add (avdName);
 		}
 
 		logger?.Invoke (TraceLevel.Verbose, $"Running emulators AVD names: {string.Join (", ", runningAvdNames)}");

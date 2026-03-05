@@ -21,12 +21,12 @@ internal static class AndroidEnvironmentHelper
 	{
 		var env = new Dictionary<string, string> ();
 
-		if (!string.IsNullOrEmpty (sdkPath))
-			env [EnvironmentVariableNames.AndroidHome] = sdkPath!;
+		if (sdkPath is { Length: > 0 })
+			env [EnvironmentVariableNames.AndroidHome] = sdkPath;
 
-		if (!string.IsNullOrEmpty (jdkPath)) {
-			env [EnvironmentVariableNames.JavaHome] = jdkPath!;
-			var jdkBin = Path.Combine (jdkPath!, "bin");
+		if (jdkPath is { Length: > 0 }) {
+			env [EnvironmentVariableNames.JavaHome] = jdkPath;
+			var jdkBin = Path.Combine (jdkPath, "bin");
 			var currentPath = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";
 			env [EnvironmentVariableNames.Path] = string.IsNullOrEmpty (currentPath) ? jdkBin : jdkBin + Path.PathSeparator + currentPath;
 		}
