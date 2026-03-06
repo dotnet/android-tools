@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Xamarin.Android.Tools.Tests;
@@ -558,7 +559,7 @@ public class AdbRunnerTests
 			new List<string> { "pixel_7_api_35", "pixel_9_api_36" });
 
 		Assert.AreEqual (2, result.Count, "Should not add duplicates when all emulators are running");
-		Assert.IsTrue (result.TrueForAll (d => d.Status == AdbDeviceStatus.Online));
+		Assert.IsTrue (result.All (d => d.Status == AdbDeviceStatus.Online));
 	}
 
 	[Test]

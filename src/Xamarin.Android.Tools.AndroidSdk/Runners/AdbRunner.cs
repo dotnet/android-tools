@@ -70,8 +70,8 @@ public class AdbRunner
 	}
 
 	/// <summary>
-	/// Queries the emulator for its AVD name using 'adb -s &lt;serial&gt; emu avd name',
-	/// falling back to a direct emulator console TCP query if that fails.
+	/// Queries the emulator for its AVD name using 'adb -s &lt;serial&gt; emu avd name'.
+	/// Returns null if the query fails or produces no output.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.GetEmulatorAvdName.
 	/// </summary>
 	internal async Task<string?> GetEmulatorAvdNameAsync (string serial, CancellationToken cancellationToken = default)
@@ -139,7 +139,7 @@ public class AdbRunner
 	/// Parses the output lines from 'adb devices -l'.
 	/// Accepts an <see cref="IEnumerable{T}"/> to avoid allocating a joined string.
 	/// </summary>
-	public static List<AdbDeviceInfo> ParseAdbDevicesOutput (IEnumerable<string> lines)
+	public static IReadOnlyList<AdbDeviceInfo> ParseAdbDevicesOutput (IEnumerable<string> lines)
 	{
 		var devices = new List<AdbDeviceInfo> ();
 
@@ -261,7 +261,7 @@ public class AdbRunner
 	/// Running emulators are not duplicated. Non-running emulators are added with Status=NotRunning.
 	/// Ported from dotnet/android GetAvailableAndroidDevices.MergeDevicesAndEmulators.
 	/// </summary>
-	public static List<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators, Action<TraceLevel, string>? logger = null)
+	public static IReadOnlyList<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators, Action<TraceLevel, string>? logger = null)
 	{
 		var result = new List<AdbDeviceInfo> (adbDevices);
 
