@@ -89,7 +89,7 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void AvdManagerPath_FindsVersionedDir ()
+	public void FindCmdlineTool_FindsVersionedDir ()
 	{
 		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
 		var binDir = Path.Combine (tempDir, "cmdline-tools", "12.0", "bin");
@@ -99,16 +99,16 @@ public class AvdManagerRunnerTests
 			var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
 			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
 
-			var runner = new AvdManagerRunner (() => tempDir, null);
-			Assert.IsNotNull (runner.AvdManagerPath);
-			Assert.IsTrue (runner.AvdManagerPath!.Contains ("12.0"));
+			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
+			Assert.IsNotNull (path);
+			Assert.IsTrue (path!.Contains ("12.0"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
 	}
 
 	[Test]
-	public void AvdManagerPath_PrefersHigherVersion ()
+	public void FindCmdlineTool_PrefersHigherVersion ()
 	{
 		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
 		var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
@@ -121,16 +121,16 @@ public class AvdManagerRunnerTests
 		File.WriteAllText (Path.Combine (binDir12, avdMgrName), "");
 
 		try {
-			var runner = new AvdManagerRunner (() => tempDir, null);
-			Assert.IsNotNull (runner.AvdManagerPath);
-			Assert.IsTrue (runner.AvdManagerPath!.Contains ("12.0"));
+			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
+			Assert.IsNotNull (path);
+			Assert.IsTrue (path!.Contains ("12.0"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
 	}
 
 	[Test]
-	public void AvdManagerPath_FallsBackToLatest ()
+	public void FindCmdlineTool_FallsBackToLatest ()
 	{
 		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
 		var binDir = Path.Combine (tempDir, "cmdline-tools", "latest", "bin");
@@ -140,60 +140,65 @@ public class AvdManagerRunnerTests
 			var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
 			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
 
-			var runner = new AvdManagerRunner (() => tempDir, null);
-			Assert.IsNotNull (runner.AvdManagerPath);
-			Assert.IsTrue (runner.AvdManagerPath!.Contains ("latest"));
+			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
+			Assert.IsNotNull (path);
+			Assert.IsTrue (path!.Contains ("latest"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
 	}
 
 	[Test]
-	public void AvdManagerPath_NullSdk_ReturnsNull ()
+	public void FindCmdlineTool_MissingSdk_ReturnsNull ()
 	{
-		var runner = new AvdManagerRunner (() => null, null);
-		Assert.IsNull (runner.AvdManagerPath);
+		var path = ProcessUtils.FindCmdlineTool ("/nonexistent/path", "avdmanager", OS.IsWindows ? ".bat" : "");
+		Assert.IsNull (path);
 	}
 
 	[Test]
-	public void AvdManagerPath_MissingSdk_ReturnsNull ()
+	public void Constructor_NullPath_ThrowsArgumentException ()
 	{
-		var runner = new AvdManagerRunner (() => "/nonexistent/path", null);
-		Assert.IsNull (runner.AvdManagerPath);
+		Assert.Throws<ArgumentException> (() => new AvdManagerRunner (null!));
+	}
+
+	[Test]
+	public void Constructor_EmptyPath_ThrowsArgumentException ()
+	{
+		Assert.Throws<ArgumentException> (() => new AvdManagerRunner (""));
 	}
 
 	[Test]
 	public void CreateAvdAsync_NullName_ThrowsArgumentNullException ()
 	{
-		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentNullException> (() => runner.CreateAvdAsync (null!, "system-image"));
 	}
 
 	[Test]
 	public void CreateAvdAsync_EmptyName_ThrowsArgumentException ()
 	{
-		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("", "system-image"));
 	}
 
 	[Test]
 	public void CreateAvdAsync_EmptySystemImage_ThrowsArgumentException ()
 	{
-		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", ""));
 	}
 
 	[Test]
 	public void DeleteAvdAsync_NullName_ThrowsArgumentNullException ()
 	{
-		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentNullException> (() => runner.DeleteAvdAsync (null!));
 	}
 
 	[Test]
 	public void DeleteAvdAsync_EmptyName_ThrowsArgumentException ()
 	{
-		var runner = new AvdManagerRunner (() => "/fake/sdk", null);
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentException> (() => runner.DeleteAvdAsync (""));
 	}
 }

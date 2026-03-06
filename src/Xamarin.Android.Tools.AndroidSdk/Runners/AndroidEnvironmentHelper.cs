@@ -37,4 +37,15 @@ internal static class AndroidEnvironmentHelper
 
 		return env;
 	}
+
+	/// <summary>
+	/// Applies Android SDK environment variables directly to a <see cref="System.Diagnostics.ProcessStartInfo"/>.
+	/// Used by runners that manage their own process lifecycle (e.g., EmulatorRunner).
+	/// </summary>
+	internal static void ConfigureEnvironment (System.Diagnostics.ProcessStartInfo psi, string? sdkPath, string? jdkPath)
+	{
+		var env = GetEnvironmentVariables (sdkPath, jdkPath);
+		foreach (var kvp in env)
+			psi.Environment [kvp.Key] = kvp.Value;
+	}
 }

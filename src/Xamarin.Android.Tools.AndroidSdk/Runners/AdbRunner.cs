@@ -47,7 +47,7 @@ public class AdbRunner
 	/// Lists connected devices using 'adb devices -l'.
 	/// For emulators, queries the AVD name using 'adb -s &lt;serial&gt; emu avd name'.
 	/// </summary>
-	public async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
+	public virtual async Task<IReadOnlyList<AdbDeviceInfo>> ListDevicesAsync (CancellationToken cancellationToken = default)
 	{
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
@@ -133,6 +133,40 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr);
+	}
+
+	/// <summary>
+	/// Runs 'adb -s &lt;serial&gt; shell getprop &lt;property&gt;' and returns the first non-empty line.
+	/// </summary>
+	public virtual async Task<string?> GetShellPropertyAsync (string serial, string property, CancellationToken cancellationToken = default)
+	{
+		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", "getprop", property);
+		await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		return FirstNonEmptyLine (stdout.ToString ());
+	}
+
+	/// <summary>
+	/// Runs 'adb -s &lt;serial&gt; shell &lt;command&gt;' and returns the first non-empty line.
+	/// </summary>
+	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
+	{
+		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", command);
+		await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		return FirstNonEmptyLine (stdout.ToString ());
+	}
+
+	internal static string? FirstNonEmptyLine (string output)
+	{
+		foreach (var line in output.Split (new [] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)) {
+			var trimmed = line.Trim ();
+			if (trimmed.Length > 0)
+				return trimmed;
+		}
+		return null;
 	}
 
 	/// <summary>

@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -16,74 +15,30 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public class AvdManagerRunner
 {
-	readonly Func<string?> getSdkPath;
-	readonly Func<string?>? getJdkPath;
+	readonly string avdManagerPath;
+	readonly IDictionary<string, string>? environmentVariables;
 
-	public AvdManagerRunner (Func<string?> getSdkPath)
-		: this (getSdkPath, null)
+	/// <summary>
+	/// Creates a new AvdManagerRunner with the full path to the avdmanager executable.
+	/// </summary>
+	/// <param name="avdManagerPath">Full path to avdmanager (e.g., "/path/to/sdk/cmdline-tools/latest/bin/avdmanager").</param>
+	/// <param name="environmentVariables">Optional environment variables to pass to avdmanager processes.</param>
+	public AvdManagerRunner (string avdManagerPath, IDictionary<string, string>? environmentVariables = null)
 	{
-	}
-
-	public AvdManagerRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
-	{
-		this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
-		this.getJdkPath = getJdkPath;
-	}
-
-	public string? AvdManagerPath {
-		get {
-			var sdkPath = getSdkPath ();
-			if (string.IsNullOrEmpty (sdkPath))
-				return null;
-
-			var ext = OS.IsWindows ? ".bat" : "";
-			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
-
-			if (Directory.Exists (cmdlineToolsDir)) {
-				// Versioned dirs sorted descending, then "latest" as fallback
-				var searchDirs = Directory.GetDirectories (cmdlineToolsDir)
-					.Select (Path.GetFileName)
-					.Where (n => n != "latest" && !string.IsNullOrEmpty (n))
-					.OrderByDescending (n => Version.TryParse (n, out var v) ? v : new Version (0, 0))
-					.Append ("latest");
-
-				foreach (var dir in searchDirs) {
-					var toolPath = Path.Combine (cmdlineToolsDir, dir!, "bin", "avdmanager" + ext);
-					if (File.Exists (toolPath))
-						return toolPath;
-				}
-			}
-
-			// Legacy fallback: tools/bin/avdmanager
-			var legacyPath = Path.Combine (sdkPath, "tools", "bin", "avdmanager" + ext);
-			return File.Exists (legacyPath) ? legacyPath : null;
-		}
-	}
-
-	public bool IsAvailable => !string.IsNullOrEmpty (AvdManagerPath);
-
-	string RequireAvdManagerPath ()
-	{
-		return AvdManagerPath ?? throw new InvalidOperationException ("AVD Manager not found.");
-	}
-
-	void ConfigureEnvironment (ProcessStartInfo psi)
-	{
-		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), getJdkPath?.Invoke ());
+		if (string.IsNullOrWhiteSpace (avdManagerPath))
+			throw new ArgumentException ("Path to avdmanager must not be empty.", nameof (avdManagerPath));
+		this.avdManagerPath = avdManagerPath;
+		this.environmentVariables = environmentVariables;
 	}
 
 	public async Task<IReadOnlyList<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
 	{
-		var avdManagerPath = RequireAvdManagerPath ();
-
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "list", "avd");
-		ConfigureEnvironment (psi);
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
-		if (exitCode != 0)
-			throw new InvalidOperationException ($"avdmanager list avd failed (exit code {exitCode}): {stderr.ToString ().Trim ()}");
+		ProcessUtils.ThrowIfFailed (exitCode, "avdmanager list avd", stderr);
 
 		return ParseAvdListOutput (stdout.ToString ());
 	}
@@ -91,16 +46,8 @@ public class AvdManagerRunner
 	public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 		bool force = false, CancellationToken cancellationToken = default)
 	{
-		if (name is null)
-			throw new ArgumentNullException (nameof (name));
-		if (name.Length == 0)
-			throw new ArgumentException ("Value cannot be an empty string.", nameof (name));
-		if (systemImage is null)
-			throw new ArgumentNullException (nameof (systemImage));
-		if (systemImage.Length == 0)
-			throw new ArgumentException ("Value cannot be an empty string.", nameof (systemImage));
-
-		var avdManagerPath = RequireAvdManagerPath ();
+		ProcessUtils.ValidateNotNullOrEmpty (name, nameof (name));
+		ProcessUtils.ValidateNotNullOrEmpty (systemImage, nameof (systemImage));
 
 		// Check if AVD already exists — return it instead of failing
 		if (!force) {
@@ -116,7 +63,7 @@ public class AvdManagerRunner
 			force = true;
 
 		var args = new List<string> { "create", "avd", "-n", name, "-k", systemImage };
-		if (!string.IsNullOrEmpty (deviceProfile))
+		if (deviceProfile is { Length: > 0 })
 			args.AddRange (new [] { "-d", deviceProfile });
 		if (force)
 			args.Add ("--force");
@@ -125,10 +72,9 @@ public class AvdManagerRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, args.ToArray ());
 		psi.RedirectStandardInput = true;
-		ConfigureEnvironment (psi);
 
 		// avdmanager prompts "Do you wish to create a custom hardware profile?" — answer "no"
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken,
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables,
 			onStarted: p => {
 				try {
 					p.StandardInput.WriteLine ("no");
@@ -138,12 +84,7 @@ public class AvdManagerRunner
 				}
 			}).ConfigureAwait (false);
 
-		if (exitCode != 0) {
-			var errorOutput = stderr.ToString ().Trim ();
-			if (string.IsNullOrEmpty (errorOutput))
-				errorOutput = stdout.ToString ().Trim ();
-			throw new InvalidOperationException ($"Failed to create AVD '{name}': {errorOutput}");
-		}
+		ProcessUtils.ThrowIfFailed (exitCode, $"avdmanager create avd -n {name}", stderr, stdout);
 
 		// Re-list to get the actual path from avdmanager (respects ANDROID_USER_HOME/ANDROID_AVD_HOME)
 		var avds = await ListAvdsAsync (cancellationToken).ConfigureAwait (false);
@@ -161,20 +102,13 @@ public class AvdManagerRunner
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
 	{
-		if (name is null)
-			throw new ArgumentNullException (nameof (name));
-		if (name.Length == 0)
-			throw new ArgumentException ("Value cannot be an empty string.", nameof (name));
-
-		var avdManagerPath = RequireAvdManagerPath ();
+		ProcessUtils.ValidateNotNullOrEmpty (name, nameof (name));
 
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "delete", "avd", "--name", name);
-		ConfigureEnvironment (psi);
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
-		if (exitCode != 0)
-			throw new InvalidOperationException ($"Failed to delete AVD '{name}': {stderr.ToString ().Trim ()}");
+		ProcessUtils.ThrowIfFailed (exitCode, $"avdmanager delete avd --name {name}", stderr);
 	}
 
 	internal static List<AvdInfo> ParseAvdListOutput (string output)
@@ -208,13 +142,13 @@ public class AvdManagerRunner
 	static string GetAvdRootDirectory ()
 	{
 		// ANDROID_AVD_HOME takes highest priority
-		var avdHome = Environment.GetEnvironmentVariable ("ANDROID_AVD_HOME");
-		if (!string.IsNullOrEmpty (avdHome))
+		var avdHome = Environment.GetEnvironmentVariable (EnvironmentVariableNames.AndroidAvdHome);
+		if (avdHome is { Length: > 0 })
 			return avdHome;
 
 		// ANDROID_USER_HOME/avd is the next option
 		var userHome = Environment.GetEnvironmentVariable (EnvironmentVariableNames.AndroidUserHome);
-		if (!string.IsNullOrEmpty (userHome))
+		if (userHome is { Length: > 0 })
 			return Path.Combine (userHome, "avd");
 
 		// Default: ~/.android/avd

@@ -300,7 +300,7 @@ public class EmulatorRunnerTests
 		public Action? OnListDevices { get; set; }
 
 		public MockAdbRunner (List<AdbDeviceInfo> devices)
-			: base (() => null)
+			: base ("/fake/adb")
 		{
 			this.devices = devices;
 		}
