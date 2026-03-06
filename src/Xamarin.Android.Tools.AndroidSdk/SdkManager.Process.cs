@@ -29,7 +29,7 @@ public partial class SdkManager
 			};
 		psi.RedirectStandardInput = acceptLicenses;
 
-		var envVars = GetEnvironmentVariables ();
+		var envVars = AndroidEnvironmentHelper.GetEnvironmentVariables (AndroidSdkPath, JavaSdkPath);
 
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
@@ -90,10 +90,4 @@ public partial class SdkManager
 		await DownloadUtils.DownloadFileAsync (httpClient, url, destinationPath, expectedSize, downloadProgress, cancellationToken).ConfigureAwait (false);
 		logger (TraceLevel.Info, $"Download complete: {destinationPath}");
 	}
-
-	Dictionary<string, string> GetEnvironmentVariables ()
-	{
-		return AndroidEnvironmentHelper.GetEnvironmentVariables (AndroidSdkPath, JavaSdkPath);
-	}
-
 }
