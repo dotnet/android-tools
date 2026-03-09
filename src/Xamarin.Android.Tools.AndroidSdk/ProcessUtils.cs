@@ -230,6 +230,58 @@ namespace Xamarin.Android.Tools
 			ThrowIfFailed (exitCode, command, stderr?.ToString (), stdout?.ToString ());
 		}
 
+		/// <summary>
+		/// Validates that a string parameter is not null or empty.
+		/// </summary>
+		internal static void ValidateNotNullOrEmpty (string? value, string paramName)
+		{
+			if (value is null)
+				throw new ArgumentNullException (paramName);
+			if (value.Length == 0)
+				throw new ArgumentException ("Value cannot be an empty string.", paramName);
+		}
+
+		/// <summary>
+		/// Searches for a cmdline-tools binary in the SDK, preferring higher versioned directories.
+		/// Falls back to "latest" and then legacy "tools/bin".
+		/// </summary>
+		/// <param name="sdkPath">Root path to the Android SDK.</param>
+		/// <param name="toolName">Tool binary name without extension (e.g., "avdmanager").</param>
+		/// <param name="extension">File extension including the dot (e.g., ".bat") or empty string for no extension.</param>
+		internal static string? FindCmdlineTool (string sdkPath, string toolName, string extension)
+		{
+			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
+
+			if (Directory.Exists (cmdlineToolsDir)) {
+				var subdirs = new List<(string name, Version version)> ();
+				foreach (var dir in Directory.GetDirectories (cmdlineToolsDir)) {
+					var name = Path.GetFileName (dir);
+					if (string.IsNullOrEmpty (name) || name == "latest")
+						continue;
+					// Strip pre-release suffixes (e.g., "5.0-rc1" → "5.0") before parsing
+					var versionStr = name;
+					var dashIndex = name.IndexOf ('-');
+					if (dashIndex >= 0)
+						versionStr = name.Substring (0, dashIndex);
+					Version.TryParse (versionStr, out var v);
+					subdirs.Add ((name, v ?? new Version (0, 0)));
+				}
+				subdirs.Sort ((a, b) => b.version.CompareTo (a.version));
+
+				foreach (var (name, _) in subdirs) {
+					var toolPath = Path.Combine (cmdlineToolsDir, name, "bin", toolName + extension);
+					if (File.Exists (toolPath))
+						return toolPath;
+				}
+				var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
+				if (File.Exists (latestPath))
+					return latestPath;
+			}
+
+			var legacyPath = Path.Combine (sdkPath, "tools", "bin", toolName + extension);
+			return File.Exists (legacyPath) ? legacyPath : null;
+		}
+
 		internal static IEnumerable<string> FindExecutablesInPath (string executable)
 		{
 			var path        = Environment.GetEnvironmentVariable (EnvironmentVariableNames.Path) ?? "";
