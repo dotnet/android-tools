@@ -214,10 +214,10 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void CreateAvdAsync_NullName_ThrowsArgumentNullException ()
+	public void CreateAvdAsync_NullName_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentNullException> (() => runner.CreateAvdAsync (null!, "system-image"));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync (null!, "system-image"));
 	}
 
 	[Test]
@@ -228,10 +228,17 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void CreateAvdAsync_NullSystemImage_ThrowsArgumentNullException ()
+	public void CreateAvdAsync_WhitespaceName_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentNullException> (() => runner.CreateAvdAsync ("test-avd", null!));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("   ", "system-image"));
+	}
+
+	[Test]
+	public void CreateAvdAsync_NullSystemImage_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", null!));
 	}
 
 	[Test]
@@ -242,10 +249,17 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void DeleteAvdAsync_NullName_ThrowsArgumentNullException ()
+	public void CreateAvdAsync_WhitespaceSystemImage_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentNullException> (() => runner.DeleteAvdAsync (null!));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", " \t "));
+	}
+
+	[Test]
+	public void DeleteAvdAsync_NullName_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
+		Assert.ThrowsAsync<ArgumentException> (() => runner.DeleteAvdAsync (null!));
 	}
 
 	[Test]
@@ -253,5 +267,35 @@ public class AvdManagerRunnerTests
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
 		Assert.ThrowsAsync<ArgumentException> (() => runner.DeleteAvdAsync (""));
+	}
+
+	[Test]
+	public void DeleteAvdAsync_WhitespaceName_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
+		Assert.ThrowsAsync<ArgumentException> (() => runner.DeleteAvdAsync (" \t "));
+	}
+
+	[Test]
+	public void FindCmdlineTool_PrefersStableOverPreRelease ()
+	{
+		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
+		var avdMgrName = OS.IsWindows ? "avdmanager.bat" : "avdmanager";
+
+		// Both "13.0" (stable) and "13.0-rc1" (prerelease) exist — stable should win
+		var binDirStable = Path.Combine (tempDir, "cmdline-tools", "13.0", "bin");
+		var binDirRc = Path.Combine (tempDir, "cmdline-tools", "13.0-rc1", "bin");
+		Directory.CreateDirectory (binDirStable);
+		Directory.CreateDirectory (binDirRc);
+		File.WriteAllText (Path.Combine (binDirStable, avdMgrName), "");
+		File.WriteAllText (Path.Combine (binDirRc, avdMgrName), "");
+
+		try {
+			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
+			Assert.IsNotNull (path);
+			Assert.IsTrue (path!.Contains (Path.Combine ("13.0", "bin")), $"Expected stable 13.0, got: {path}");
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
 	}
 }

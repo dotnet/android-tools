@@ -253,29 +253,48 @@ namespace Xamarin.Android.Tools
 			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
 
 			if (Directory.Exists (cmdlineToolsDir)) {
-				var subdirs = new List<(string name, Version version)> ();
-				foreach (var dir in Directory.GetDirectories (cmdlineToolsDir)) {
-					var name = Path.GetFileName (dir);
-					if (string.IsNullOrEmpty (name) || name == "latest")
-						continue;
-					// Strip pre-release suffixes (e.g., "5.0-rc1" → "5.0") before parsing
-					var versionStr = name;
-					var dashIndex = name.IndexOf ('-');
-					if (dashIndex >= 0)
-						versionStr = name.Substring (0, dashIndex);
-					Version.TryParse (versionStr, out var v);
-					subdirs.Add ((name, v ?? new Version (0, 0)));
-				}
-				subdirs.Sort ((a, b) => b.version.CompareTo (a.version));
+				try {
+					var subdirs = new List<(string name, Version version, bool isPreRelease)> ();
+					foreach (var dir in Directory.GetDirectories (cmdlineToolsDir)) {
+						var name = Path.GetFileName (dir);
+						if (string.IsNullOrEmpty (name) || name == "latest")
+							continue;
+						// Strip pre-release suffixes (e.g., "5.0-rc1" → "5.0") before parsing
+						var versionStr = name;
+						var dashIndex = name.IndexOf ('-');
+						var isPreRelease = dashIndex >= 0;
+						if (isPreRelease)
+							versionStr = name.Substring (0, dashIndex);
+						Version.TryParse (versionStr, out var v);
+						subdirs.Add ((name, v ?? new Version (0, 0), isPreRelease));
+					}
+					// Sort by version descending, then prefer stable (non-prerelease) over prerelease
+					subdirs.Sort ((a, b) => {
+						var cmp = b.version.CompareTo (a.version);
+						if (cmp != 0) return cmp;
+						if (a.isPreRelease != b.isPreRelease)
+							return a.isPreRelease ? 1 : -1; // stable first
+						return string.Compare (a.name, b.name, StringComparison.Ordinal);
+					});
 
-				foreach (var (name, _) in subdirs) {
-					var toolPath = Path.Combine (cmdlineToolsDir, name, "bin", toolName + extension);
-					if (File.Exists (toolPath))
-						return toolPath;
+					foreach (var (name, _, _) in subdirs) {
+						var toolPath = Path.Combine (cmdlineToolsDir, name, "bin", toolName + extension);
+						if (File.Exists (toolPath))
+							return toolPath;
+					}
+				} catch (IOException) {
+					// Filesystem enumeration failure — fall through to legacy path
+				} catch (UnauthorizedAccessException) {
+					// Permission denied — fall through to legacy path
 				}
-				var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
-				if (File.Exists (latestPath))
-					return latestPath;
+
+				try {
+					var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
+					if (File.Exists (latestPath))
+						return latestPath;
+				} catch (IOException) {
+				} catch (UnauthorizedAccessException) {
+				}
 			}
 
 			var legacyPath = Path.Combine (sdkPath, "tools", "bin", toolName + extension);

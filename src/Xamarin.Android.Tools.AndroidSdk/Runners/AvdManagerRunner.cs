@@ -46,8 +46,10 @@ public class AvdManagerRunner
 	public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 		bool force = false, CancellationToken cancellationToken = default)
 	{
-		ProcessUtils.ValidateNotNullOrEmpty (name, nameof (name));
-		ProcessUtils.ValidateNotNullOrEmpty (systemImage, nameof (systemImage));
+		if (string.IsNullOrWhiteSpace (name))
+			throw new ArgumentException ("Value cannot be null or whitespace.", nameof (name));
+		if (string.IsNullOrWhiteSpace (systemImage))
+			throw new ArgumentException ("Value cannot be null or whitespace.", nameof (systemImage));
 
 		// Check if AVD already exists — return it instead of failing
 		if (!force) {
@@ -102,7 +104,8 @@ public class AvdManagerRunner
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
 	{
-		ProcessUtils.ValidateNotNullOrEmpty (name, nameof (name));
+		if (string.IsNullOrWhiteSpace (name))
+			throw new ArgumentException ("Value cannot be null or whitespace.", nameof (name));
 
 		// Idempotent: if the AVD doesn't exist, treat as success
 		var avds = await ListAvdsAsync (cancellationToken).ConfigureAwait (false);
