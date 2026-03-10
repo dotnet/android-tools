@@ -95,11 +95,7 @@ public class AvdManagerRunner
 			return created;
 
 		// Fallback if re-list didn't find it
-		return new AvdInfo {
-			Name = name,
-			DeviceProfile = deviceProfile,
-			Path = Path.Combine (GetAvdRootDirectory (), $"{name}.avd"),
-		};
+		return new AvdInfo (name, deviceProfile, Path.Combine (GetAvdRootDirectory (), $"{name}.avd"));
 	}
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
@@ -128,7 +124,7 @@ public class AvdManagerRunner
 			var trimmed = line.Trim ();
 			if (trimmed.StartsWith ("Name:", StringComparison.OrdinalIgnoreCase)) {
 				if (currentName is not null)
-					avds.Add (new AvdInfo { Name = currentName, DeviceProfile = currentDevice, Path = currentPath });
+					avds.Add (new AvdInfo (currentName, currentDevice, currentPath));
 				currentName = trimmed.Substring (5).Trim ();
 				currentDevice = currentPath = null;
 			}
@@ -139,7 +135,7 @@ public class AvdManagerRunner
 		}
 
 		if (currentName is not null)
-			avds.Add (new AvdInfo { Name = currentName, DeviceProfile = currentDevice, Path = currentPath });
+			avds.Add (new AvdInfo (currentName, currentDevice, currentPath));
 
 		return avds;
 	}

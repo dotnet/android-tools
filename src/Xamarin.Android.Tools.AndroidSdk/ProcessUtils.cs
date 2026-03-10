@@ -231,17 +231,6 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>
-		/// Validates that a string parameter is not null or empty.
-		/// </summary>
-		internal static void ValidateNotNullOrEmpty (string? value, string paramName)
-		{
-			if (value is null)
-				throw new ArgumentNullException (paramName);
-			if (value.Length == 0)
-				throw new ArgumentException ("Value cannot be an empty string.", paramName);
-		}
-
-		/// <summary>
 		/// Searches for a cmdline-tools binary in the SDK, preferring higher versioned directories.
 		/// Falls back to "latest" and then legacy "tools/bin".
 		/// </summary>
@@ -288,13 +277,9 @@ namespace Xamarin.Android.Tools
 					// Permission denied — fall through to legacy path
 				}
 
-				try {
-					var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
-					if (File.Exists (latestPath))
-						return latestPath;
-				} catch (IOException) {
-				} catch (UnauthorizedAccessException) {
-				}
+				var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
+				if (File.Exists (latestPath))
+					return latestPath;
 			}
 
 			var legacyPath = Path.Combine (sdkPath, "tools", "bin", toolName + extension);

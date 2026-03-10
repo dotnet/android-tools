@@ -3,9 +3,4 @@
 
 namespace Xamarin.Android.Tools;
 
-public class AvdInfo
-{
-	public string Name { get; set; } = string.Empty;
-	public string? DeviceProfile { get; set; }
-	public string? Path { get; set; }
-}
+public record AvdInfo (string Name, string? DeviceProfile = null, string? Path = null);
