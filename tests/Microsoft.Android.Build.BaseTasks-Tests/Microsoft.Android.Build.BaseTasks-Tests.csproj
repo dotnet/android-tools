@@ -4,8 +4,6 @@
     <TargetFramework>$(DotNetTargetFramework)</TargetFramework>
     <RootNamespace>Microsoft.Android.Build.BaseTasks.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
-    <OutputPath>$(TestOutputFullPath)</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <RollForward>Major</RollForward>
   </PropertyGroup>
 

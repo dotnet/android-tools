@@ -1,0 +1,91 @@
+# .NET Android Tools — Official Build Pipeline
+# Runs on dnceng internal for official builds, signing, and NuGet publishing.
+
+variables:
+- template: /eng/common/templates-official/variables/pool-providers.yml@self
+- name: Codeql.Language
+  value: csharp
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - main
+    - release/*
+    - feature/*
+
+pr: none
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    sdl:
+      tsa:
+        enabled: true
+      policheck:
+        enabled: true
+      binskim:
+        enabled: true
+      codeql:
+        ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
+          enabledOnNonDefaultBranches: true
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+    stages:
+    - stage: Build
+      jobs:
+      - template: /eng/common/templates-official/jobs/jobs.yml@self
+        parameters:
+          enableTelemetry: true
+          enablePublishBuildArtifacts: true
+          enableMicrobuild: true
+          enablePublishUsingPipelines: true
+          enablePublishBuildAssets: true
+          helixRepo: dotnet/android-tools
+          jobs:
+          - job: Windows
+            displayName: Build, Test & Pack (Windows)
+            timeoutInMinutes: 60
+            steps:
+            - script: eng\common\CIBuild.cmd -configuration $(_BuildConfig) -prepareMachine $(_InternalBuildArgs)
+              name: Build
+              displayName: Build & Test
+
+            - task: DotNetCoreCLI@2
+              displayName: Pack NuGet
+              inputs:
+                command: custom
+                projects: src/Xamarin.Android.Tools.AndroidSdk/Xamarin.Android.Tools.AndroidSdk.csproj
+                custom: pack
+                arguments: -c $(_BuildConfig) --no-build -o $(Build.ArtifactStagingDirectory)/packages
+              condition: succeeded()
+
+            templateContext:
+              outputs:
+              - output: nuget
+                displayName: Push NuGet packages
+                packageParentPath: $(Build.ArtifactStagingDirectory)
+                packagesToPush: $(Build.ArtifactStagingDirectory)/packages/*.nupkg
+                nuGetFeedType: external
+                publishFeedCredentials: dotnet-android-tools-nuget-org
+                condition: and(succeeded(), eq(variables['_BuildConfig'], 'Release'))
+
+              - output: pipelineArtifact
+                artifact: BuildArtifacts
+                path: $(Build.ArtifactStagingDirectory)
+                displayName: Publish Build Artifacts
+                condition: succeeded()
+
+    - template: /eng/common/templates-official/post-build/post-build.yml@self
+      parameters:
+        enableSymbolValidation: true
+        enableSourceLinkValidation: true
