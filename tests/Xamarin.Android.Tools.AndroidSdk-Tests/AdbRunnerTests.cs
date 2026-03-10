@@ -320,7 +320,16 @@ public class AdbRunnerTests
 	[Test]
 	public void FormatDisplayName_HandlesComplexNames ()
 	{
+		// Lowercase input: "xl" gets title-cased to "Xl"
 		Assert.AreEqual ("Pixel 9 Pro Xl API 36", AdbRunner.FormatDisplayName ("pixel_9_pro_xl_api_36"));
+	}
+
+	[Test]
+	public void FormatDisplayName_PreservesUppercaseSegments ()
+	{
+		// Fully-uppercase segments like "XL", "SE", "FE" are preserved
+		Assert.AreEqual ("Pixel 9 Pro XL", AdbRunner.FormatDisplayName ("Pixel_9_Pro_XL"));
+		Assert.AreEqual ("Galaxy S24 FE", AdbRunner.FormatDisplayName ("Galaxy_S24_FE"));
 	}
 
 	[Test]
