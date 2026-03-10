@@ -36,9 +36,19 @@ public class EmulatorRunner
 			if (string.IsNullOrEmpty (sdkPath))
 				return null;
 
-			var ext = OS.IsWindows ? ".exe" : "";
-			var path = Path.Combine (sdkPath, "emulator", "emulator" + ext);
+			var emulatorDir = Path.Combine (sdkPath, "emulator");
 
+			if (OS.IsWindows) {
+				// Prefer .exe, fall back to .bat/.cmd (older SDK versions)
+				foreach (var ext in new [] { ".exe", ".bat", ".cmd" }) {
+					var candidate = Path.Combine (emulatorDir, "emulator" + ext);
+					if (File.Exists (candidate))
+						return candidate;
+				}
+				return null;
+			}
+
+			var path = Path.Combine (emulatorDir, "emulator");
 			return File.Exists (path) ? path : null;
 		}
 	}

@@ -273,11 +273,11 @@ public class EmulatorRunnerTests
 		var emulatorDir = Path.Combine (tempDir, "emulator");
 		Directory.CreateDirectory (emulatorDir);
 
-		var emuName = OS.IsWindows ? "emulator.exe" : "emulator";
+		var emuName = OS.IsWindows ? "emulator.bat" : "emulator";
 		var emuPath = Path.Combine (emulatorDir, emuName);
-		// Create a fake emulator script that just exits
+		// Create a fake emulator script that just idles
 		if (OS.IsWindows) {
-			File.WriteAllText (emuPath, "@echo off");
+			File.WriteAllText (emuPath, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n");
 		} else {
 			File.WriteAllText (emuPath, "#!/bin/sh\nsleep 60\n");
 			// Make executable
