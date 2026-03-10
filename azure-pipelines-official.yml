@@ -1,6 +1,12 @@
 # .NET Android Tools — Official Build Pipeline
 # Runs on dnceng internal for official builds, signing, and NuGet publishing.
 
+parameters:
+- name: publishToNuGet
+  displayName: Publish NuGet packages to nuget.org
+  type: boolean
+  default: false
+
 variables:
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
 - name: Codeql.Language
@@ -71,19 +77,39 @@ extends:
 
             templateContext:
               outputs:
-              - output: nuget
-                displayName: Push NuGet packages
-                packageParentPath: $(Build.ArtifactStagingDirectory)
-                packagesToPush: $(Build.ArtifactStagingDirectory)/packages/*.nupkg
-                nuGetFeedType: external
-                publishFeedCredentials: dotnet-android-tools-nuget-org
-                condition: and(succeeded(), eq(variables['_BuildConfig'], 'Release'))
-
               - output: pipelineArtifact
                 artifact: BuildArtifacts
                 path: $(Build.ArtifactStagingDirectory)
                 displayName: Publish Build Artifacts
                 condition: succeeded()
+
+    - ${{ if parameters.publishToNuGet }}:
+      - stage: Publish
+        displayName: Publish to NuGet.org
+        dependsOn: Build
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        jobs:
+        - deployment: PublishNuGet
+          displayName: Push NuGet packages
+          environment: nuget-org
+          pool:
+            name: $(DncEngInternalBuildPool)
+            image: 1es-windows-2022
+            os: windows
+          strategy:
+            runOnce:
+              deploy:
+                steps:
+                - download: current
+                  artifact: BuildArtifacts
+
+                - task: NuGetCommand@2
+                  displayName: Push to NuGet.org
+                  inputs:
+                    command: push
+                    packagesToPush: $(Pipeline.Workspace)/BuildArtifacts/packages/*.nupkg
+                    nuGetFeedType: external
+                    publishFeedCredentials: dotnet-android-tools-nuget-org
 
     - template: /eng/common/templates-official/post-build/post-build.yml@self
       parameters:
