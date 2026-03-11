@@ -242,6 +242,11 @@ namespace Xamarin.Android.Tools
 			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
 
 			if (Directory.Exists (cmdlineToolsDir)) {
+				// Prefer "latest" symlink first — it's the SDK's own recommended default
+				var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
+				if (File.Exists (latestPath))
+					return latestPath;
+
 				try {
 					var subdirs = new List<(string name, Version version, bool isPreRelease)> ();
 					foreach (var dir in Directory.GetDirectories (cmdlineToolsDir)) {
@@ -272,18 +277,13 @@ namespace Xamarin.Android.Tools
 							return toolPath;
 					}
 				} catch (IOException) {
-					// Filesystem enumeration failure — fall through to legacy path
+					// Filesystem enumeration failure — fall through
 				} catch (UnauthorizedAccessException) {
-					// Permission denied — fall through to legacy path
+					// Permission denied — fall through
 				}
-
-				var latestPath = Path.Combine (cmdlineToolsDir, "latest", "bin", toolName + extension);
-				if (File.Exists (latestPath))
-					return latestPath;
 			}
 
-			var legacyPath = Path.Combine (sdkPath, "tools", "bin", toolName + extension);
-			return File.Exists (legacyPath) ? legacyPath : null;
+			return null;
 		}
 
 		internal static IEnumerable<string> FindExecutablesInPath (string executable)

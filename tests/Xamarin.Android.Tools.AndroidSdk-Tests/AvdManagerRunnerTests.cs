@@ -109,8 +109,7 @@ public class AvdManagerRunnerTests
 			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
 
 			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
-			Assert.IsNotNull (path);
-			Assert.IsTrue (path!.Contains ("12.0"));
+			Assert.That (path, Does.Contain ("12.0"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
@@ -131,8 +130,7 @@ public class AvdManagerRunnerTests
 
 		try {
 			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
-			Assert.IsNotNull (path);
-			Assert.IsTrue (path!.Contains ("12.0"));
+			Assert.That (path, Does.Contain ("12.0"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
@@ -154,15 +152,14 @@ public class AvdManagerRunnerTests
 
 		try {
 			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
-			Assert.IsNotNull (path);
-			Assert.IsTrue (path!.Contains ("13.0-rc1"), $"Expected 13.0-rc1, got: {path}");
+			Assert.That (path, Does.Contain ("13.0-rc1"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
 	}
 
 	[Test]
-	public void FindCmdlineTool_FallsBackToLatest ()
+	public void FindCmdlineTool_PrefersLatest ()
 	{
 		var tempDir = Path.Combine (Path.GetTempPath (), $"avd-test-{Path.GetRandomFileName ()}");
 		var binDir = Path.Combine (tempDir, "cmdline-tools", "latest", "bin");
@@ -173,8 +170,7 @@ public class AvdManagerRunnerTests
 			File.WriteAllText (Path.Combine (binDir, avdMgrName), "");
 
 			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
-			Assert.IsNotNull (path);
-			Assert.IsTrue (path!.Contains ("latest"));
+			Assert.That (path, Does.Contain ("latest"));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}
@@ -292,8 +288,7 @@ public class AvdManagerRunnerTests
 
 		try {
 			var path = ProcessUtils.FindCmdlineTool (tempDir, "avdmanager", OS.IsWindows ? ".bat" : "");
-			Assert.IsNotNull (path);
-			Assert.IsTrue (path!.Contains (Path.Combine ("13.0", "bin")), $"Expected stable 13.0, got: {path}");
+			Assert.That (path, Does.Contain (Path.Combine ("13.0", "bin")));
 		} finally {
 			Directory.Delete (tempDir, true);
 		}

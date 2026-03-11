@@ -94,8 +94,7 @@ public class AvdManagerRunner
 		if (created is not null)
 			return created;
 
-		// Fallback if re-list didn't find it
-		return new AvdInfo (name, deviceProfile, Path.Combine (GetAvdRootDirectory (), $"{name}.avd"));
+		throw new InvalidOperationException ($"avdmanager reported success but AVD '{name}' was not found in the list.");
 	}
 
 	public async Task DeleteAvdAsync (string name, CancellationToken cancellationToken = default)
