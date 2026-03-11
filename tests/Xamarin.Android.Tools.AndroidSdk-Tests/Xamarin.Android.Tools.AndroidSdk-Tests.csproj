@@ -3,13 +3,13 @@
   <PropertyGroup>
     <TargetFramework>$(DotNetTargetFramework)</TargetFramework>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
     <RollForward>Major</RollForward>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
   </ItemGroup>
 
   <ItemGroup>
