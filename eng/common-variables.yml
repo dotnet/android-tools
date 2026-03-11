@@ -8,7 +8,7 @@ variables:
 
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - name: _SignType
-      value: real
+      value: test
     - name: _BuildConfig
       value: Release
     - group: Publish-Build-Assets
