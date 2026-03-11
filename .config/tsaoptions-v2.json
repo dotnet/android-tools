@@ -1,0 +1,7 @@
+{
+  "instanceUrl": "https://devdiv.visualstudio.com/",
+  "projectName": "DevDiv",
+  "areaPath": "DevDiv\\.NET MAUI\\Android",
+  "iterationPath": "DevDiv",
+  "allTools": true
+}
