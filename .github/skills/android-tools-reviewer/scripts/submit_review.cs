@@ -112,7 +112,7 @@ psi.ArgumentList.Add ("POST");
 psi.ArgumentList.Add ("--input");
 psi.ArgumentList.Add (jsonPath);
 
-var process = Process.Start (psi);
+using var process = Process.Start (psi);
 if (process is null) {
 	Console.Error.WriteLine ("❌ Failed to start 'gh' — is it installed and on PATH?");
 	return 1;

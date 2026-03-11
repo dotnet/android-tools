@@ -202,3 +202,5 @@ These are patterns that AI-generated code consistently gets wrong:
 | **Test assertions must be specific** | `Assert.IsNotNull(result)` or `Assert.IsTrue(success)` don't tell you what went wrong. Prefer `Assert.AreEqual(expected, actual)` or NUnit constraints (`Assert.That` with `Does.Contain`, `Is.EqualTo`, etc.) for richer failure messages. |
 | **Deterministic test data** | Tests should not depend on system locale, timezone, or current date. Use explicit `CultureInfo.InvariantCulture` and hardcoded dates when testing formatting. |
 | **Test edge cases** | Empty collections, null inputs, boundary values, and very large inputs should all be considered. If the PR only tests the happy path, suggest edge cases. |
+
+**Source:** dotnet/android`#10918`
