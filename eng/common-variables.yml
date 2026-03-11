@@ -1,0 +1,20 @@
+variables:
+  - name: _TeamName
+    value: DotNetCore
+  - name: _InternalBuildArgs
+    value: ''
+  - name: _BuildConfig
+    value: Debug
+
+  - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    - name: _SignType
+      value: real
+    - name: _BuildConfig
+      value: Release
+    - group: Publish-Build-Assets
+    - group: SDL_Settings
+    - name: _InternalBuildArgs
+      value: /p:DotNetSignType=$(_SignType)
+        /p:TeamName=$(_TeamName)
+        /p:DotNetPublishUsingPipelines=true
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)

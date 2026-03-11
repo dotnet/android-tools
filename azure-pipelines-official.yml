@@ -8,6 +8,7 @@ parameters:
   default: false
 
 variables:
+- template: /eng/common-variables.yml@self
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
 - name: Codeql.Language
   value: csharp
