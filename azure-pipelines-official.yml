@@ -35,7 +35,7 @@ extends:
   parameters:
     sdl:
       tsa:
-        enabled: true
+        enabled: false
       policheck:
         enabled: true
       binskim:
@@ -54,7 +54,7 @@ extends:
         parameters:
           enableTelemetry: true
           enablePublishBuildArtifacts: true
-          enableMicrobuild: true
+          enableMicrobuild: false
           enablePublishUsingPipelines: true
           enablePublishBuildAssets: true
           helixRepo: dotnet/android-tools
