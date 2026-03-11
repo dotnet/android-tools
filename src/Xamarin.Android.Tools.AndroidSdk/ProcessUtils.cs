@@ -231,8 +231,8 @@ namespace Xamarin.Android.Tools
 		}
 
 		/// <summary>
-		/// Searches for a cmdline-tools binary in the SDK, preferring higher versioned directories.
-		/// Falls back to "latest" and then legacy "tools/bin".
+		/// Searches for a cmdline-tools binary in the SDK.
+		/// Prefers the "latest" symlink, then the highest versioned directory.
 		/// </summary>
 		/// <param name="sdkPath">Root path to the Android SDK.</param>
 		/// <param name="toolName">Tool binary name without extension (e.g., "avdmanager").</param>
@@ -276,10 +276,10 @@ namespace Xamarin.Android.Tools
 						if (File.Exists (toolPath))
 							return toolPath;
 					}
-				} catch (IOException) {
-					// Filesystem enumeration failure — fall through
-				} catch (UnauthorizedAccessException) {
-					// Permission denied — fall through
+				} catch (IOException ex) {
+					System.Diagnostics.Debug.WriteLine ($"FindCmdlineTool: IO error enumerating {cmdlineToolsDir}: {ex.Message}");
+				} catch (UnauthorizedAccessException ex) {
+					System.Diagnostics.Debug.WriteLine ($"FindCmdlineTool: Permission denied on {cmdlineToolsDir}: {ex.Message}");
 				}
 			}
 
