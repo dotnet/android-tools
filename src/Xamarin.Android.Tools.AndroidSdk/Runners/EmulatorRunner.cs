@@ -16,67 +16,34 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public class EmulatorRunner
 {
-	readonly Func<string?> getSdkPath;
-	readonly Func<string?>? getJdkPath;
+	readonly string emulatorPath;
+	readonly IDictionary<string, string>? environmentVariables;
+	readonly Action<TraceLevel, string>? logger;
 
-	public EmulatorRunner (Func<string?> getSdkPath)
-		: this (getSdkPath, null)
+	/// <summary>
+	/// Creates a new EmulatorRunner with the full path to the emulator executable.
+	/// </summary>
+	/// <param name="emulatorPath">Full path to the emulator executable (e.g., "/path/to/sdk/emulator/emulator").</param>
+	/// <param name="environmentVariables">Optional environment variables to pass to emulator processes.</param>
+	/// <param name="logger">Optional logger callback for diagnostic messages.</param>
+	public EmulatorRunner (string emulatorPath, IDictionary<string, string>? environmentVariables = null, Action<TraceLevel, string>? logger = null)
 	{
+		if (string.IsNullOrWhiteSpace (emulatorPath))
+			throw new ArgumentException ("Path to emulator must not be empty.", nameof (emulatorPath));
+		this.emulatorPath = emulatorPath;
+		this.environmentVariables = environmentVariables;
+		this.logger = logger;
 	}
 
-	public EmulatorRunner (Func<string?> getSdkPath, Func<string?>? getJdkPath)
+	public Process StartAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
 	{
-		this.getSdkPath = getSdkPath ?? throw new ArgumentNullException (nameof (getSdkPath));
-		this.getJdkPath = getJdkPath;
-	}
-
-	public string? EmulatorPath {
-		get {
-			var sdkPath = getSdkPath ();
-			if (string.IsNullOrEmpty (sdkPath))
-				return null;
-
-			var emulatorDir = Path.Combine (sdkPath, "emulator");
-
-			if (OS.IsWindows) {
-				// Prefer .exe, fall back to .bat/.cmd (older SDK versions)
-				foreach (var ext in new [] { ".exe", ".bat", ".cmd" }) {
-					var candidate = Path.Combine (emulatorDir, "emulator" + ext);
-					if (File.Exists (candidate))
-						return candidate;
-				}
-				return null;
-			}
-
-			var path = Path.Combine (emulatorDir, "emulator");
-			return File.Exists (path) ? path : null;
-		}
-	}
-
-	public bool IsAvailable => EmulatorPath is not null;
-
-	string RequireEmulatorPath ()
-	{
-		return EmulatorPath ?? throw new InvalidOperationException ("Android Emulator not found.");
-	}
-
-	void ConfigureEnvironment (ProcessStartInfo psi)
-	{
-		AndroidEnvironmentHelper.ConfigureEnvironment (psi, getSdkPath (), getJdkPath?.Invoke ());
-	}
-
-	public Process StartAvd (string avdName, bool coldBoot = false, string? additionalArgs = null)
-	{
-		var emulatorPath = RequireEmulatorPath ();
-
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
 			args.Add ("-no-snapshot-load");
-		if (!string.IsNullOrEmpty (additionalArgs))
-			args.Add (additionalArgs);
+		if (additionalArgs != null)
+			args.AddRange (additionalArgs);
 
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, args.ToArray ());
-		ConfigureEnvironment (psi);
 
 		// Redirect stdout/stderr so the emulator process doesn't inherit the
 		// caller's pipes. Without this, parent processes (e.g. VS Code spawn)
@@ -84,21 +51,37 @@ public class EmulatorRunner
 		psi.RedirectStandardOutput = true;
 		psi.RedirectStandardError = true;
 
+		logger?.Invoke (TraceLevel.Verbose, $"Starting emulator AVD '{avdName}'");
+
 		var process = new Process { StartInfo = psi };
+
+		// Forward emulator output to the logger so crash messages (e.g. "HAX is
+		// not working", "image not found") are captured instead of silently lost.
+		process.OutputDataReceived += (_, e) => {
+			if (e.Data != null)
+				logger?.Invoke (TraceLevel.Verbose, $"[emulator] {e.Data}");
+		};
+		process.ErrorDataReceived += (_, e) => {
+			if (e.Data != null)
+				logger?.Invoke (TraceLevel.Warning, $"[emulator] {e.Data}");
+		};
+
 		process.Start ();
+
+		// Drain redirected streams asynchronously to prevent pipe buffer deadlocks
+		process.BeginOutputReadLine ();
+		process.BeginErrorReadLine ();
 
 		return process;
 	}
 
 	public async Task<IReadOnlyList<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
 	{
-		var emulatorPath = RequireEmulatorPath ();
-
 		using var stdout = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, "-list-avds");
-		ConfigureEnvironment (psi);
 
-		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken).ConfigureAwait (false);
+		logger?.Invoke (TraceLevel.Verbose, "Running: emulator -list-avds");
+		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 		return ParseListAvdsOutput (stdout.ToString ());
 	}
@@ -122,7 +105,6 @@ public class EmulatorRunner
 		string deviceOrAvdName,
 		AdbRunner adbRunner,
 		EmulatorBootOptions? options = null,
-		Action<TraceLevel, string>? logger = null,
 		CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (deviceOrAvdName))
@@ -130,7 +112,12 @@ public class EmulatorRunner
 		if (adbRunner == null)
 			throw new ArgumentNullException (nameof (adbRunner));
 
-		options = options ?? new EmulatorBootOptions ();
+		options ??= new EmulatorBootOptions ();
+		if (options.BootTimeout <= TimeSpan.Zero)
+			throw new ArgumentOutOfRangeException (nameof (options), "BootTimeout must be positive.");
+		if (options.PollInterval <= TimeSpan.Zero)
+			throw new ArgumentOutOfRangeException (nameof (options), "PollInterval must be positive.");
+
 		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
 
 		Log (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
@@ -150,17 +137,10 @@ public class EmulatorRunner
 		var runningSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 		if (runningSerial != null) {
 			Log (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
-			return await WaitForFullBootAsync (adbRunner, runningSerial, options, logger, cancellationToken).ConfigureAwait (false);
+			return await WaitForFullBootAsync (adbRunner, runningSerial, options, cancellationToken).ConfigureAwait (false);
 		}
 
 		// Phase 3: Launch the emulator
-		if (EmulatorPath == null) {
-			return new EmulatorBootResult {
-				Success = false,
-				ErrorMessage = "Android Emulator not found. Ensure the Android SDK is installed and the emulator is available.",
-			};
-		}
-
 		Log (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
 		Process emulatorProcess;
 		try {
@@ -172,7 +152,9 @@ public class EmulatorRunner
 			};
 		}
 
-		// Poll for the new emulator serial to appear
+		// Poll for the new emulator serial to appear.
+		// If the boot times out or is cancelled, terminate the process we spawned
+		// to avoid leaving orphan emulator processes.
 		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
 		timeoutCts.CancelAfter (options.BootTimeout);
 
@@ -187,12 +169,16 @@ public class EmulatorRunner
 			}
 
 			Log (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
-			return await WaitForFullBootAsync (adbRunner, newSerial, options, logger, timeoutCts.Token).ConfigureAwait (false);
+			return await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+			TryKillProcess (emulatorProcess);
 			return new EmulatorBootResult {
 				Success = false,
 				ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
 			};
+		} catch {
+			TryKillProcess (emulatorProcess);
+			throw;
 		}
 	}
 
@@ -208,11 +194,22 @@ public class EmulatorRunner
 		return null;
 	}
 
+	static void TryKillProcess (Process process)
+	{
+		try {
+			if (!process.HasExited)
+				process.Kill ();
+		} catch {
+			// Best-effort: process may have already exited between check and kill
+		} finally {
+			process.Dispose ();
+		}
+	}
+
 	async Task<EmulatorBootResult> WaitForFullBootAsync (
 		AdbRunner adbRunner,
 		string serial,
 		EmulatorBootOptions options,
-		Action<TraceLevel, string>? logger,
 		CancellationToken cancellationToken)
 	{
 		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);

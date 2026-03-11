@@ -59,39 +59,21 @@ public class EmulatorRunnerTests
 	}
 
 	[Test]
-	public void EmulatorPath_FindsInSdk ()
+	public void Constructor_ThrowsOnNullPath ()
 	{
-		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-test-{Path.GetRandomFileName ()}");
-		var emulatorDir = Path.Combine (tempDir, "emulator");
-		Directory.CreateDirectory (emulatorDir);
-
-		try {
-			var emuName = OS.IsWindows ? "emulator.exe" : "emulator";
-			File.WriteAllText (Path.Combine (emulatorDir, emuName), "");
-
-			var runner = new EmulatorRunner (() => tempDir);
-
-			Assert.IsNotNull (runner.EmulatorPath);
-			Assert.IsTrue (runner.IsAvailable);
-		} finally {
-			Directory.Delete (tempDir, true);
-		}
+		Assert.Throws<ArgumentException> (() => new EmulatorRunner (null!));
 	}
 
 	[Test]
-	public void EmulatorPath_MissingSdk_ReturnsNull ()
+	public void Constructor_ThrowsOnEmptyPath ()
 	{
-		var runner = new EmulatorRunner (() => "/nonexistent/path");
-		Assert.IsNull (runner.EmulatorPath);
-		Assert.IsFalse (runner.IsAvailable);
+		Assert.Throws<ArgumentException> (() => new EmulatorRunner (""));
 	}
 
 	[Test]
-	public void EmulatorPath_NullSdk_ReturnsNull ()
+	public void Constructor_ThrowsOnWhitespacePath ()
 	{
-		var runner = new EmulatorRunner (() => null);
-		Assert.IsNull (runner.EmulatorPath);
-		Assert.IsFalse (runner.IsAvailable);
+		Assert.Throws<ArgumentException> (() => new EmulatorRunner ("   "));
 	}
 
 	// --- BootAndWaitAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
@@ -109,7 +91,7 @@ public class EmulatorRunnerTests
 		};
 
 		var mockAdb = new MockAdbRunner (devices);
-		var runner = new EmulatorRunner (() => null);
+		var runner = new EmulatorRunner ("/fake/emulator");
 
 		var result = await runner.BootAndWaitAsync ("emulator-5554", mockAdb);
 
@@ -134,7 +116,7 @@ public class EmulatorRunnerTests
 		mockAdb.ShellProperties ["sys.boot_completed"] = "1";
 		mockAdb.ShellCommands ["pm path android"] = "package:/system/framework/framework-res.apk";
 
-		var runner = new EmulatorRunner (() => null);
+		var runner = new EmulatorRunner ("/fake/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
 
 		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
@@ -164,9 +146,10 @@ public class EmulatorRunnerTests
 			}
 		};
 
-		var tempDir = CreateFakeEmulatorSdk ();
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		Process? emulatorProcess = null;
 		try {
-			var runner = new EmulatorRunner (() => tempDir);
+			var runner = new EmulatorRunner (emuPath);
 			var options = new EmulatorBootOptions {
 				BootTimeout = TimeSpan.FromSeconds (10),
 				PollInterval = TimeSpan.FromMilliseconds (50),
@@ -178,6 +161,12 @@ public class EmulatorRunnerTests
 			Assert.AreEqual ("emulator-5554", result.Serial);
 			Assert.IsTrue (pollCount >= 2);
 		} finally {
+			// Kill any emulator process spawned by the test
+			try {
+				emulatorProcess = FindEmulatorProcess (emuPath);
+				emulatorProcess?.Kill ();
+				emulatorProcess?.WaitForExit (1000);
+			} catch { }
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -188,15 +177,14 @@ public class EmulatorRunnerTests
 		var devices = new List<AdbDeviceInfo> ();
 		var mockAdb = new MockAdbRunner (devices);
 
-		// No emulator path → EmulatorPath returns null → error
-		var runner = new EmulatorRunner (() => null);
+		// Nonexistent path → StartAvd throws → error result
+		var runner = new EmulatorRunner ("/nonexistent/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (2) };
 
 		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsFalse (result.Success);
-		Assert.IsNotNull (result.ErrorMessage);
-		Assert.IsTrue (result.ErrorMessage!.Contains ("not found"), $"Unexpected error: {result.ErrorMessage}");
+		Assert.That (result.ErrorMessage, Does.Contain ("Failed to launch"));
 	}
 
 	[Test]
@@ -215,7 +203,7 @@ public class EmulatorRunnerTests
 		// boot_completed never returns "1"
 		mockAdb.ShellProperties ["sys.boot_completed"] = "0";
 
-		var runner = new EmulatorRunner (() => null);
+		var runner = new EmulatorRunner ("/fake/emulator");
 		var options = new EmulatorBootOptions {
 			BootTimeout = TimeSpan.FromMilliseconds (200),
 			PollInterval = TimeSpan.FromMilliseconds (50),
@@ -224,8 +212,29 @@ public class EmulatorRunnerTests
 		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsFalse (result.Success);
-		Assert.IsNotNull (result.ErrorMessage);
-		Assert.IsTrue (result.ErrorMessage!.Contains ("Timed out"), $"Unexpected error: {result.ErrorMessage}");
+		Assert.That (result.ErrorMessage, Does.Contain ("Timed out"));
+	}
+
+	[Test]
+	public void BootAndWaitAsync_InvalidBootTimeout_Throws ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		var mockAdb = new MockAdbRunner (new List<AdbDeviceInfo> ());
+		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.Zero };
+
+		Assert.ThrowsAsync<ArgumentOutOfRangeException> (() =>
+			runner.BootAndWaitAsync ("test", mockAdb, options));
+	}
+
+	[Test]
+	public void BootAndWaitAsync_InvalidPollInterval_Throws ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		var mockAdb = new MockAdbRunner (new List<AdbDeviceInfo> ());
+		var options = new EmulatorBootOptions { PollInterval = TimeSpan.FromMilliseconds (-1) };
+
+		Assert.ThrowsAsync<ArgumentOutOfRangeException> (() =>
+			runner.BootAndWaitAsync ("test", mockAdb, options));
 	}
 
 	[Test]
@@ -256,7 +265,7 @@ public class EmulatorRunnerTests
 		mockAdb.ShellProperties ["sys.boot_completed"] = "1";
 		mockAdb.ShellCommands ["pm path android"] = "package:/system/framework/framework-res.apk";
 
-		var runner = new EmulatorRunner (() => null);
+		var runner = new EmulatorRunner ("/fake/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
 
 		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
@@ -267,7 +276,7 @@ public class EmulatorRunnerTests
 
 	// --- Helpers ---
 
-	static string CreateFakeEmulatorSdk ()
+	static (string tempDir, string emulatorPath) CreateFakeEmulatorSdk ()
 	{
 		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-boot-test-{Path.GetRandomFileName ()}");
 		var emulatorDir = Path.Combine (tempDir, "emulator");
@@ -275,17 +284,31 @@ public class EmulatorRunnerTests
 
 		var emuName = OS.IsWindows ? "emulator.bat" : "emulator";
 		var emuPath = Path.Combine (emulatorDir, emuName);
-		// Create a fake emulator script that just idles
 		if (OS.IsWindows) {
 			File.WriteAllText (emuPath, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n");
 		} else {
 			File.WriteAllText (emuPath, "#!/bin/sh\nsleep 60\n");
-			// Make executable
-			var psi = new ProcessStartInfo ("chmod", $"+x \"{emuPath}\"") { UseShellExecute = false };
-			Process.Start (psi)?.WaitForExit ();
+			var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
+			using var chmod = new Process { StartInfo = psi };
+			chmod.Start ();
+			chmod.WaitForExit ();
 		}
 
-		return tempDir;
+		return (tempDir, emuPath);
+	}
+
+	static Process? FindEmulatorProcess (string emuPath)
+	{
+		// Best-effort: find the process by matching the command line
+		try {
+			foreach (var p in Process.GetProcessesByName ("emulator")) {
+				return p;
+			}
+			foreach (var p in Process.GetProcessesByName ("sleep")) {
+				return p;
+			}
+		} catch { }
+		return null;
 	}
 
 	/// <summary>

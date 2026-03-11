@@ -2,17 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 
-namespace Xamarin.Android.Tools
+namespace Xamarin.Android.Tools;
+
+/// <summary>
+/// Options for booting an Android emulator.
+/// </summary>
+public class EmulatorBootOptions
 {
-	/// <summary>
-	/// Options for booting an Android emulator.
-	/// </summary>
-	public class EmulatorBootOptions
-	{
-		public TimeSpan BootTimeout { get; set; } = TimeSpan.FromSeconds (300);
-		public string? AdditionalArgs { get; set; }
-		public bool ColdBoot { get; set; }
-		public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds (500);
-	}
+	public TimeSpan BootTimeout { get; set; } = TimeSpan.FromSeconds (300);
+	public IEnumerable<string>? AdditionalArgs { get; set; }
+	public bool ColdBoot { get; set; }
+	public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds (500);
 }
