@@ -4,8 +4,7 @@
     <TargetFramework>$(DotNetTargetFramework)</TargetFramework>
     <RootNamespace>Microsoft.Android.Build.BaseTasks.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
-    <OutputPath>$(TestOutputFullPath)</OutputPath>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <IsTestProject>true</IsTestProject>
     <RollForward>Major</RollForward>
   </PropertyGroup>
 
@@ -14,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
   </ItemGroup>
 
   <ItemGroup>

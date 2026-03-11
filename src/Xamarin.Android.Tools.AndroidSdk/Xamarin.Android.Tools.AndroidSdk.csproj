@@ -3,24 +3,18 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <TargetFrameworks Condition=" '$(AndroidToolsDisableMultiTargeting)' != 'true' ">$(TargetFrameworks);$(DotNetTargetFramework)</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <DefineConstants>INTERNAL_NULLABLE_ATTRIBUTES</DefineConstants>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\..\product.snk</AssemblyOriginatorKeyFile>
     <Title>Xamarin.Android.Tools</Title>
     <Authors>Xamarin</Authors>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/dotnet/android-tools</PackageProjectUrl>
     <Description>Xamarin tools for interacting with the Android SDK.</Description>
     <Copyright>Copyright © Xamarin 2011-2016</Copyright>
     <PackageTags>Xamarin;Xamarin.Android</PackageTags>
     <AssemblyName>$(VendorPrefix)Xamarin.Android.Tools.AndroidSdk$(VendorSuffix)</AssemblyName>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputPath>$(ToolOutputFullPath)</OutputPath>
-  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' != 'netstandard2.0' ">
     <IsTrimmable>true</IsTrimmable>

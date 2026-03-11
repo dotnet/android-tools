@@ -4,8 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>$(DotNetTargetFramework)</TargetFramework>
     <RootNamespace>Xamarin.Android.Tools</RootNamespace>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <OutputPath>$(ToolOutputFullPath)</OutputPath>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
