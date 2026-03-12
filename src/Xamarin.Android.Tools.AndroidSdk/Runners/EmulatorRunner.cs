@@ -45,6 +45,11 @@ public class EmulatorRunner
 
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, args.ToArray ());
 
+		if (environmentVariables != null) {
+			foreach (var kvp in environmentVariables)
+				psi.EnvironmentVariables[kvp.Key] = kvp.Value;
+		}
+
 		// Redirect stdout/stderr so the emulator process doesn't inherit the
 		// caller's pipes. Without this, parent processes (e.g. VS Code spawn)
 		// never see the 'close' event because the emulator holds the pipes open.
@@ -133,11 +138,22 @@ public class EmulatorRunner
 			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial };
 		}
 
+		// Single timeout CTS for the entire boot operation (covers Phase 2 and Phase 3).
+		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
+		timeoutCts.CancelAfter (options.BootTimeout);
+
 		// Phase 2: Check if AVD is already running (possibly still booting)
 		var runningSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 		if (runningSerial != null) {
 			Log (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
-			return await WaitForFullBootAsync (adbRunner, runningSerial, options, cancellationToken).ConfigureAwait (false);
+			try {
+				return await WaitForFullBootAsync (adbRunner, runningSerial, options, timeoutCts.Token).ConfigureAwait (false);
+			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+				return new EmulatorBootResult {
+					Success = false,
+					ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
+				};
+			}
 		}
 
 		// Phase 3: Launch the emulator
@@ -155,9 +171,6 @@ public class EmulatorRunner
 		// Poll for the new emulator serial to appear.
 		// If the boot times out or is cancelled, terminate the process we spawned
 		// to avoid leaving orphan emulator processes.
-		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
-		timeoutCts.CancelAfter (options.BootTimeout);
-
 		try {
 			string? newSerial = null;
 			while (newSerial == null) {
@@ -197,8 +210,13 @@ public class EmulatorRunner
 	static void TryKillProcess (Process process)
 	{
 		try {
-			if (!process.HasExited)
+			if (!process.HasExited) {
+#if NET5_0_OR_GREATER
+				process.Kill (entireProcessTree: true);
+#else
 				process.Kill ();
+#endif
+			}
 		} catch {
 			// Best-effort: process may have already exited between check and kill
 		} finally {
@@ -214,30 +232,22 @@ public class EmulatorRunner
 	{
 		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
 
-		using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource (cancellationToken);
-		timeoutCts.CancelAfter (options.BootTimeout);
+		// The caller is responsible for enforcing the overall boot timeout via
+		// cancellationToken (a linked CTS with CancelAfter). This method simply
+		// polls until boot completes or the token is cancelled.
+		while (true) {
+			cancellationToken.ThrowIfCancellationRequested ();
 
-		try {
-			while (true) {
-				timeoutCts.Token.ThrowIfCancellationRequested ();
-
-				var bootCompleted = await adbRunner.GetShellPropertyAsync (serial, "sys.boot_completed", timeoutCts.Token).ConfigureAwait (false);
-				if (string.Equals (bootCompleted, "1", StringComparison.Ordinal)) {
-					var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", timeoutCts.Token).ConfigureAwait (false);
-					if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
-						Log (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
-						return new EmulatorBootResult { Success = true, Serial = serial };
-					}
+			var bootCompleted = await adbRunner.GetShellPropertyAsync (serial, "sys.boot_completed", cancellationToken).ConfigureAwait (false);
+			if (string.Equals (bootCompleted, "1", StringComparison.Ordinal)) {
+				var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", cancellationToken).ConfigureAwait (false);
+				if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
+					Log (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
+					return new EmulatorBootResult { Success = true, Serial = serial };
 				}
-
-				await Task.Delay (options.PollInterval, timeoutCts.Token).ConfigureAwait (false);
 			}
-		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
-			return new EmulatorBootResult {
-				Success = false,
-				Serial = serial,
-				ErrorMessage = $"Timed out waiting for emulator '{serial}' to fully boot within {options.BootTimeout.TotalSeconds}s.",
-			};
+
+			await Task.Delay (options.PollInterval, cancellationToken).ConfigureAwait (false);
 		}
 	}
 }
