@@ -210,45 +210,45 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void CreateAvdAsync_NullName_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_NullName_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync (null!, "system-image"));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync (null!, "system-image"));
 	}
 
 	[Test]
-	public void CreateAvdAsync_EmptyName_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_EmptyName_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("", "system-image"));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync ("", "system-image"));
 	}
 
 	[Test]
-	public void CreateAvdAsync_WhitespaceName_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_WhitespaceName_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("   ", "system-image"));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync ("   ", "system-image"));
 	}
 
 	[Test]
-	public void CreateAvdAsync_NullSystemImage_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_NullSystemImage_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", null!));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync ("test-avd", null!));
 	}
 
 	[Test]
-	public void CreateAvdAsync_EmptySystemImage_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_EmptySystemImage_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", ""));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync ("test-avd", ""));
 	}
 
 	[Test]
-	public void CreateAvdAsync_WhitespaceSystemImage_ThrowsArgumentException ()
+	public void GetOrCreateAvdAsync_WhitespaceSystemImage_ThrowsArgumentException ()
 	{
 		var runner = new AvdManagerRunner ("/fake/avdmanager");
-		Assert.ThrowsAsync<ArgumentException> (() => runner.CreateAvdAsync ("test-avd", " \t "));
+		Assert.ThrowsAsync<ArgumentException> (() => runner.GetOrCreateAvdAsync ("test-avd", " \t "));
 	}
 
 	[Test]

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -17,18 +18,21 @@ public class AvdManagerRunner
 {
 	readonly string avdManagerPath;
 	readonly IDictionary<string, string>? environmentVariables;
+	readonly Action<TraceLevel, string>? logger;
 
 	/// <summary>
 	/// Creates a new AvdManagerRunner with the full path to the avdmanager executable.
 	/// </summary>
 	/// <param name="avdManagerPath">Full path to avdmanager (e.g., "/path/to/sdk/cmdline-tools/latest/bin/avdmanager").</param>
 	/// <param name="environmentVariables">Optional environment variables to pass to avdmanager processes.</param>
-	public AvdManagerRunner (string avdManagerPath, IDictionary<string, string>? environmentVariables = null)
+	/// <param name="logger">Optional logger callback for diagnostic messages.</param>
+	public AvdManagerRunner (string avdManagerPath, IDictionary<string, string>? environmentVariables = null, Action<TraceLevel, string>? logger = null)
 	{
 		if (string.IsNullOrWhiteSpace (avdManagerPath))
 			throw new ArgumentException ("Path to avdmanager must not be empty.", nameof (avdManagerPath));
 		this.avdManagerPath = avdManagerPath;
 		this.environmentVariables = environmentVariables;
+		this.logger = logger;
 	}
 
 	public async Task<IReadOnlyList<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)
@@ -36,6 +40,7 @@ public class AvdManagerRunner
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "list", "avd");
+		logger?.Invoke (TraceLevel.Verbose, "Running: avdmanager list avd");
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 		ProcessUtils.ThrowIfFailed (exitCode, "avdmanager list avd", stderr);
@@ -43,7 +48,11 @@ public class AvdManagerRunner
 		return ParseAvdListOutput (stdout.ToString ());
 	}
 
-	public async Task<AvdInfo> CreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
+	/// <summary>
+	/// Creates an AVD with the specified name and system image. If <paramref name="force"/> is <c>false</c>
+	/// and an AVD with the same name already exists, returns the existing AVD without re-creating it.
+	/// </summary>
+	public async Task<AvdInfo> GetOrCreateAvdAsync (string name, string systemImage, string? deviceProfile = null,
 		bool force = false, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (name))
@@ -55,8 +64,10 @@ public class AvdManagerRunner
 		if (!force) {
 			var existing = (await ListAvdsAsync (cancellationToken).ConfigureAwait (false))
 				.FirstOrDefault (a => string.Equals (a.Name, name, StringComparison.OrdinalIgnoreCase));
-			if (existing is not null)
+			if (existing is not null) {
+				logger?.Invoke (TraceLevel.Verbose, $"AVD '{name}' already exists, returning existing");
 				return existing;
+			}
 
 			// Detect orphaned AVD directory (folder exists without .ini registration).
 			var avdDir = Path.Combine (GetAvdRootDirectory (), $"{name}.avd");
@@ -81,8 +92,8 @@ public class AvdManagerRunner
 				try {
 					p.StandardInput.WriteLine ("no");
 					p.StandardInput.Close ();
-				} catch (IOException) {
-					// Process may have already exited
+				} catch (IOException ex) {
+					logger?.Invoke (TraceLevel.Warning, $"Failed to write to avdmanager stdin: {ex.Message}");
 				}
 			}).ConfigureAwait (false);
 
@@ -104,8 +115,10 @@ public class AvdManagerRunner
 
 		// Idempotent: if the AVD doesn't exist, treat as success
 		var avds = await ListAvdsAsync (cancellationToken).ConfigureAwait (false);
-		if (!avds.Any (a => string.Equals (a.Name, name, StringComparison.OrdinalIgnoreCase)))
+		if (!avds.Any (a => string.Equals (a.Name, name, StringComparison.OrdinalIgnoreCase))) {
+			logger?.Invoke (TraceLevel.Verbose, $"AVD '{name}' does not exist, nothing to delete");
 			return;
+		}
 
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "delete", "avd", "--name", name);
