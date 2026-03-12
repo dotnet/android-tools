@@ -237,7 +237,8 @@ namespace Xamarin.Android.Tools
 		/// <param name="sdkPath">Root path to the Android SDK.</param>
 		/// <param name="toolName">Tool binary name without extension (e.g., "avdmanager").</param>
 		/// <param name="extension">File extension including the dot (e.g., ".bat") or empty string for no extension.</param>
-		internal static string? FindCmdlineTool (string sdkPath, string toolName, string extension)
+		/// <param name="logger">Optional logger for diagnostic messages.</param>
+		internal static string? FindCmdlineTool (string sdkPath, string toolName, string extension, Action<TraceLevel, string>? logger = null)
 		{
 			var cmdlineToolsDir = Path.Combine (sdkPath, "cmdline-tools");
 
@@ -277,9 +278,9 @@ namespace Xamarin.Android.Tools
 							return toolPath;
 					}
 				} catch (IOException ex) {
-					System.Diagnostics.Debug.WriteLine ($"FindCmdlineTool: IO error enumerating {cmdlineToolsDir}: {ex.Message}");
+					logger?.Invoke (TraceLevel.Warning, $"FindCmdlineTool: IO error enumerating {cmdlineToolsDir}: {ex.Message}");
 				} catch (UnauthorizedAccessException ex) {
-					System.Diagnostics.Debug.WriteLine ($"FindCmdlineTool: Permission denied on {cmdlineToolsDir}: {ex.Message}");
+					logger?.Invoke (TraceLevel.Warning, $"FindCmdlineTool: Permission denied on {cmdlineToolsDir}: {ex.Message}");
 				}
 			}
 
