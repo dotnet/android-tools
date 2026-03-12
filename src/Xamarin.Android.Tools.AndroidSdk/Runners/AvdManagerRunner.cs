@@ -68,11 +68,6 @@ public class AvdManagerRunner
 				logger?.Invoke (TraceLevel.Verbose, $"AVD '{name}' already exists, returning existing");
 				return existing;
 			}
-
-			// Detect orphaned AVD directory (folder exists without .ini registration).
-			var avdDir = Path.Combine (GetAvdRootDirectory (), $"{name}.avd");
-			if (Directory.Exists (avdDir))
-				force = true;
 		}
 
 		var args = new List<string> { "create", "avd", "-n", name, "-k", systemImage };
@@ -152,43 +147,5 @@ public class AvdManagerRunner
 		return avds;
 	}
 
-	/// <summary>
-	/// Resolves the AVD root directory, respecting ANDROID_AVD_HOME and ANDROID_USER_HOME.
-	/// Checks instance <see cref="environmentVariables"/> first, then falls back to process environment.
-	/// </summary>
-	string GetAvdRootDirectory ()
-	{
-		// ANDROID_AVD_HOME takes highest priority
-		if (TryGetEnvironmentVariable (EnvironmentVariableNames.AndroidAvdHome, out var avdHome))
-			return avdHome;
-
-		// ANDROID_USER_HOME/avd is the next option
-		if (TryGetEnvironmentVariable (EnvironmentVariableNames.AndroidUserHome, out var userHome))
-			return Path.Combine (userHome, "avd");
-
-		// Default: ~/.android/avd
-		return Path.Combine (
-			Environment.GetFolderPath (Environment.SpecialFolder.UserProfile),
-			".android", "avd");
-	}
-
-	/// <summary>
-	/// Looks up an environment variable, checking instance <see cref="environmentVariables"/> first,
-	/// then falling back to the process environment.
-	/// </summary>
-	bool TryGetEnvironmentVariable (string name, out string value)
-	{
-		if (environmentVariables is not null && environmentVariables.TryGetValue (name, out var dictValue) && dictValue is { Length: > 0 }) {
-			value = dictValue;
-			return true;
-		}
-		var envValue = Environment.GetEnvironmentVariable (name);
-		if (envValue is { Length: > 0 }) {
-			value = envValue;
-			return true;
-		}
-		value = string.Empty;
-		return false;
-	}
 }
 
