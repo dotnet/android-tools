@@ -655,4 +655,171 @@ public class AdbRunnerTests
 		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
 			async () => await runner.WaitForDeviceAsync (timeout: System.TimeSpan.Zero));
 	}
+
+	// --- ParseReverseListOutput tests ---
+	// Consumer: MAUI DevTools (via ListReversePortsAsync), vscode-maui ServiceHub replacement
+
+	[Test]
+	public void ParseReverseListOutput_SingleRule ()
+	{
+		var output = new [] {
+			"(reverse) tcp:5000 tcp:5000",
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual ("tcp:5000", rules [0].Remote);
+		Assert.AreEqual ("tcp:5000", rules [0].Local);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_MultipleRules ()
+	{
+		var output = new [] {
+			"(reverse) tcp:5000 tcp:5000",
+			"(reverse) tcp:8081 tcp:8081",
+			"(reverse) tcp:19000 tcp:19001",
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+
+		Assert.AreEqual (3, rules.Count);
+		Assert.AreEqual ("tcp:5000", rules [0].Remote);
+		Assert.AreEqual ("tcp:5000", rules [0].Local);
+		Assert.AreEqual ("tcp:8081", rules [1].Remote);
+		Assert.AreEqual ("tcp:8081", rules [1].Local);
+		Assert.AreEqual ("tcp:19000", rules [2].Remote);
+		Assert.AreEqual ("tcp:19001", rules [2].Local);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_EmptyOutput ()
+	{
+		var output = new [] { "", "  " };
+		var rules = AdbRunner.ParseReverseListOutput (output);
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_NoLines ()
+	{
+		var rules = AdbRunner.ParseReverseListOutput (Array.Empty<string> ());
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_IgnoresNonReverseLines ()
+	{
+		var output = new [] {
+			"some random header",
+			"(reverse) tcp:5000 tcp:5000",
+			"* daemon started successfully",
+			"(reverse) tcp:8081 tcp:8081",
+			"",
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+
+		Assert.AreEqual (2, rules.Count);
+		Assert.AreEqual ("tcp:5000", rules [0].Remote);
+		Assert.AreEqual ("tcp:8081", rules [1].Remote);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_MalformedLine_InsufficientParts ()
+	{
+		var output = new [] {
+			"(reverse) tcp:5000",  // missing local spec
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseReverseListOutput_DifferentRemoteAndLocalPorts ()
+	{
+		var output = new [] {
+			"(reverse) tcp:8080 tcp:3000",
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual ("tcp:8080", rules [0].Remote);
+		Assert.AreEqual ("tcp:3000", rules [0].Local);
+	}
+
+	// --- ReversePortAsync parameter validation tests ---
+
+	[Test]
+	public void ReversePortAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.ReversePortAsync ("", 5000, 5000));
+	}
+
+	[Test]
+	public void ReversePortAsync_ZeroRemotePort_ThrowsArgumentOutOfRange ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
+			async () => await runner.ReversePortAsync ("emulator-5554", 0, 5000));
+	}
+
+	[Test]
+	public void ReversePortAsync_NegativeLocalPort_ThrowsArgumentOutOfRange ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
+			async () => await runner.ReversePortAsync ("emulator-5554", 5000, -1));
+	}
+
+	[Test]
+	public void ReversePortAsync_PortAbove65535_ThrowsArgumentOutOfRange ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
+			async () => await runner.ReversePortAsync ("emulator-5554", 70000, 5000));
+	}
+
+	// --- RemoveReversePortAsync parameter validation tests ---
+
+	[Test]
+	public void RemoveReversePortAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.RemoveReversePortAsync ("", 5000));
+	}
+
+	[Test]
+	public void RemoveReversePortAsync_ZeroPort_ThrowsArgumentOutOfRange ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
+			async () => await runner.RemoveReversePortAsync ("emulator-5554", 0));
+	}
+
+	// --- RemoveAllReversePortsAsync parameter validation tests ---
+
+	[Test]
+	public void RemoveAllReversePortsAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.RemoveAllReversePortsAsync (""));
+	}
+
+	// --- ListReversePortsAsync parameter validation tests ---
+
+	[Test]
+	public void ListReversePortsAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.ListReversePortsAsync (""));
+	}
 }
