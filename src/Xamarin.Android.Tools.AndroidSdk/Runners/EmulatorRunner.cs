@@ -97,10 +97,12 @@ public class EmulatorRunner
 	public async Task<IReadOnlyList<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
 	{
 		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, "-list-avds");
 
 		logger?.Invoke (TraceLevel.Verbose, "Running: emulator -list-avds");
-		await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, "emulator -list-avds", stderr);
 
 		return ParseListAvdsOutput (stdout.ToString ());
 	}
@@ -243,7 +245,7 @@ public class EmulatorRunner
 		return null;
 	}
 
-	static void TryKillProcess (Process process)
+	void TryKillProcess (Process process)
 	{
 		try {
 #if NET5_0_OR_GREATER
@@ -251,8 +253,9 @@ public class EmulatorRunner
 #else
 			process.Kill ();
 #endif
-		} catch {
+		} catch (Exception ex) {
 			// Best-effort: process may have already exited
+			logger?.Invoke (TraceLevel.Verbose, $"Failed to stop emulator process: {ex.Message}");
 		} finally {
 			process.Dispose ();
 		}

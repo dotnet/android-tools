@@ -161,6 +161,11 @@ public class AdbRunner
 	/// Runs a shell command on a device via 'adb -s &lt;serial&gt; shell &lt;command&gt;'.
 	/// Returns the full stdout output trimmed, or <c>null</c> on failure.
 	/// </summary>
+	/// <remarks>
+	/// The <paramref name="command"/> is passed as a single argument to <c>adb shell</c>,
+	/// which means the device's shell interprets it (shell expansion, pipes, semicolons are active).
+	/// Do not pass untrusted or user-supplied input without proper validation.
+	/// </remarks>
 	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
 	{
 		using var stdout = new StringWriter ();
