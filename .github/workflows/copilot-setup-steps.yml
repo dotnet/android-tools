@@ -3,7 +3,7 @@ name: Copilot Setup Steps CI
 on:
   pull_request:
     paths:
-      - '.github/copilot-setup-steps.yml'
+      - '.github/workflows/copilot-setup-steps.yml'
 
 permissions:
   contents: read
