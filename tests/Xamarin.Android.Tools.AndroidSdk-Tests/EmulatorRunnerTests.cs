@@ -76,7 +76,7 @@ public class EmulatorRunnerTests
 		Assert.Throws<ArgumentException> (() => new EmulatorRunner ("   "));
 	}
 
-	// --- BootAndWaitAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
+	// --- BootAvdAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
 
 	[Test]
 	public async Task AlreadyOnlineDevice_PassesThrough ()
@@ -93,7 +93,7 @@ public class EmulatorRunnerTests
 		var mockAdb = new MockAdbRunner (devices);
 		var runner = new EmulatorRunner ("/fake/emulator");
 
-		var result = await runner.BootAndWaitAsync ("emulator-5554", mockAdb);
+		var result = await runner.BootAvdAsync ("emulator-5554", mockAdb);
 
 		Assert.IsTrue (result.Success);
 		Assert.AreEqual ("emulator-5554", result.Serial);
@@ -119,7 +119,7 @@ public class EmulatorRunnerTests
 		var runner = new EmulatorRunner ("/fake/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
 
-		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+		var result = await runner.BootAvdAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsTrue (result.Success);
 		Assert.AreEqual ("emulator-5554", result.Serial);
@@ -155,7 +155,7 @@ public class EmulatorRunnerTests
 				PollInterval = TimeSpan.FromMilliseconds (50),
 			};
 
-			var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+			var result = await runner.BootAvdAsync ("Pixel_7_API_35", mockAdb, options);
 
 			Assert.IsTrue (result.Success);
 			Assert.AreEqual ("emulator-5554", result.Serial);
@@ -177,11 +177,11 @@ public class EmulatorRunnerTests
 		var devices = new List<AdbDeviceInfo> ();
 		var mockAdb = new MockAdbRunner (devices);
 
-		// Nonexistent path → StartAvd throws → error result
+		// Nonexistent path → LaunchAvd throws → error result
 		var runner = new EmulatorRunner ("/nonexistent/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (2) };
 
-		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+		var result = await runner.BootAvdAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsFalse (result.Success);
 		Assert.That (result.ErrorMessage, Does.Contain ("Failed to launch"));
@@ -209,32 +209,32 @@ public class EmulatorRunnerTests
 			PollInterval = TimeSpan.FromMilliseconds (50),
 		};
 
-		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+		var result = await runner.BootAvdAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsFalse (result.Success);
 		Assert.That (result.ErrorMessage, Does.Contain ("Timed out"));
 	}
 
 	[Test]
-	public void BootAndWaitAsync_InvalidBootTimeout_Throws ()
+	public void BootAvdAsync_InvalidBootTimeout_Throws ()
 	{
 		var runner = new EmulatorRunner ("/fake/emulator");
 		var mockAdb = new MockAdbRunner (new List<AdbDeviceInfo> ());
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.Zero };
 
 		Assert.ThrowsAsync<ArgumentOutOfRangeException> (() =>
-			runner.BootAndWaitAsync ("test", mockAdb, options));
+			runner.BootAvdAsync ("test", mockAdb, options));
 	}
 
 	[Test]
-	public void BootAndWaitAsync_InvalidPollInterval_Throws ()
+	public void BootAvdAsync_InvalidPollInterval_Throws ()
 	{
 		var runner = new EmulatorRunner ("/fake/emulator");
 		var mockAdb = new MockAdbRunner (new List<AdbDeviceInfo> ());
 		var options = new EmulatorBootOptions { PollInterval = TimeSpan.FromMilliseconds (-1) };
 
 		Assert.ThrowsAsync<ArgumentOutOfRangeException> (() =>
-			runner.BootAndWaitAsync ("test", mockAdb, options));
+			runner.BootAvdAsync ("test", mockAdb, options));
 	}
 
 	[Test]
@@ -268,7 +268,7 @@ public class EmulatorRunnerTests
 		var runner = new EmulatorRunner ("/fake/emulator");
 		var options = new EmulatorBootOptions { BootTimeout = TimeSpan.FromSeconds (5), PollInterval = TimeSpan.FromMilliseconds (50) };
 
-		var result = await runner.BootAndWaitAsync ("Pixel_7_API_35", mockAdb, options);
+		var result = await runner.BootAvdAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsTrue (result.Success);
 		Assert.AreEqual ("emulator-5556", result.Serial, "Should find the correct AVD among multiple emulators");
@@ -312,7 +312,7 @@ public class EmulatorRunnerTests
 	}
 
 	/// <summary>
-	/// Mock AdbRunner for testing BootAndWaitAsync without real adb commands.
+	/// Mock AdbRunner for testing BootAvdAsync without real adb commands.
 	/// </summary>
 	class MockAdbRunner : AdbRunner
 	{

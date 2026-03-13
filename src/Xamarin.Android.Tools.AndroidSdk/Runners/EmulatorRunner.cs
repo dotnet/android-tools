@@ -35,7 +35,18 @@ public class EmulatorRunner
 		this.logger = logger;
 	}
 
-	public Process StartAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
+	/// <summary>
+	/// Launches an emulator process for the specified AVD and returns immediately.
+	/// The returned <see cref="Process"/> represents the running emulator — the caller
+	/// is responsible for managing its lifetime (e.g., killing it on shutdown).
+	/// This method does <b>not</b> wait for the emulator to finish booting.
+	/// To launch <i>and</i> wait until the device is fully booted, use <see cref="BootAvdAsync"/> instead.
+	/// </summary>
+	/// <param name="avdName">Name of the AVD to launch (as shown by <c>emulator -list-avds</c>).</param>
+	/// <param name="coldBoot">When <c>true</c>, forces a cold boot by passing <c>-no-snapshot-load</c>.</param>
+	/// <param name="additionalArgs">Optional extra arguments to pass to the emulator command line.</param>
+	/// <returns>The <see cref="Process"/> running the emulator. Stdout/stderr are redirected and forwarded to the logger.</returns>
+	public Process LaunchAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
 	{
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
@@ -56,7 +67,7 @@ public class EmulatorRunner
 		psi.RedirectStandardOutput = true;
 		psi.RedirectStandardError = true;
 
-		logger?.Invoke (TraceLevel.Verbose, $"Starting emulator AVD '{avdName}'");
+		logger?.Invoke (TraceLevel.Verbose, $"Launching emulator AVD '{avdName}'");
 
 		var process = new Process { StartInfo = psi };
 
@@ -103,10 +114,27 @@ public class EmulatorRunner
 	}
 
 	/// <summary>
-	/// Boots an emulator and waits for it to be fully booted.
-	/// Ported from dotnet/android BootAndroidEmulator MSBuild task.
+	/// Boots an emulator for the specified AVD and waits until it is fully ready to accept commands.
+	/// <para>
+	/// Unlike <see cref="LaunchAvd"/>, which only spawns the emulator process, this method
+	/// handles the full lifecycle: it checks whether the device is already online, launches
+	/// the emulator if needed, then polls <c>sys.boot_completed</c> and <c>pm path android</c>
+	/// until the Android OS is fully booted and the package manager is responsive.
+	/// </para>
+	/// <para>Ported from the dotnet/android <c>BootAndroidEmulator</c> MSBuild task.</para>
 	/// </summary>
-	public async Task<EmulatorBootResult> BootAndWaitAsync (
+	/// <param name="deviceOrAvdName">
+	/// Either an ADB device serial (e.g., <c>emulator-5554</c>) to wait for,
+	/// or an AVD name (e.g., <c>Pixel_7_API_35</c>) to launch and boot.
+	/// </param>
+	/// <param name="adbRunner">An <see cref="AdbRunner"/> used to query device status and boot properties.</param>
+	/// <param name="options">Optional boot configuration (timeout, poll interval, cold boot, extra args).</param>
+	/// <param name="cancellationToken">Cancellation token to abort the operation.</param>
+	/// <returns>
+	/// An <see cref="EmulatorBootResult"/> indicating success or failure, including the device serial on success
+	/// or an error message on timeout/failure.
+	/// </returns>
+	public async Task<EmulatorBootResult> BootAvdAsync (
 		string deviceOrAvdName,
 		AdbRunner adbRunner,
 		EmulatorBootOptions? options = null,
@@ -160,7 +188,7 @@ public class EmulatorRunner
 		Log (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
 		Process emulatorProcess;
 		try {
-			emulatorProcess = StartAvd (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
+			emulatorProcess = LaunchAvd (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
 		} catch (Exception ex) {
 			return new EmulatorBootResult {
 				Success = false,
