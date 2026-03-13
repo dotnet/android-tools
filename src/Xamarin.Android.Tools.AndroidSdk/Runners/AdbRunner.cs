@@ -242,6 +242,105 @@ public class AdbRunner
 				return trimmed;
 		}
 		return null;
+	/// Sets up reverse port forwarding from the device to the host via
+	/// 'adb -s &lt;serial&gt; reverse tcp:&lt;remotePort&gt; tcp:&lt;localPort&gt;'.
+	/// This allows the device to connect to a service on the host machine through the specified port.
+	/// </summary>
+	public virtual async Task ReversePortAsync (string serial, int remotePort, int localPort, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (serial))
+			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
+		if (remotePort <= 0 || remotePort > 65535)
+			throw new ArgumentOutOfRangeException (nameof (remotePort), remotePort, "Port must be between 1 and 65535.");
+		if (localPort <= 0 || localPort > 65535)
+			throw new ArgumentOutOfRangeException (nameof (localPort), localPort, "Port must be between 1 and 65535.");
+
+		var remoteSpec = $"tcp:{remotePort}";
+		var localSpec = $"tcp:{localPort}";
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", remoteSpec, localSpec);
+		using var stderr = new StringWriter ();
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse {remoteSpec} {localSpec}", stderr);
+	}
+
+	/// <summary>
+	/// Removes a specific reverse port forwarding rule via
+	/// 'adb -s &lt;serial&gt; reverse --remove tcp:&lt;remotePort&gt;'.
+	/// </summary>
+	public virtual async Task RemoveReversePortAsync (string serial, int remotePort, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (serial))
+			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
+		if (remotePort <= 0 || remotePort > 65535)
+			throw new ArgumentOutOfRangeException (nameof (remotePort), remotePort, "Port must be between 1 and 65535.");
+
+		var remoteSpec = $"tcp:{remotePort}";
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--remove", remoteSpec);
+		using var stderr = new StringWriter ();
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --remove {remoteSpec}", stderr);
+	}
+
+	/// <summary>
+	/// Removes all reverse port forwarding rules via
+	/// 'adb -s &lt;serial&gt; reverse --remove-all'.
+	/// </summary>
+	public virtual async Task RemoveAllReversePortsAsync (string serial, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (serial))
+			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
+
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--remove-all");
+		using var stderr = new StringWriter ();
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --remove-all", stderr);
+	}
+
+	/// <summary>
+	/// Lists all active reverse port forwarding rules via
+	/// 'adb -s &lt;serial&gt; reverse --list'.
+	/// </summary>
+	public virtual async Task<IReadOnlyList<AdbReversePortRule>> ListReversePortsAsync (string serial, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (serial))
+			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
+
+		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--list");
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --list", stderr);
+
+		return ParseReverseListOutput (stdout.ToString ().Split ('\n'));
+	}
+
+	/// <summary>
+	/// Parses the output of 'adb reverse --list'.
+	/// Each line is "(reverse) &lt;remote&gt; &lt;local&gt;", e.g. "(reverse) tcp:5000 tcp:5000".
+	/// </summary>
+	internal static IReadOnlyList<AdbReversePortRule> ParseReverseListOutput (IEnumerable<string> lines)
+	{
+		var rules = new List<AdbReversePortRule> ();
+
+		foreach (var line in lines) {
+			var trimmed = line.Trim ();
+			if (string.IsNullOrEmpty (trimmed))
+				continue;
+
+			// Expected format: "(reverse) tcp:5000 tcp:5000"
+			if (!trimmed.StartsWith ("(reverse)", StringComparison.Ordinal))
+				continue;
+
+			var parts = trimmed.Substring ("(reverse)".Length).Trim ().Split (new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			if (parts.Length >= 2) {
+				rules.Add (new AdbReversePortRule {
+					Remote = parts [0],
+					Local = parts [1],
+				});
+			}
+		}
+
+		return rules;
 	}
 
 	/// <summary>
