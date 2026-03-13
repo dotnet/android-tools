@@ -76,6 +76,27 @@ public class EmulatorRunnerTests
 		Assert.Throws<ArgumentException> (() => new EmulatorRunner ("   "));
 	}
 
+	[Test]
+	public void LaunchAvd_ThrowsOnNullAvdName ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		Assert.Throws<ArgumentException> (() => runner.LaunchAvd (null!));
+	}
+
+	[Test]
+	public void LaunchAvd_ThrowsOnEmptyAvdName ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		Assert.Throws<ArgumentException> (() => runner.LaunchAvd (""));
+	}
+
+	[Test]
+	public void LaunchAvd_ThrowsOnWhitespaceAvdName ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		Assert.Throws<ArgumentException> (() => runner.LaunchAvd ("   "));
+	}
+
 	// --- BootAvdAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
 
 	[Test]

@@ -48,6 +48,9 @@ public class EmulatorRunner
 	/// <returns>The <see cref="Process"/> running the emulator. Stdout/stderr are redirected and forwarded to the logger.</returns>
 	public Process LaunchAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
 	{
+		if (string.IsNullOrWhiteSpace (avdName))
+			throw new ArgumentException ("AVD name must not be empty.", nameof (avdName));
+
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
 			args.Add ("-no-snapshot-load");
@@ -238,15 +241,13 @@ public class EmulatorRunner
 	static void TryKillProcess (Process process)
 	{
 		try {
-			if (!process.HasExited) {
 #if NET5_0_OR_GREATER
-				process.Kill (entireProcessTree: true);
+			process.Kill (entireProcessTree: true);
 #else
-				process.Kill ();
+			process.Kill ();
 #endif
-			}
 		} catch {
-			// Best-effort: process may have already exited between check and kill
+			// Best-effort: process may have already exited
 		} finally {
 			process.Dispose ();
 		}

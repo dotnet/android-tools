@@ -21,6 +21,7 @@ public class AdbRunner
 {
 	readonly string adbPath;
 	readonly IDictionary<string, string>? environmentVariables;
+	readonly Action<TraceLevel, string>? logger;
 
 	// Pattern to match device lines: <serial> <state> [key:value ...]
 	// Uses \s+ to match one or more whitespace characters (spaces or tabs) between fields.
@@ -35,12 +36,14 @@ public class AdbRunner
 	/// </summary>
 	/// <param name="adbPath">Full path to the adb executable (e.g., "/path/to/sdk/platform-tools/adb").</param>
 	/// <param name="environmentVariables">Optional environment variables to pass to adb processes.</param>
-	public AdbRunner (string adbPath, IDictionary<string, string>? environmentVariables = null)
+	/// <param name="logger">Optional logger callback for diagnostic messages.</param>
+	public AdbRunner (string adbPath, IDictionary<string, string>? environmentVariables = null, Action<TraceLevel, string>? logger = null)
 	{
 		if (string.IsNullOrWhiteSpace (adbPath))
 			throw new ArgumentException ("Path to adb must not be empty.", nameof (adbPath));
 		this.adbPath = adbPath;
 		this.environmentVariables = environmentVariables;
+		this.logger = logger;
 	}
 
 	/// <summary>
@@ -137,6 +140,7 @@ public class AdbRunner
 
 	/// <summary>
 	/// Gets a system property from a device via 'adb -s &lt;serial&gt; shell getprop &lt;property&gt;'.
+	/// Returns the property value (first non-empty line of stdout), or <c>null</c> on failure.
 	/// </summary>
 	public virtual async Task<string?> GetShellPropertyAsync (string serial, string propertyName, CancellationToken cancellationToken = default)
 	{
@@ -144,11 +148,18 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", "getprop", propertyName);
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		return exitCode == 0 ? FirstNonEmptyLine (stdout.ToString ()) : null;
+		if (exitCode != 0) {
+			var stderrText = stderr.ToString ().Trim ();
+			if (stderrText.Length > 0)
+				logger?.Invoke (TraceLevel.Warning, $"adb shell getprop {propertyName} failed (exit {exitCode}): {stderrText}");
+			return null;
+		}
+		return FirstNonEmptyLine (stdout.ToString ());
 	}
 
 	/// <summary>
 	/// Runs a shell command on a device via 'adb -s &lt;serial&gt; shell &lt;command&gt;'.
+	/// Returns the full stdout output trimmed, or <c>null</c> on failure.
 	/// </summary>
 	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
 	{
@@ -156,7 +167,14 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", command);
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		return exitCode == 0 ? FirstNonEmptyLine (stdout.ToString ()) : null;
+		if (exitCode != 0) {
+			var stderrText = stderr.ToString ().Trim ();
+			if (stderrText.Length > 0)
+				logger?.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
+			return null;
+		}
+		var output = stdout.ToString ().Trim ();
+		return output.Length > 0 ? output : null;
 	}
 
 	internal static string? FirstNonEmptyLine (string output)
