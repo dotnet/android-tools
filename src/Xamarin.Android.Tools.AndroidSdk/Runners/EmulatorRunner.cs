@@ -213,7 +213,12 @@ public class EmulatorRunner
 			}
 
 			Log (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
-			return await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
+			var result = await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
+
+			// Release the Process handle — the emulator process itself keeps running.
+			// We no longer need stdout/stderr forwarding since boot is complete.
+			emulatorProcess.Dispose ();
+			return result;
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 			TryKillProcess (emulatorProcess);
 			return new EmulatorBootResult {
