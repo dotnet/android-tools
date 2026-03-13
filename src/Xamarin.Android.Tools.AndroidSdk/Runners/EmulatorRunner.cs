@@ -40,13 +40,13 @@ public class EmulatorRunner
 	/// The returned <see cref="Process"/> represents the running emulator — the caller
 	/// is responsible for managing its lifetime (e.g., killing it on shutdown).
 	/// This method does <b>not</b> wait for the emulator to finish booting.
-	/// To launch <i>and</i> wait until the device is fully booted, use <see cref="BootAvdAsync"/> instead.
+	/// To launch <i>and</i> wait until the device is fully booted, use <see cref="BootEmulatorAsync"/> instead.
 	/// </summary>
 	/// <param name="avdName">Name of the AVD to launch (as shown by <c>emulator -list-avds</c>).</param>
 	/// <param name="coldBoot">When <c>true</c>, forces a cold boot by passing <c>-no-snapshot-load</c>.</param>
 	/// <param name="additionalArgs">Optional extra arguments to pass to the emulator command line.</param>
 	/// <returns>The <see cref="Process"/> running the emulator. Stdout/stderr are redirected and forwarded to the logger.</returns>
-	public Process LaunchAvd (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
+	public Process LaunchEmulator (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
 	{
 		if (string.IsNullOrWhiteSpace (avdName))
 			throw new ArgumentException ("AVD name must not be empty.", nameof (avdName));
@@ -121,7 +121,7 @@ public class EmulatorRunner
 	/// <summary>
 	/// Boots an emulator for the specified AVD and waits until it is fully ready to accept commands.
 	/// <para>
-	/// Unlike <see cref="LaunchAvd"/>, which only spawns the emulator process, this method
+	/// Unlike <see cref="LaunchEmulator"/>, which only spawns the emulator process, this method
 	/// handles the full lifecycle: it checks whether the device is already online, launches
 	/// the emulator if needed, then polls <c>sys.boot_completed</c> and <c>pm path android</c>
 	/// until the Android OS is fully booted and the package manager is responsive.
@@ -139,7 +139,7 @@ public class EmulatorRunner
 	/// An <see cref="EmulatorBootResult"/> indicating success or failure, including the device serial on success
 	/// or an error message on timeout/failure.
 	/// </returns>
-	public async Task<EmulatorBootResult> BootAvdAsync (
+	public async Task<EmulatorBootResult> BootEmulatorAsync (
 		string deviceOrAvdName,
 		AdbRunner adbRunner,
 		EmulatorBootOptions? options = null,
@@ -193,7 +193,7 @@ public class EmulatorRunner
 		Log (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
 		Process emulatorProcess;
 		try {
-			emulatorProcess = LaunchAvd (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
+			emulatorProcess = LaunchEmulator (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
 		} catch (Exception ex) {
 			return new EmulatorBootResult {
 				Success = false,

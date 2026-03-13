@@ -166,11 +166,43 @@ public class AdbRunner
 	/// which means the device's shell interprets it (shell expansion, pipes, semicolons are active).
 	/// Do not pass untrusted or user-supplied input without proper validation.
 	/// </remarks>
-	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken = default)
+	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, CancellationToken cancellationToken)
 	{
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", command);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		if (exitCode != 0) {
+			var stderrText = stderr.ToString ().Trim ();
+			if (stderrText.Length > 0)
+				logger?.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
+			return null;
+		}
+		var output = stdout.ToString ().Trim ();
+		return output.Length > 0 ? output : null;
+	}
+
+	/// <summary>
+	/// Runs a shell command on a device via <c>adb -s &lt;serial&gt; shell &lt;command&gt; &lt;args&gt;</c>.
+	/// Returns the full stdout output trimmed, or <c>null</c> on failure.
+	/// </summary>
+	/// <remarks>
+	/// When <c>adb shell</c> receives the command and arguments as separate tokens, it uses
+	/// <c>exec()</c> directly on the device — bypassing the device's shell interpreter.
+	/// This avoids shell expansion, pipes, and injection risks, making it safer for dynamic input.
+	/// </remarks>
+	public virtual async Task<string?> RunShellCommandAsync (string serial, string command, string[] args, CancellationToken cancellationToken = default)
+	{
+		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
+		// Build: adb -s <serial> shell <command> <arg1> <arg2> ...
+		var allArgs = new string [3 + 1 + args.Length];
+		allArgs [0] = "-s";
+		allArgs [1] = serial;
+		allArgs [2] = "shell";
+		allArgs [3] = command;
+		Array.Copy (args, 0, allArgs, 4, args.Length);
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, allArgs);
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
