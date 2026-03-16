@@ -242,43 +242,73 @@ public class AdbRunner
 				return trimmed;
 		}
 		return null;
+	}
+
+	/// <summary>
 	/// Sets up reverse port forwarding from the device to the host via
-	/// 'adb -s &lt;serial&gt; reverse tcp:&lt;remotePort&gt; tcp:&lt;localPort&gt;'.
-	/// This allows the device to connect to a service on the host machine through the specified port.
+	/// 'adb -s &lt;serial&gt; reverse &lt;remote&gt; &lt;local&gt;'.
+	/// Supports any socket spec accepted by adb (tcp:PORT, localabstract:NAME, etc.).
+	/// This is the core overload; the (int, int) convenience overload delegates here.
 	/// </summary>
-	public virtual async Task ReversePortAsync (string serial, int remotePort, int localPort, CancellationToken cancellationToken = default)
+	/// <param name="serial">Device serial number.</param>
+	/// <param name="remote">Remote (device-side) socket spec, e.g. "tcp:5000" or "localabstract:foo".</param>
+	/// <param name="local">Local (host-side) socket spec, e.g. "tcp:5000".</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	public virtual async Task ReversePortAsync (string serial, string remote, string local, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (serial))
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
-		if (remotePort <= 0 || remotePort > 65535)
-			throw new ArgumentOutOfRangeException (nameof (remotePort), remotePort, "Port must be between 1 and 65535.");
-		if (localPort <= 0 || localPort > 65535)
-			throw new ArgumentOutOfRangeException (nameof (localPort), localPort, "Port must be between 1 and 65535.");
+		if (string.IsNullOrWhiteSpace (remote))
+			throw new ArgumentException ("Remote socket spec must not be empty.", nameof (remote));
+		if (string.IsNullOrWhiteSpace (local))
+			throw new ArgumentException ("Local socket spec must not be empty.", nameof (local));
 
-		var remoteSpec = $"tcp:{remotePort}";
-		var localSpec = $"tcp:{localPort}";
-		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", remoteSpec, localSpec);
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", remote, local);
 		using var stderr = new StringWriter ();
 		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse {remoteSpec} {localSpec}", stderr);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse {remote} {local}", stderr);
+	}
+
+	/// <summary>
+	/// TCP convenience overload: sets up reverse port forwarding via
+	/// 'adb -s &lt;serial&gt; reverse tcp:&lt;remotePort&gt; tcp:&lt;localPort&gt;'.
+	/// </summary>
+	public virtual Task ReversePortAsync (string serial, int remotePort, int localPort, CancellationToken cancellationToken = default)
+	{
+		ValidatePort (remotePort, nameof (remotePort));
+		ValidatePort (localPort, nameof (localPort));
+		return ReversePortAsync (serial, $"tcp:{remotePort}", $"tcp:{localPort}", cancellationToken);
 	}
 
 	/// <summary>
 	/// Removes a specific reverse port forwarding rule via
-	/// 'adb -s &lt;serial&gt; reverse --remove tcp:&lt;remotePort&gt;'.
+	/// 'adb -s &lt;serial&gt; reverse --remove &lt;remote&gt;'.
+	/// Supports any socket spec accepted by adb.
 	/// </summary>
-	public virtual async Task RemoveReversePortAsync (string serial, int remotePort, CancellationToken cancellationToken = default)
+	/// <param name="serial">Device serial number.</param>
+	/// <param name="remote">Remote (device-side) socket spec to remove, e.g. "tcp:5000".</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	public virtual async Task RemoveReversePortAsync (string serial, string remote, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (serial))
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
-		if (remotePort <= 0 || remotePort > 65535)
-			throw new ArgumentOutOfRangeException (nameof (remotePort), remotePort, "Port must be between 1 and 65535.");
+		if (string.IsNullOrWhiteSpace (remote))
+			throw new ArgumentException ("Remote socket spec must not be empty.", nameof (remote));
 
-		var remoteSpec = $"tcp:{remotePort}";
-		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--remove", remoteSpec);
+		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--remove", remote);
 		using var stderr = new StringWriter ();
 		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --remove {remoteSpec}", stderr);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --remove {remote}", stderr);
+	}
+
+	/// <summary>
+	/// TCP convenience overload: removes a specific reverse port forwarding rule via
+	/// 'adb -s &lt;serial&gt; reverse --remove tcp:&lt;remotePort&gt;'.
+	/// </summary>
+	public virtual Task RemoveReversePortAsync (string serial, int remotePort, CancellationToken cancellationToken = default)
+	{
+		ValidatePort (remotePort, nameof (remotePort));
+		return RemoveReversePortAsync (serial, $"tcp:{remotePort}", cancellationToken);
 	}
 
 	/// <summary>
@@ -333,14 +363,20 @@ public class AdbRunner
 
 			var parts = trimmed.Substring ("(reverse)".Length).Trim ().Split (new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length >= 2) {
-				rules.Add (new AdbReversePortRule {
-					Remote = parts [0],
-					Local = parts [1],
-				});
+				rules.Add (new AdbReversePortRule (
+					Remote: parts [0],
+					Local: parts [1]
+				));
 			}
 		}
 
 		return rules;
+	}
+
+	static void ValidatePort (int port, string paramName)
+	{
+		if (port <= 0 || port > 65535)
+			throw new ArgumentOutOfRangeException (paramName, port, "Port must be between 1 and 65535.");
 	}
 
 	/// <summary>

@@ -5,16 +5,8 @@ namespace Xamarin.Android.Tools;
 
 /// <summary>
 /// Represents a single ADB reverse port forwarding rule as reported by 'adb reverse --list'.
+/// Uses positional record for value equality and built-in ToString().
 /// </summary>
-public class AdbReversePortRule
-{
-	/// <summary>
-	/// The remote (device-side) socket spec, e.g. "tcp:5000".
-	/// </summary>
-	public string Remote { get; init; } = string.Empty;
-
-	/// <summary>
-	/// The local (host-side) socket spec, e.g. "tcp:5000".
-	/// </summary>
-	public string Local { get; init; } = string.Empty;
-}
+/// <param name="Remote">The remote (device-side) socket spec, e.g. "tcp:5000".</param>
+/// <param name="Local">The local (host-side) socket spec, e.g. "tcp:5000".</param>
+public record AdbReversePortRule (string Remote, string Local);
