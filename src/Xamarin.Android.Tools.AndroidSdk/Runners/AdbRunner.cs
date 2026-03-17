@@ -73,12 +73,16 @@ public class AdbRunner
 	}
 
 	/// <summary>
-	/// Queries the emulator for its AVD name using 'adb -s &lt;serial&gt; emu avd name'.
-	/// Returns null if the query fails or produces no output.
-	/// Ported from dotnet/android GetAvailableAndroidDevices.GetEmulatorAvdName.
+	/// Queries the emulator for its AVD name.
+	/// Tries <c>adb -s &lt;serial&gt; emu avd name</c> first (emulator console protocol),
+	/// then falls back to <c>adb shell getprop ro.boot.qemu.avd_name</c> which reads the
+	/// boot property set by the emulator kernel. The fallback is needed because newer
+	/// emulator versions (36+) may require authentication for console commands, causing
+	/// <c>emu avd name</c> to return empty output.
 	/// </summary>
 	internal async Task<string?> GetEmulatorAvdNameAsync (string serial, CancellationToken cancellationToken = default)
 	{
+		// Try 1: Console command (fast, works on most emulator versions)
 		try {
 			using var stdout = new StringWriter ();
 			var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "avd", "name");
@@ -93,8 +97,19 @@ public class AdbRunner
 			}
 		} catch (OperationCanceledException) {
 			throw;
-		} catch (Exception ex) {
-			Trace.WriteLine ($"GetEmulatorAvdNameAsync adb query failed for '{serial}': {ex.Message}");
+		} catch {
+			// Fall through to getprop fallback
+		}
+
+		// Try 2: Shell property (works when emu console requires auth, e.g. emulator 36+)
+		try {
+			var avdName = await GetShellPropertyAsync (serial, "ro.boot.qemu.avd_name", cancellationToken).ConfigureAwait (false);
+			if (!string.IsNullOrWhiteSpace (avdName))
+				return avdName!.Trim ();
+		} catch (OperationCanceledException) {
+			throw;
+		} catch {
+			// Both methods failed
 		}
 
 		return null;
