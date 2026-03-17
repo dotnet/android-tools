@@ -21,7 +21,9 @@ public class AdbRunner
 {
 	readonly string adbPath;
 	readonly IDictionary<string, string>? environmentVariables;
-	readonly Action<TraceLevel, string>? logger;
+	readonly Action<TraceLevel, string> logger;
+
+	static readonly Action<TraceLevel, string> NullLogger = static (_, _) => { };
 
 	// Pattern to match device lines: <serial> <state> [key:value ...]
 	// Uses \s+ to match one or more whitespace characters (spaces or tabs) between fields.
@@ -43,7 +45,7 @@ public class AdbRunner
 			throw new ArgumentException ("Path to adb must not be empty.", nameof (adbPath));
 		this.adbPath = adbPath;
 		this.environmentVariables = environmentVariables;
-		this.logger = logger;
+		this.logger = logger ?? NullLogger;
 	}
 
 	/// <summary>
@@ -166,7 +168,7 @@ public class AdbRunner
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)
-				logger?.Invoke (TraceLevel.Warning, $"adb shell getprop {propertyName} failed (exit {exitCode}): {stderrText}");
+				logger.Invoke (TraceLevel.Warning, $"adb shell getprop {propertyName} failed (exit {exitCode}): {stderrText}");
 			return null;
 		}
 		return FirstNonEmptyLine (stdout.ToString ());
@@ -190,7 +192,7 @@ public class AdbRunner
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)
-				logger?.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
+				logger.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
 			return null;
 		}
 		var output = stdout.ToString ().Trim ();
@@ -222,7 +224,7 @@ public class AdbRunner
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)
-				logger?.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
+				logger.Invoke (TraceLevel.Warning, $"adb shell {command} failed (exit {exitCode}): {stderrText}");
 			return null;
 		}
 		var output = stdout.ToString ().Trim ();
@@ -323,10 +325,11 @@ public class AdbRunner
 	/// </summary>
 	public static string BuildDeviceDescription (AdbDeviceInfo device, Action<TraceLevel, string>? logger = null)
 	{
+		logger ??= NullLogger;
 		if (device.Type == AdbDeviceType.Emulator && device.AvdName is { Length: > 0 } avdName) {
-			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {avdName}");
+			logger.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {avdName}");
 			var formatted = FormatDisplayName (avdName);
-			logger?.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, formatted AVD display name: {formatted}");
+			logger.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, formatted AVD display name: {formatted}");
 			return formatted;
 		}
 
@@ -368,6 +371,7 @@ public class AdbRunner
 	/// </summary>
 	public static IReadOnlyList<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators, Action<TraceLevel, string>? logger = null)
 	{
+		logger ??= NullLogger;
 		var result = new List<AdbDeviceInfo> (adbDevices);
 
 		// Build a set of AVD names that are already running
@@ -377,12 +381,12 @@ public class AdbRunner
 				runningAvdNames.Add (avdName);
 		}
 
-		logger?.Invoke (TraceLevel.Verbose, $"Running emulators AVD names: {string.Join (", ", runningAvdNames)}");
+		logger.Invoke (TraceLevel.Verbose, $"Running emulators AVD names: {string.Join (", ", runningAvdNames)}");
 
 		// Add non-running emulators
 		foreach (var avdName in availableEmulators) {
 			if (runningAvdNames.Contains (avdName)) {
-				logger?.Invoke (TraceLevel.Verbose, $"Emulator '{avdName}' is already running, skipping");
+				logger.Invoke (TraceLevel.Verbose, $"Emulator '{avdName}' is already running, skipping");
 				continue;
 			}
 
@@ -394,7 +398,7 @@ public class AdbRunner
 				Status = AdbDeviceStatus.NotRunning,
 				AvdName = avdName,
 			});
-			logger?.Invoke (TraceLevel.Verbose, $"Added non-running emulator: {avdName}");
+			logger.Invoke (TraceLevel.Verbose, $"Added non-running emulator: {avdName}");
 		}
 
 		// Sort: online devices first, then not-running emulators, alphabetically by description

@@ -16,9 +16,11 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public class EmulatorRunner
 {
+	static readonly Action<TraceLevel, string> NullLogger = static (_, _) => { };
+
 	readonly string emulatorPath;
 	readonly IDictionary<string, string>? environmentVariables;
-	readonly Action<TraceLevel, string>? logger;
+	readonly Action<TraceLevel, string> logger;
 
 	/// <summary>
 	/// Creates a new EmulatorRunner with the full path to the emulator executable.
@@ -32,7 +34,7 @@ public class EmulatorRunner
 			throw new ArgumentException ("Path to emulator must not be empty.", nameof (emulatorPath));
 		this.emulatorPath = emulatorPath;
 		this.environmentVariables = environmentVariables;
-		this.logger = logger;
+		this.logger = logger ?? NullLogger;
 	}
 
 	/// <summary>
@@ -70,7 +72,7 @@ public class EmulatorRunner
 		psi.RedirectStandardOutput = true;
 		psi.RedirectStandardError = true;
 
-		logger?.Invoke (TraceLevel.Verbose, $"Launching emulator AVD '{avdName}'");
+		logger.Invoke (TraceLevel.Verbose, $"Launching emulator AVD '{avdName}'");
 
 		var process = new Process { StartInfo = psi };
 
@@ -78,11 +80,11 @@ public class EmulatorRunner
 		// not working", "image not found") are captured instead of silently lost.
 		process.OutputDataReceived += (_, e) => {
 			if (e.Data != null)
-				logger?.Invoke (TraceLevel.Verbose, $"[emulator] {e.Data}");
+				logger.Invoke (TraceLevel.Verbose, $"[emulator] {e.Data}");
 		};
 		process.ErrorDataReceived += (_, e) => {
 			if (e.Data != null)
-				logger?.Invoke (TraceLevel.Warning, $"[emulator] {e.Data}");
+				logger.Invoke (TraceLevel.Warning, $"[emulator] {e.Data}");
 		};
 
 		process.Start ();
@@ -100,7 +102,7 @@ public class EmulatorRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, "-list-avds");
 
-		logger?.Invoke (TraceLevel.Verbose, "Running: emulator -list-avds");
+		logger.Invoke (TraceLevel.Verbose, "Running: emulator -list-avds");
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 		ProcessUtils.ThrowIfFailed (exitCode, "emulator -list-avds", stderr);
 
@@ -156,7 +158,7 @@ public class EmulatorRunner
 		if (options.PollInterval <= TimeSpan.Zero)
 			throw new ArgumentOutOfRangeException (nameof (options), "PollInterval must be positive.");
 
-		logger?.Invoke (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
+		logger.Invoke (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
 
 		// Phase 1: Check if deviceOrAvdName is already an online ADB device by serial
 		var devices = await adbRunner.ListDevicesAsync (cancellationToken).ConfigureAwait (false);
@@ -165,7 +167,7 @@ public class EmulatorRunner
 			string.Equals (d.Serial, deviceOrAvdName, StringComparison.OrdinalIgnoreCase));
 
 		if (onlineDevice != null) {
-			logger?.Invoke (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
+			logger.Invoke (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
 			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial };
 		}
 
@@ -176,7 +178,7 @@ public class EmulatorRunner
 		// Phase 2: Check if AVD is already running (possibly still booting)
 		var runningSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 		if (runningSerial != null) {
-			logger?.Invoke (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
+			logger.Invoke (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
 			try {
 				return await WaitForFullBootAsync (adbRunner, runningSerial, options, timeoutCts.Token).ConfigureAwait (false);
 			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
@@ -188,7 +190,7 @@ public class EmulatorRunner
 		}
 
 		// Phase 3: Launch the emulator
-		logger?.Invoke (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
+		logger.Invoke (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
 		Process emulatorProcess;
 		try {
 			emulatorProcess = LaunchEmulator (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
@@ -212,7 +214,7 @@ public class EmulatorRunner
 				newSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 			}
 
-			logger?.Invoke (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
+			logger.Invoke (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
 			var result = await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
 
 			// Release the Process handle — the emulator process itself keeps running.
@@ -249,7 +251,7 @@ public class EmulatorRunner
 			process.Kill ();
 		} catch (Exception ex) {
 			// Best-effort: process may have already exited
-			logger?.Invoke (TraceLevel.Verbose, $"Failed to stop emulator process: {ex.Message}");
+			logger.Invoke (TraceLevel.Verbose, $"Failed to stop emulator process: {ex.Message}");
 		} finally {
 			process.Dispose ();
 		}
@@ -271,7 +273,7 @@ public class EmulatorRunner
 			if (string.Equals (bootCompleted, "1", StringComparison.Ordinal)) {
 				var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", cancellationToken).ConfigureAwait (false);
 				if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
-					logger?.Invoke (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
+					logger.Invoke (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
 					return new EmulatorBootResult { Success = true, Serial = serial };
 				}
 			}

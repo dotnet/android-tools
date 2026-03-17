@@ -154,7 +154,6 @@ Xamarin.Android.Tools.EmulatorBootOptions.BootTimeout.get -> System.TimeSpan
 Xamarin.Android.Tools.EmulatorBootOptions.BootTimeout.init -> void
 Xamarin.Android.Tools.EmulatorBootOptions.ColdBoot.get -> bool
 Xamarin.Android.Tools.EmulatorBootOptions.ColdBoot.init -> void
-Xamarin.Android.Tools.EmulatorBootOptions.EmulatorBootOptions() -> void
 Xamarin.Android.Tools.EmulatorBootOptions.PollInterval.get -> System.TimeSpan
 Xamarin.Android.Tools.EmulatorBootOptions.PollInterval.init -> void
 Xamarin.Android.Tools.EmulatorBootResult
