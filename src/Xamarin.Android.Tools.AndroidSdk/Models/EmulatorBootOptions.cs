@@ -9,10 +9,10 @@ namespace Xamarin.Android.Tools;
 /// <summary>
 /// Options for booting an Android emulator.
 /// </summary>
-public class EmulatorBootOptions
+public record EmulatorBootOptions
 {
-	public TimeSpan BootTimeout { get; set; } = TimeSpan.FromSeconds (300);
-	public IEnumerable<string>? AdditionalArgs { get; set; }
-	public bool ColdBoot { get; set; }
-	public TimeSpan PollInterval { get; set; } = TimeSpan.FromMilliseconds (500);
+	public TimeSpan BootTimeout { get; init; } = TimeSpan.FromSeconds (300);
+	public List<string>? AdditionalArgs { get; init; }
+	public bool ColdBoot { get; init; }
+	public TimeSpan PollInterval { get; init; } = TimeSpan.FromMilliseconds (500);
 }

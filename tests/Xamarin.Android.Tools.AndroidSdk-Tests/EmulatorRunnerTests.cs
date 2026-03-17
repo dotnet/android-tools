@@ -345,7 +345,7 @@ public class EmulatorRunnerTests
 			var options = new EmulatorBootOptions {
 				BootTimeout = TimeSpan.FromMilliseconds (500),
 				PollInterval = TimeSpan.FromMilliseconds (50),
-				AdditionalArgs = new [] { "-gpu", "auto", "-no-audio" },
+				AdditionalArgs = new List<string> { "-gpu", "auto", "-no-audio" },
 			};
 
 			// Boot will time out (no device appears), but the emulator process

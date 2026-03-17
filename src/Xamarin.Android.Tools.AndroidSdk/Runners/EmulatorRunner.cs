@@ -46,7 +46,7 @@ public class EmulatorRunner
 	/// <param name="coldBoot">When <c>true</c>, forces a cold boot by passing <c>-no-snapshot-load</c>.</param>
 	/// <param name="additionalArgs">Optional extra arguments to pass to the emulator command line.</param>
 	/// <returns>The <see cref="Process"/> running the emulator. Stdout/stderr are redirected and forwarded to the logger.</returns>
-	public Process LaunchEmulator (string avdName, bool coldBoot = false, IEnumerable<string>? additionalArgs = null)
+	public Process LaunchEmulator (string avdName, bool coldBoot = false, List<string>? additionalArgs = null)
 	{
 		if (string.IsNullOrWhiteSpace (avdName))
 			throw new ArgumentException ("AVD name must not be empty.", nameof (avdName));
@@ -156,9 +156,7 @@ public class EmulatorRunner
 		if (options.PollInterval <= TimeSpan.Zero)
 			throw new ArgumentOutOfRangeException (nameof (options), "PollInterval must be positive.");
 
-		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
-
-		Log (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
+		logger?.Invoke (TraceLevel.Info, $"Booting emulator for '{deviceOrAvdName}'...");
 
 		// Phase 1: Check if deviceOrAvdName is already an online ADB device by serial
 		var devices = await adbRunner.ListDevicesAsync (cancellationToken).ConfigureAwait (false);
@@ -167,7 +165,7 @@ public class EmulatorRunner
 			string.Equals (d.Serial, deviceOrAvdName, StringComparison.OrdinalIgnoreCase));
 
 		if (onlineDevice != null) {
-			Log (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
+			logger?.Invoke (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
 			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial };
 		}
 
@@ -178,7 +176,7 @@ public class EmulatorRunner
 		// Phase 2: Check if AVD is already running (possibly still booting)
 		var runningSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 		if (runningSerial != null) {
-			Log (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
+			logger?.Invoke (TraceLevel.Info, $"AVD '{deviceOrAvdName}' is already running as '{runningSerial}', waiting for full boot...");
 			try {
 				return await WaitForFullBootAsync (adbRunner, runningSerial, options, timeoutCts.Token).ConfigureAwait (false);
 			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
@@ -190,7 +188,7 @@ public class EmulatorRunner
 		}
 
 		// Phase 3: Launch the emulator
-		Log (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
+		logger?.Invoke (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
 		Process emulatorProcess;
 		try {
 			emulatorProcess = LaunchEmulator (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
@@ -214,7 +212,7 @@ public class EmulatorRunner
 				newSerial = FindRunningAvdSerial (devices, deviceOrAvdName);
 			}
 
-			Log (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
+			logger?.Invoke (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
 			var result = await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
 
 			// Release the Process handle — the emulator process itself keeps running.
@@ -248,11 +246,7 @@ public class EmulatorRunner
 	void TryKillProcess (Process process)
 	{
 		try {
-#if NET5_0_OR_GREATER
-			process.Kill (entireProcessTree: true);
-#else
 			process.Kill ();
-#endif
 		} catch (Exception ex) {
 			// Best-effort: process may have already exited
 			logger?.Invoke (TraceLevel.Verbose, $"Failed to stop emulator process: {ex.Message}");
@@ -267,25 +261,26 @@ public class EmulatorRunner
 		EmulatorBootOptions options,
 		CancellationToken cancellationToken)
 	{
-		void Log (TraceLevel level, string message) => logger?.Invoke (level, message);
-
 		// The caller is responsible for enforcing the overall boot timeout via
 		// cancellationToken (a linked CTS with CancelAfter). This method simply
 		// polls until boot completes or the token is cancelled.
-		while (true) {
+		while (!cancellationToken.IsCancellationRequested) {
 			cancellationToken.ThrowIfCancellationRequested ();
 
 			var bootCompleted = await adbRunner.GetShellPropertyAsync (serial, "sys.boot_completed", cancellationToken).ConfigureAwait (false);
 			if (string.Equals (bootCompleted, "1", StringComparison.Ordinal)) {
 				var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", cancellationToken).ConfigureAwait (false);
 				if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
-					Log (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
+					logger?.Invoke (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
 					return new EmulatorBootResult { Success = true, Serial = serial };
 				}
 			}
 
 			await Task.Delay (options.PollInterval, cancellationToken).ConfigureAwait (false);
 		}
+
+		cancellationToken.ThrowIfCancellationRequested ();
+		return new EmulatorBootResult { Success = false, ErrorMessage = "Boot cancelled." };
 	}
 }
 
