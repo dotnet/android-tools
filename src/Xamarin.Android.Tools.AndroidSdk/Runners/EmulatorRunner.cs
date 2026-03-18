@@ -16,8 +16,6 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public class EmulatorRunner
 {
-	static readonly Action<TraceLevel, string> NullLogger = static (_, _) => { };
-
 	readonly string emulatorPath;
 	readonly IDictionary<string, string>? environmentVariables;
 	readonly Action<TraceLevel, string> logger;
@@ -34,7 +32,7 @@ public class EmulatorRunner
 			throw new ArgumentException ("Path to emulator must not be empty.", nameof (emulatorPath));
 		this.emulatorPath = emulatorPath;
 		this.environmentVariables = environmentVariables;
-		this.logger = logger ?? NullLogger;
+		this.logger = logger ?? RunnerDefaults.NullLogger;
 	}
 
 	/// <summary>

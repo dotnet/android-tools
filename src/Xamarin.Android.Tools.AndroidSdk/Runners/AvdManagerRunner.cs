@@ -20,8 +20,6 @@ public class AvdManagerRunner
 	readonly IDictionary<string, string>? environmentVariables;
 	readonly Action<TraceLevel, string> logger;
 
-	static readonly Action<TraceLevel, string> NullLogger = static (_, _) => { };
-
 	/// <summary>
 	/// Creates a new AvdManagerRunner with the full path to the avdmanager executable.
 	/// </summary>
@@ -34,7 +32,7 @@ public class AvdManagerRunner
 			throw new ArgumentException ("Path to avdmanager must not be empty.", nameof (avdManagerPath));
 		this.avdManagerPath = avdManagerPath;
 		this.environmentVariables = environmentVariables;
-		this.logger = logger ?? NullLogger;
+		this.logger = logger ?? RunnerDefaults.NullLogger;
 	}
 
 	public async Task<IReadOnlyList<AvdInfo>> ListAvdsAsync (CancellationToken cancellationToken = default)

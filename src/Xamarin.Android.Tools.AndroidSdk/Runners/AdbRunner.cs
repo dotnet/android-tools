@@ -23,8 +23,6 @@ public class AdbRunner
 	readonly IDictionary<string, string>? environmentVariables;
 	readonly Action<TraceLevel, string> logger;
 
-	static readonly Action<TraceLevel, string> NullLogger = static (_, _) => { };
-
 	// Pattern to match device lines: <serial> <state> [key:value ...]
 	// Uses \s+ to match one or more whitespace characters (spaces or tabs) between fields.
 	// Explicit state list prevents false positives from non-device lines.
@@ -45,7 +43,7 @@ public class AdbRunner
 			throw new ArgumentException ("Path to adb must not be empty.", nameof (adbPath));
 		this.adbPath = adbPath;
 		this.environmentVariables = environmentVariables;
-		this.logger = logger ?? NullLogger;
+		this.logger = logger ?? RunnerDefaults.NullLogger;
 	}
 
 	/// <summary>
@@ -106,8 +104,8 @@ public class AdbRunner
 		// Try 2: Shell property (works when emu console requires auth, e.g. emulator 36+)
 		try {
 			var avdName = await GetShellPropertyAsync (serial, "ro.boot.qemu.avd_name", cancellationToken).ConfigureAwait (false);
-			if (!string.IsNullOrWhiteSpace (avdName))
-				return avdName!.Trim ();
+			if (avdName is { Length: > 0 } name && !string.IsNullOrWhiteSpace (name))
+				return name.Trim ();
 		} catch (OperationCanceledException) {
 			throw;
 		} catch {
@@ -325,7 +323,7 @@ public class AdbRunner
 	/// </summary>
 	public static string BuildDeviceDescription (AdbDeviceInfo device, Action<TraceLevel, string>? logger = null)
 	{
-		logger ??= NullLogger;
+		logger ??= RunnerDefaults.NullLogger;
 		if (device.Type == AdbDeviceType.Emulator && device.AvdName is { Length: > 0 } avdName) {
 			logger.Invoke (TraceLevel.Verbose, $"Emulator {device.Serial}, original AVD name: {avdName}");
 			var formatted = FormatDisplayName (avdName);
@@ -371,7 +369,7 @@ public class AdbRunner
 	/// </summary>
 	public static IReadOnlyList<AdbDeviceInfo> MergeDevicesAndEmulators (IReadOnlyList<AdbDeviceInfo> adbDevices, IReadOnlyList<string> availableEmulators, Action<TraceLevel, string>? logger = null)
 	{
-		logger ??= NullLogger;
+		logger ??= RunnerDefaults.NullLogger;
 		var result = new List<AdbDeviceInfo> (adbDevices);
 
 		// Build a set of AVD names that are already running
