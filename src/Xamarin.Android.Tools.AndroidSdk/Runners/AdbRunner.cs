@@ -76,9 +76,9 @@ public class AdbRunner
 	/// Queries the emulator for its AVD name.
 	/// Tries <c>adb -s &lt;serial&gt; emu avd name</c> first (emulator console protocol),
 	/// then falls back to <c>adb shell getprop ro.boot.qemu.avd_name</c> which reads the
-	/// boot property set by the emulator kernel. The fallback is needed because newer
-	/// emulator versions (36+) may require authentication for console commands, causing
-	/// <c>emu avd name</c> to return empty output.
+	/// boot property set by the emulator kernel. The fallback is needed because
+	/// <c>emu avd name</c> can return empty output on some adb/emulator version
+	/// combinations (observed with adb v36).
 	/// </summary>
 	internal async Task<string?> GetEmulatorAvdNameAsync (string serial, CancellationToken cancellationToken = default)
 	{
@@ -101,7 +101,7 @@ public class AdbRunner
 			// Fall through to getprop fallback
 		}
 
-		// Try 2: Shell property (works when emu console requires auth, e.g. emulator 36+)
+		// Try 2: Shell property (fallback when 'adb emu avd name' returns empty on some adb/emulator versions)
 		try {
 			var avdName = await GetShellPropertyAsync (serial, "ro.boot.qemu.avd_name", cancellationToken).ConfigureAwait (false);
 			if (avdName is { Length: > 0 } name && !string.IsNullOrWhiteSpace (name))
