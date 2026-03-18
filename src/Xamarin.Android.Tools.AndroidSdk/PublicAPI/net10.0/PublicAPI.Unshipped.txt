@@ -156,7 +156,15 @@ Xamarin.Android.Tools.EmulatorBootOptions.ColdBoot.get -> bool
 Xamarin.Android.Tools.EmulatorBootOptions.ColdBoot.init -> void
 Xamarin.Android.Tools.EmulatorBootOptions.PollInterval.get -> System.TimeSpan
 Xamarin.Android.Tools.EmulatorBootOptions.PollInterval.init -> void
+Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootErrorKind.None = 0 -> Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootErrorKind.LaunchFailed = 1 -> Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootErrorKind.Timeout = 2 -> Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootErrorKind.Cancelled = 3 -> Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootErrorKind.Unknown = 4 -> Xamarin.Android.Tools.EmulatorBootErrorKind
 Xamarin.Android.Tools.EmulatorBootResult
+Xamarin.Android.Tools.EmulatorBootResult.ErrorKind.get -> Xamarin.Android.Tools.EmulatorBootErrorKind
+Xamarin.Android.Tools.EmulatorBootResult.ErrorKind.init -> void
 Xamarin.Android.Tools.EmulatorBootResult.ErrorMessage.get -> string?
 Xamarin.Android.Tools.EmulatorBootResult.ErrorMessage.init -> void
 Xamarin.Android.Tools.EmulatorBootResult.Serial.get -> string?

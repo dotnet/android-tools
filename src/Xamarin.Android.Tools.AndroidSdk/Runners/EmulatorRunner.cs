@@ -168,7 +168,7 @@ public class EmulatorRunner
 
 		if (onlineDevice != null) {
 			logger.Invoke (TraceLevel.Info, $"Device '{deviceOrAvdName}' is already online.");
-			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial };
+			return new EmulatorBootResult { Success = true, Serial = onlineDevice.Serial, ErrorKind = EmulatorBootErrorKind.None };
 		}
 
 		// Single timeout CTS for the entire boot operation (covers Phase 2 and Phase 3).
@@ -184,6 +184,7 @@ public class EmulatorRunner
 			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 				return new EmulatorBootResult {
 					Success = false,
+					ErrorKind = EmulatorBootErrorKind.Timeout,
 					ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
 				};
 			}
@@ -197,6 +198,7 @@ public class EmulatorRunner
 		} catch (Exception ex) {
 			return new EmulatorBootResult {
 				Success = false,
+				ErrorKind = EmulatorBootErrorKind.LaunchFailed,
 				ErrorMessage = $"Failed to launch emulator: {ex.Message}",
 			};
 		}
@@ -225,6 +227,7 @@ public class EmulatorRunner
 			TryKillProcess (emulatorProcess);
 			return new EmulatorBootResult {
 				Success = false,
+				ErrorKind = EmulatorBootErrorKind.Timeout,
 				ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
 			};
 		} catch {
@@ -274,7 +277,7 @@ public class EmulatorRunner
 				var pmResult = await adbRunner.RunShellCommandAsync (serial, "pm path android", cancellationToken).ConfigureAwait (false);
 				if (pmResult != null && pmResult.StartsWith ("package:", StringComparison.Ordinal)) {
 					logger.Invoke (TraceLevel.Info, $"Emulator '{serial}' is fully booted.");
-					return new EmulatorBootResult { Success = true, Serial = serial };
+					return new EmulatorBootResult { Success = true, Serial = serial, ErrorKind = EmulatorBootErrorKind.None };
 				}
 			}
 
@@ -282,7 +285,7 @@ public class EmulatorRunner
 		}
 
 		cancellationToken.ThrowIfCancellationRequested ();
-		return new EmulatorBootResult { Success = false, ErrorMessage = "Boot cancelled." };
+		return new EmulatorBootResult { Success = false, ErrorKind = EmulatorBootErrorKind.Cancelled, ErrorMessage = "Boot cancelled." };
 	}
 }
 
