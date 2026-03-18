@@ -204,10 +204,33 @@ public class EmulatorRunner
 		// Poll for the new emulator serial to appear.
 		// If the boot times out or is cancelled, terminate the process we spawned
 		// to avoid leaving orphan emulator processes.
+		//
+		// On macOS, the emulator binary may fork the real QEMU process and exit with
+		// code 0 immediately. The real emulator continues as a separate process and
+		// will eventually appear in 'adb devices'. We only treat non-zero exit codes
+		// as immediate failures; exit code 0 means we continue polling.
 		try {
 			string? newSerial = null;
+			bool processExitedWithZero = false;
 			while (newSerial == null) {
 				timeoutCts.Token.ThrowIfCancellationRequested ();
+
+				// Detect early process exit for fast failure
+				if (emulatorProcess.HasExited && !processExitedWithZero) {
+					if (emulatorProcess.ExitCode != 0) {
+						emulatorProcess.Dispose ();
+						return new EmulatorBootResult {
+							Success = false,
+							ErrorKind = EmulatorBootErrorKind.LaunchFailed,
+							ErrorMessage = $"Emulator process for '{deviceOrAvdName}' exited with code {emulatorProcess.ExitCode} before becoming available.",
+						};
+					}
+					// Exit code 0: emulator likely forked (common on macOS).
+					// The real emulator runs as a separate process — keep polling.
+					logger.Invoke (TraceLevel.Verbose, $"Emulator launcher process exited with code 0 (likely forked). Continuing to poll adb devices.");
+					processExitedWithZero = true;
+				}
+
 				await Task.Delay (options.PollInterval, timeoutCts.Token).ConfigureAwait (false);
 
 				devices = await adbRunner.ListDevicesAsync (timeoutCts.Token).ConfigureAwait (false);
