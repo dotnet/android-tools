@@ -848,6 +848,21 @@ public class AdbRunnerTests
 		Assert.AreEqual (8081, rules [1].Remote.Port);
 	}
 
+	[Test]
+	public void ParseReverseListOutput_TabSeparated ()
+	{
+		var output = new [] {
+			"(reverse)\ttcp:5000\ttcp:5000",
+			"(reverse)\ttcp:8081\ttcp:8081",
+		};
+
+		var rules = AdbRunner.ParseReverseListOutput (output);
+
+		Assert.AreEqual (2, rules.Count);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Remote.Port);
+	}
+
 	// --- AdbPortSpec tests ---
 
 	[Test]

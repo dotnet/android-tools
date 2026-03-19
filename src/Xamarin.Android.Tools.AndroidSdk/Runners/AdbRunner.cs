@@ -343,7 +343,7 @@ public class AdbRunner
 			if (!trimmed.StartsWith ("(reverse)", StringComparison.Ordinal))
 				continue;
 
-			var parts = trimmed.Substring ("(reverse)".Length).Trim ().Split (new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+			var parts = trimmed.Substring ("(reverse)".Length).Trim ().Split ((char[]?) null, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length >= 2) {
 				var remote = AdbPortSpec.TryParse (parts [0]);
 				var local = AdbPortSpec.TryParse (parts [1]);
