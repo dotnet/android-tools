@@ -314,7 +314,7 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--list");
 		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --list", stderr);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} reverse --list", stderr, stdout);
 
 		return ParseReverseListOutput (stdout.ToString ().Split ('\n'));
 	}
