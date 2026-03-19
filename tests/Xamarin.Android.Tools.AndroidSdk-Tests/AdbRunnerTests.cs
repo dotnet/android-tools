@@ -854,8 +854,11 @@ public class AdbRunnerTests
 	public void AdbPortSpec_TryParse_ValidTcp ()
 	{
 		var spec = AdbPortSpec.TryParse ("tcp:5000");
-		Assert.IsNotNull (spec);
-		Assert.AreEqual (AdbProtocol.Tcp, spec!.Protocol);
+		if (spec is null) {
+			Assert.Fail ("Expected non-null AdbPortSpec");
+			return;
+		}
+		Assert.AreEqual (AdbProtocol.Tcp, spec.Protocol);
 		Assert.AreEqual (5000, spec.Port);
 	}
 
@@ -863,8 +866,11 @@ public class AdbRunnerTests
 	public void AdbPortSpec_TryParse_ValidLocalAbstract ()
 	{
 		var spec = AdbPortSpec.TryParse ("localabstract:9222");
-		Assert.IsNotNull (spec);
-		Assert.AreEqual (AdbProtocol.LocalAbstract, spec!.Protocol);
+		if (spec is null) {
+			Assert.Fail ("Expected non-null AdbPortSpec");
+			return;
+		}
+		Assert.AreEqual (AdbProtocol.LocalAbstract, spec.Protocol);
 		Assert.AreEqual (9222, spec.Port);
 	}
 
@@ -872,8 +878,11 @@ public class AdbRunnerTests
 	public void AdbPortSpec_TryParse_ValidLocalReserved ()
 	{
 		var spec = AdbPortSpec.TryParse ("localreserved:1234");
-		Assert.IsNotNull (spec);
-		Assert.AreEqual (AdbProtocol.LocalReserved, spec!.Protocol);
+		if (spec is null) {
+			Assert.Fail ("Expected non-null AdbPortSpec");
+			return;
+		}
+		Assert.AreEqual (AdbProtocol.LocalReserved, spec.Protocol);
 		Assert.AreEqual (1234, spec.Port);
 	}
 
@@ -881,15 +890,18 @@ public class AdbRunnerTests
 	public void AdbPortSpec_TryParse_ValidLocalFilesystem ()
 	{
 		var spec = AdbPortSpec.TryParse ("localfilesystem:8080");
-		Assert.IsNotNull (spec);
-		Assert.AreEqual (AdbProtocol.LocalFilesystem, spec!.Protocol);
+		if (spec is null) {
+			Assert.Fail ("Expected non-null AdbPortSpec");
+			return;
+		}
+		Assert.AreEqual (AdbProtocol.LocalFilesystem, spec.Protocol);
 		Assert.AreEqual (8080, spec.Port);
 	}
 
 	[Test]
 	public void AdbPortSpec_TryParse_Null_ReturnsNull ()
 	{
-		Assert.IsNull (AdbPortSpec.TryParse (null!));
+		Assert.IsNull (AdbPortSpec.TryParse (default));
 	}
 
 	[Test]

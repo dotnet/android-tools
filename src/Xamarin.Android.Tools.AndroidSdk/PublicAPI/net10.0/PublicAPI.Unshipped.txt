@@ -196,7 +196,7 @@ Xamarin.Android.Tools.AdbProtocol.LocalFilesystem = 3 -> Xamarin.Android.Tools.A
 Xamarin.Android.Tools.AdbProtocol.LocalReserved = 2 -> Xamarin.Android.Tools.AdbProtocol
 Xamarin.Android.Tools.AdbProtocol.Tcp = 0 -> Xamarin.Android.Tools.AdbProtocol
 override Xamarin.Android.Tools.AdbPortSpec.ToString() -> string!
-static Xamarin.Android.Tools.AdbPortSpec.TryParse(string! socketSpec) -> Xamarin.Android.Tools.AdbPortSpec?
+static Xamarin.Android.Tools.AdbPortSpec.TryParse(string? socketSpec) -> Xamarin.Android.Tools.AdbPortSpec?
 virtual Xamarin.Android.Tools.AdbRunner.ListReversePortsAsync(string! serial, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Xamarin.Android.Tools.AdbPortRule!>!>!
 virtual Xamarin.Android.Tools.AdbRunner.RemoveAllReversePortsAsync(string! serial, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual Xamarin.Android.Tools.AdbRunner.RemoveReversePortAsync(string! serial, Xamarin.Android.Tools.AdbPortSpec! remote, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
