@@ -244,11 +244,12 @@ public class AdbRunner
 		return null;
 	}
 
+#pragma warning disable RS0026, RS0027 // Multiple overloads with optional parameters are intentional for API convenience
 	/// <summary>
 	/// Sets up reverse port forwarding from the device to the host via
 	/// 'adb -s &lt;serial&gt; reverse &lt;remote&gt; &lt;local&gt;'.
 	/// Supports any socket spec accepted by adb (tcp:PORT, localabstract:NAME, etc.).
-	/// This is the core overload; the (int, int) convenience overload delegates here.
+	/// This is the core overload; the typed and int convenience overloads delegate here.
 	/// </summary>
 	/// <param name="serial">Device serial number.</param>
 	/// <param name="remote">Remote (device-side) socket spec, e.g. "tcp:5000" or "localabstract:foo".</param>
@@ -270,6 +271,18 @@ public class AdbRunner
 	}
 
 	/// <summary>
+	/// Typed overload: sets up reverse port forwarding using <see cref="AdbPortSpec"/> values.
+	/// </summary>
+	public virtual Task ReversePortAsync (string serial, AdbPortSpec remote, AdbPortSpec local, CancellationToken cancellationToken = default)
+	{
+		if (remote is null)
+			throw new ArgumentNullException (nameof (remote));
+		if (local is null)
+			throw new ArgumentNullException (nameof (local));
+		return ReversePortAsync (serial, remote.ToSocketSpec (), local.ToSocketSpec (), cancellationToken);
+	}
+
+	/// <summary>
 	/// TCP convenience overload: sets up reverse port forwarding via
 	/// 'adb -s &lt;serial&gt; reverse tcp:&lt;remotePort&gt; tcp:&lt;localPort&gt;'.
 	/// </summary>
@@ -277,9 +290,11 @@ public class AdbRunner
 	{
 		ValidatePort (remotePort, nameof (remotePort));
 		ValidatePort (localPort, nameof (localPort));
-		return ReversePortAsync (serial, $"tcp:{remotePort}", $"tcp:{localPort}", cancellationToken);
+		return ReversePortAsync (serial, new AdbPortSpec (AdbProtocol.Tcp, remotePort), new AdbPortSpec (AdbProtocol.Tcp, localPort), cancellationToken);
 	}
+#pragma warning restore RS0026, RS0027
 
+#pragma warning disable RS0026, RS0027 // Multiple overloads with optional parameters are intentional for API convenience
 	/// <summary>
 	/// Removes a specific reverse port forwarding rule via
 	/// 'adb -s &lt;serial&gt; reverse --remove &lt;remote&gt;'.
@@ -302,14 +317,25 @@ public class AdbRunner
 	}
 
 	/// <summary>
+	/// Typed overload: removes a specific reverse port forwarding rule using <see cref="AdbPortSpec"/>.
+	/// </summary>
+	public virtual Task RemoveReversePortAsync (string serial, AdbPortSpec remote, CancellationToken cancellationToken = default)
+	{
+		if (remote is null)
+			throw new ArgumentNullException (nameof (remote));
+		return RemoveReversePortAsync (serial, remote.ToSocketSpec (), cancellationToken);
+	}
+
+	/// <summary>
 	/// TCP convenience overload: removes a specific reverse port forwarding rule via
 	/// 'adb -s &lt;serial&gt; reverse --remove tcp:&lt;remotePort&gt;'.
 	/// </summary>
 	public virtual Task RemoveReversePortAsync (string serial, int remotePort, CancellationToken cancellationToken = default)
 	{
 		ValidatePort (remotePort, nameof (remotePort));
-		return RemoveReversePortAsync (serial, $"tcp:{remotePort}", cancellationToken);
+		return RemoveReversePortAsync (serial, new AdbPortSpec (AdbProtocol.Tcp, remotePort), cancellationToken);
 	}
+#pragma warning restore RS0026, RS0027
 
 	/// <summary>
 	/// Removes all reverse port forwarding rules via
@@ -330,7 +356,7 @@ public class AdbRunner
 	/// Lists all active reverse port forwarding rules via
 	/// 'adb -s &lt;serial&gt; reverse --list'.
 	/// </summary>
-	public virtual async Task<IReadOnlyList<AdbReversePortRule>> ListReversePortsAsync (string serial, CancellationToken cancellationToken = default)
+	public virtual async Task<IReadOnlyList<AdbPortRule>> ListReversePortsAsync (string serial, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (serial))
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
@@ -347,10 +373,11 @@ public class AdbRunner
 	/// <summary>
 	/// Parses the output of 'adb reverse --list'.
 	/// Each line is "(reverse) &lt;remote&gt; &lt;local&gt;", e.g. "(reverse) tcp:5000 tcp:5000".
+	/// Lines with unparseable socket specs are skipped.
 	/// </summary>
-	internal static IReadOnlyList<AdbReversePortRule> ParseReverseListOutput (IEnumerable<string> lines)
+	internal static IReadOnlyList<AdbPortRule> ParseReverseListOutput (IEnumerable<string> lines)
 	{
-		var rules = new List<AdbReversePortRule> ();
+		var rules = new List<AdbPortRule> ();
 
 		foreach (var line in lines) {
 			var trimmed = line.Trim ();
@@ -363,10 +390,10 @@ public class AdbRunner
 
 			var parts = trimmed.Substring ("(reverse)".Length).Trim ().Split (new [] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length >= 2) {
-				rules.Add (new AdbReversePortRule (
-					Remote: parts [0],
-					Local: parts [1]
-				));
+				var remote = AdbPortSpec.TryParse (parts [0]);
+				var local = AdbPortSpec.TryParse (parts [1]);
+				if (remote is { } r && local is { } l)
+					rules.Add (new AdbPortRule (r, l));
 			}
 		}
 

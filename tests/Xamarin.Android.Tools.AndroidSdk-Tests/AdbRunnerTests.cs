@@ -729,8 +729,10 @@ public class AdbRunnerTests
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
 		Assert.AreEqual (1, rules.Count);
-		Assert.AreEqual ("tcp:5000", rules [0].Remote);
-		Assert.AreEqual ("tcp:5000", rules [0].Local);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Remote.Protocol);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Local.Protocol);
+		Assert.AreEqual (5000, rules [0].Local.Port);
 	}
 
 	[Test]
@@ -745,12 +747,13 @@ public class AdbRunnerTests
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
 		Assert.AreEqual (3, rules.Count);
-		Assert.AreEqual ("tcp:5000", rules [0].Remote);
-		Assert.AreEqual ("tcp:5000", rules [0].Local);
-		Assert.AreEqual ("tcp:8081", rules [1].Remote);
-		Assert.AreEqual ("tcp:8081", rules [1].Local);
-		Assert.AreEqual ("tcp:19000", rules [2].Remote);
-		Assert.AreEqual ("tcp:19001", rules [2].Local);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Remote.Protocol);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (8081, rules [1].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Local.Port);
+		Assert.AreEqual (19000, rules [2].Remote.Port);
+		Assert.AreEqual (19001, rules [2].Local.Port);
 	}
 
 	[Test]
@@ -782,8 +785,8 @@ public class AdbRunnerTests
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
 		Assert.AreEqual (2, rules.Count);
-		Assert.AreEqual ("tcp:5000", rules [0].Remote);
-		Assert.AreEqual ("tcp:8081", rules [1].Remote);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Remote.Port);
 	}
 
 	[Test]
@@ -807,12 +810,14 @@ public class AdbRunnerTests
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
 		Assert.AreEqual (1, rules.Count);
-		Assert.AreEqual ("tcp:8080", rules [0].Remote);
-		Assert.AreEqual ("tcp:3000", rules [0].Local);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Remote.Protocol);
+		Assert.AreEqual (8080, rules [0].Remote.Port);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Local.Protocol);
+		Assert.AreEqual (3000, rules [0].Local.Port);
 	}
 
 	[Test]
-	public void ParseReverseListOutput_NonTcpSpecs ()
+	public void ParseReverseListOutput_NonTcpSpecs_SkipsUnparseable ()
 	{
 		var output = new [] {
 			"(reverse) localabstract:chrome_devtools_remote tcp:9222",
@@ -821,11 +826,10 @@ public class AdbRunnerTests
 
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
-		Assert.AreEqual (2, rules.Count);
-		Assert.AreEqual ("localabstract:chrome_devtools_remote", rules [0].Remote);
-		Assert.AreEqual ("tcp:9222", rules [0].Local);
-		Assert.AreEqual ("tcp:5000", rules [1].Remote);
-		Assert.AreEqual ("tcp:5000", rules [1].Local);
+		// localabstract:chrome_devtools_remote has a non-numeric port, so it is skipped
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Remote.Protocol);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
 	}
 
 	[Test]
@@ -840,16 +844,127 @@ public class AdbRunnerTests
 		var rules = AdbRunner.ParseReverseListOutput (output);
 
 		Assert.AreEqual (2, rules.Count);
-		Assert.AreEqual ("tcp:5000", rules [0].Remote);
-		Assert.AreEqual ("tcp:8081", rules [1].Remote);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Remote.Port);
+	}
+
+	// --- AdbPortSpec tests ---
+
+	[Test]
+	public void AdbPortSpec_TryParse_ValidTcp ()
+	{
+		var spec = AdbPortSpec.TryParse ("tcp:5000");
+		Assert.IsNotNull (spec);
+		Assert.AreEqual (AdbProtocol.Tcp, spec!.Protocol);
+		Assert.AreEqual (5000, spec.Port);
 	}
 
 	[Test]
-	public void AdbReversePortRule_ValueEquality ()
+	public void AdbPortSpec_TryParse_ValidLocalAbstract ()
 	{
-		var rule1 = new AdbReversePortRule ("tcp:5000", "tcp:5000");
-		var rule2 = new AdbReversePortRule ("tcp:5000", "tcp:5000");
-		var rule3 = new AdbReversePortRule ("tcp:5000", "tcp:3000");
+		var spec = AdbPortSpec.TryParse ("localabstract:9222");
+		Assert.IsNotNull (spec);
+		Assert.AreEqual (AdbProtocol.LocalAbstract, spec!.Protocol);
+		Assert.AreEqual (9222, spec.Port);
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_ValidLocalReserved ()
+	{
+		var spec = AdbPortSpec.TryParse ("localreserved:1234");
+		Assert.IsNotNull (spec);
+		Assert.AreEqual (AdbProtocol.LocalReserved, spec!.Protocol);
+		Assert.AreEqual (1234, spec.Port);
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_ValidLocalFilesystem ()
+	{
+		var spec = AdbPortSpec.TryParse ("localfilesystem:8080");
+		Assert.IsNotNull (spec);
+		Assert.AreEqual (AdbProtocol.LocalFilesystem, spec!.Protocol);
+		Assert.AreEqual (8080, spec.Port);
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_Null_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse (null!));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_Empty_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse (""));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_NoColon_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse ("tcp5000"));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_NonNumericPort_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse ("localabstract:chrome_devtools_remote"));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_ZeroPort_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse ("tcp:0"));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_PortAbove65535_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse ("tcp:70000"));
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_UnknownProtocol_ReturnsNull ()
+	{
+		Assert.IsNull (AdbPortSpec.TryParse ("udp:5000"));
+	}
+
+	[Test]
+	public void AdbPortSpec_ToSocketSpec_Tcp ()
+	{
+		var spec = new AdbPortSpec (AdbProtocol.Tcp, 5000);
+		Assert.AreEqual ("tcp:5000", spec.ToSocketSpec ());
+	}
+
+	[Test]
+	public void AdbPortSpec_ToSocketSpec_LocalAbstract ()
+	{
+		var spec = new AdbPortSpec (AdbProtocol.LocalAbstract, 9222);
+		Assert.AreEqual ("localabstract:9222", spec.ToSocketSpec ());
+	}
+
+	[Test]
+	public void AdbPortSpec_ToString_MatchesSocketSpec ()
+	{
+		var spec = new AdbPortSpec (AdbProtocol.Tcp, 8080);
+		Assert.AreEqual ("tcp:8080", spec.ToString ());
+	}
+
+	[Test]
+	public void AdbPortSpec_TryParse_Roundtrip ()
+	{
+		var original = new AdbPortSpec (AdbProtocol.Tcp, 3000);
+		var parsed = AdbPortSpec.TryParse (original.ToSocketSpec ());
+		Assert.AreEqual (original, parsed);
+	}
+
+	// --- AdbPortRule tests ---
+
+	[Test]
+	public void AdbPortRule_ValueEquality ()
+	{
+		var rule1 = new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 5000));
+		var rule2 = new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 5000));
+		var rule3 = new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 3000));
 
 		Assert.AreEqual (rule1, rule2);
 		Assert.AreNotEqual (rule1, rule3);
@@ -858,19 +973,21 @@ public class AdbRunnerTests
 	}
 
 	[Test]
-	public void AdbReversePortRule_Deconstruct ()
+	public void AdbPortRule_Deconstruct ()
 	{
-		var rule = new AdbReversePortRule ("tcp:5000", "tcp:3000");
+		var rule = new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 3000));
 		var (remote, local) = rule;
 
-		Assert.AreEqual ("tcp:5000", remote);
-		Assert.AreEqual ("tcp:3000", local);
+		Assert.AreEqual (AdbProtocol.Tcp, remote.Protocol);
+		Assert.AreEqual (5000, remote.Port);
+		Assert.AreEqual (AdbProtocol.Tcp, local.Protocol);
+		Assert.AreEqual (3000, local.Port);
 	}
 
 	[Test]
-	public void AdbReversePortRule_ToString ()
+	public void AdbPortRule_ToString ()
 	{
-		var rule = new AdbReversePortRule ("tcp:5000", "tcp:3000");
+		var rule = new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 3000));
 		var str = rule.ToString ();
 
 		Assert.That (str, Does.Contain ("tcp:5000"));
@@ -937,6 +1054,24 @@ public class AdbRunnerTests
 			async () => await runner.ReversePortAsync ("emulator-5554", "tcp:5000", ""));
 	}
 
+	// --- ReversePortAsync AdbPortSpec overload validation tests ---
+
+	[Test]
+	public void ReversePortAsync_AdbPortSpec_NullRemote_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.ReversePortAsync ("emulator-5554", (AdbPortSpec) null!, new AdbPortSpec (AdbProtocol.Tcp, 5000)));
+	}
+
+	[Test]
+	public void ReversePortAsync_AdbPortSpec_NullLocal_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.ReversePortAsync ("emulator-5554", new AdbPortSpec (AdbProtocol.Tcp, 5000), (AdbPortSpec) null!));
+	}
+
 	// --- RemoveReversePortAsync parameter validation tests ---
 
 	[Test]
@@ -971,6 +1106,16 @@ public class AdbRunnerTests
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentException> (
 			async () => await runner.RemoveReversePortAsync ("emulator-5554", ""));
+	}
+
+	// --- RemoveReversePortAsync AdbPortSpec overload validation tests ---
+
+	[Test]
+	public void RemoveReversePortAsync_AdbPortSpec_NullRemote_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.RemoveReversePortAsync ("emulator-5554", (AdbPortSpec) null!));
 	}
 
 	// --- RemoveAllReversePortsAsync parameter validation tests ---
