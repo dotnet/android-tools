@@ -1001,63 +1001,11 @@ public class AdbRunnerTests
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.ReversePortAsync ("", 5000, 5000));
+			async () => await runner.ReversePortAsync ("", new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 5000)));
 	}
 
 	[Test]
-	public void ReversePortAsync_ZeroRemotePort_ThrowsArgumentOutOfRange ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", 0, 5000));
-	}
-
-	[Test]
-	public void ReversePortAsync_NegativeLocalPort_ThrowsArgumentOutOfRange ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", 5000, -1));
-	}
-
-	[Test]
-	public void ReversePortAsync_PortAbove65535_ThrowsArgumentOutOfRange ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", 70000, 5000));
-	}
-
-	// --- ReversePortAsync string overload validation tests ---
-
-	[Test]
-	public void ReversePortAsync_String_EmptySerial_ThrowsArgumentException ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.ReversePortAsync ("", "tcp:5000", "tcp:5000"));
-	}
-
-	[Test]
-	public void ReversePortAsync_String_EmptyRemote_ThrowsArgumentException ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", "", "tcp:5000"));
-	}
-
-	[Test]
-	public void ReversePortAsync_String_EmptyLocal_ThrowsArgumentException ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", "tcp:5000", ""));
-	}
-
-	// --- ReversePortAsync AdbPortSpec overload validation tests ---
-
-	[Test]
-	public void ReversePortAsync_AdbPortSpec_NullRemote_ThrowsArgumentNull ()
+	public void ReversePortAsync_NullRemote_ThrowsArgumentNull ()
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
@@ -1065,7 +1013,7 @@ public class AdbRunnerTests
 	}
 
 	[Test]
-	public void ReversePortAsync_AdbPortSpec_NullLocal_ThrowsArgumentNull ()
+	public void ReversePortAsync_NullLocal_ThrowsArgumentNull ()
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
@@ -1079,39 +1027,11 @@ public class AdbRunnerTests
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.RemoveReversePortAsync ("", 5000));
+			async () => await runner.RemoveReversePortAsync ("", new AdbPortSpec (AdbProtocol.Tcp, 5000)));
 	}
 
 	[Test]
-	public void RemoveReversePortAsync_ZeroPort_ThrowsArgumentOutOfRange ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentOutOfRangeException> (
-			async () => await runner.RemoveReversePortAsync ("emulator-5554", 0));
-	}
-
-	// --- RemoveReversePortAsync string overload validation tests ---
-
-	[Test]
-	public void RemoveReversePortAsync_String_EmptySerial_ThrowsArgumentException ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.RemoveReversePortAsync ("", "tcp:5000"));
-	}
-
-	[Test]
-	public void RemoveReversePortAsync_String_EmptyRemote_ThrowsArgumentException ()
-	{
-		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
-		Assert.ThrowsAsync<System.ArgumentException> (
-			async () => await runner.RemoveReversePortAsync ("emulator-5554", ""));
-	}
-
-	// --- RemoveReversePortAsync AdbPortSpec overload validation tests ---
-
-	[Test]
-	public void RemoveReversePortAsync_AdbPortSpec_NullRemote_ThrowsArgumentNull ()
+	public void RemoveReversePortAsync_NullRemote_ThrowsArgumentNull ()
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
