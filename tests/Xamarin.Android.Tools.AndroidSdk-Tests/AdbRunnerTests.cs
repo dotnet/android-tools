@@ -729,11 +729,7 @@ public class AdbRunnerTests
 		Directory.CreateDirectory (dir);
 		var path = Path.Combine (dir, "adb");
 		File.WriteAllText (path, "#!/bin/bash\n" + scriptBody);
-
-		var psi = new System.Diagnostics.ProcessStartInfo ("chmod") {
-			ArgumentList = { "+x", path },
-		};
-		System.Diagnostics.Process.Start (psi)?.WaitForExit ();
+		FileUtil.Chmod (path, 0x1ED); // 0755
 
 		return path;
 	}
@@ -741,9 +737,10 @@ public class AdbRunnerTests
 	static void CleanupFakeAdb (string adbPath)
 	{
 		var dir = Path.GetDirectoryName (adbPath);
-		File.Delete (adbPath);
-		if (dir != null)
+		if (dir is { Length: > 0 }) {
+			File.Delete (adbPath);
 			Directory.Delete (dir);
+		}
 	}
 
 	[Test]
