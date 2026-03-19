@@ -41,7 +41,7 @@ public class AvdManagerRunner
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "list", "avd");
 		logger.Invoke (TraceLevel.Verbose, "Running: avdmanager list avd");
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 		ProcessUtils.ThrowIfFailed (exitCode, "avdmanager list avd", stderr);
 
@@ -117,7 +117,7 @@ public class AvdManagerRunner
 
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "delete", "avd", "--name", name);
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 
 		ProcessUtils.ThrowIfFailed (exitCode, $"avdmanager delete avd --name {name}", stderr);
 	}

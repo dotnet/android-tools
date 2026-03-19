@@ -32,6 +32,12 @@ namespace Xamarin.Android.Tools
 			return StartProcess (psi, stdout, stderr, cancellationToken, null, onStarted);
 		}
 
+		/// Convenience overload accepting environmentVariables without requiring onStarted.
+		public static Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables)
+		{
+			return StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null);
+		}
+
 		public static async Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, IDictionary<string, string>? environmentVariables, Action<Process>? onStarted)
 		{
 			cancellationToken.ThrowIfCancellationRequested ();

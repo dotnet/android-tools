@@ -101,7 +101,7 @@ public class EmulatorRunner
 		var psi = ProcessUtils.CreateProcessStartInfo (emulatorPath, "-list-avds");
 
 		logger.Invoke (TraceLevel.Verbose, "Running: emulator -list-avds");
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
 		ProcessUtils.ThrowIfFailed (exitCode, "emulator -list-avds", stderr);
 
 		return ParseListAvdsOutput (stdout.ToString ());
