@@ -55,7 +55,7 @@ public class AdbRunner
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "devices", "-l");
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 
 		ProcessUtils.ThrowIfFailed (exitCode, "adb devices -l", stderr);
 
@@ -86,7 +86,7 @@ public class AdbRunner
 		try {
 			using var stdout = new StringWriter ();
 			var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "avd", "name");
-			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, environmentVariables).ConfigureAwait (false);
+			await ProcessUtils.StartProcess (psi, stdout, null, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 
 			foreach (var line in stdout.ToString ().Split ('\n')) {
 				var trimmed = line.Trim ();
@@ -135,7 +135,7 @@ public class AdbRunner
 		using var stderr = new StringWriter ();
 
 		try {
-			var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cts.Token, environmentVariables).ConfigureAwait (false);
+			var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cts.Token, environmentVariables, null).ConfigureAwait (false);
 			ProcessUtils.ThrowIfFailed (exitCode, "adb wait-for-device", stderr, stdout);
 		} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
 			throw new TimeoutException ($"Timed out waiting for device after {effectiveTimeout.TotalSeconds}s.");
@@ -149,7 +149,7 @@ public class AdbRunner
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "emu", "kill");
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} emu kill", stderr);
 	}
 
@@ -162,7 +162,7 @@ public class AdbRunner
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", "getprop", propertyName);
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)
@@ -186,7 +186,7 @@ public class AdbRunner
 		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "shell", command);
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)
@@ -218,7 +218,7 @@ public class AdbRunner
 		allArgs [3] = command;
 		Array.Copy (args, 0, allArgs, 4, args.Length);
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, allArgs);
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables, null).ConfigureAwait (false);
 		if (exitCode != 0) {
 			var stderrText = stderr.ToString ().Trim ();
 			if (stderrText.Length > 0)

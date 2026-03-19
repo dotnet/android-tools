@@ -124,6 +124,7 @@ static Xamarin.Android.Tools.JdkInfo.GetSupportedJdkInfos(System.Action<System.D
 static Xamarin.Android.Tools.KernelEx.GetLongPathName(string! path) -> string!
 static Xamarin.Android.Tools.KernelEx.GetShortPathName(string! path) -> string!
 static Xamarin.Android.Tools.ProcessUtils.ExecuteToolAsync<TResult>(string! exe, System.Func<string!, TResult>! result, System.Threading.CancellationToken token, System.Action<System.Diagnostics.Process!>? onStarted = null) -> System.Threading.Tasks.Task<TResult>!
+static Xamarin.Android.Tools.ProcessUtils.StartProcess(System.Diagnostics.ProcessStartInfo! psi, System.IO.TextWriter? stdout, System.IO.TextWriter? stderr, System.Threading.CancellationToken cancellationToken, System.Action<System.Diagnostics.Process!>? onStarted = null) -> System.Threading.Tasks.Task<int>!
 static readonly Xamarin.Android.Tools.AndroidVersions.KnownVersions -> Xamarin.Android.Tools.AndroidVersion![]!
 static readonly Xamarin.Android.Tools.OS.IsLinux -> bool
 static readonly Xamarin.Android.Tools.OS.IsMac -> bool
