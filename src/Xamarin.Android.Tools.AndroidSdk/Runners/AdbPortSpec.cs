@@ -27,11 +27,9 @@ public record AdbPortSpec (AdbProtocol Protocol, int Port)
 	/// </summary>
 	public static AdbPortSpec? TryParse (string? socketSpec)
 	{
-		if (string.IsNullOrWhiteSpace (socketSpec))
+		if (socketSpec is not { Length: > 0 } value || string.IsNullOrWhiteSpace (value))
 			return null;
 
-		// socketSpec is guaranteed non-null after IsNullOrWhiteSpace check
-		var value = socketSpec!;
 		var colonIndex = value.IndexOf (':');
 		if (colonIndex <= 0 || colonIndex >= value.Length - 1)
 			return null;

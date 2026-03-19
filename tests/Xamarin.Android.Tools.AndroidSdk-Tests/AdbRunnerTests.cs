@@ -1021,7 +1021,7 @@ public class AdbRunnerTests
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", (AdbPortSpec) null!, new AdbPortSpec (AdbProtocol.Tcp, 5000)));
+			async () => await runner.ReversePortAsync ("emulator-5554", (AdbPortSpec) null, new AdbPortSpec (AdbProtocol.Tcp, 5000)));
 	}
 
 	[Test]
@@ -1029,7 +1029,7 @@ public class AdbRunnerTests
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
-			async () => await runner.ReversePortAsync ("emulator-5554", new AdbPortSpec (AdbProtocol.Tcp, 5000), (AdbPortSpec) null!));
+			async () => await runner.ReversePortAsync ("emulator-5554", new AdbPortSpec (AdbProtocol.Tcp, 5000), (AdbPortSpec) null));
 	}
 
 	// --- RemoveReversePortAsync parameter validation tests ---
@@ -1047,7 +1047,7 @@ public class AdbRunnerTests
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentNullException> (
-			async () => await runner.RemoveReversePortAsync ("emulator-5554", (AdbPortSpec) null!));
+			async () => await runner.RemoveReversePortAsync ("emulator-5554", (AdbPortSpec) null));
 	}
 
 	// --- RemoveAllReversePortsAsync parameter validation tests ---

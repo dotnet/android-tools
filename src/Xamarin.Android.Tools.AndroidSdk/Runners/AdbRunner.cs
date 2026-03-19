@@ -259,6 +259,10 @@ public class AdbRunner
 			throw new ArgumentNullException (nameof (remote));
 		if (local is null)
 			throw new ArgumentNullException (nameof (local));
+		if (remote.Port <= 0 || remote.Port > 65535)
+			throw new ArgumentOutOfRangeException (nameof (remote), remote.Port, "Port must be between 1 and 65535.");
+		if (local.Port <= 0 || local.Port > 65535)
+			throw new ArgumentOutOfRangeException (nameof (local), local.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", remote.ToSocketSpec (), local.ToSocketSpec ());
 		using var stderr = new StringWriter ();
@@ -279,6 +283,8 @@ public class AdbRunner
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 		if (remote is null)
 			throw new ArgumentNullException (nameof (remote));
+		if (remote.Port <= 0 || remote.Port > 65535)
+			throw new ArgumentOutOfRangeException (nameof (remote), remote.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "reverse", "--remove", remote.ToSocketSpec ());
 		using var stderr = new StringWriter ();
