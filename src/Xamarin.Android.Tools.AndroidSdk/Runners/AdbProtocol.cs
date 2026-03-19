@@ -8,8 +8,8 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public enum AdbProtocol
 {
+	/// <summary>
+	/// TCP socket spec, e.g. "tcp:5000".
+	/// </summary>
 	Tcp,
-	LocalAbstract,
-	LocalReserved,
-	LocalFilesystem,
 }

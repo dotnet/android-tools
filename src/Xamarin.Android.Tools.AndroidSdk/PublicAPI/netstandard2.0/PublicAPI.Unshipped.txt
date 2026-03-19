@@ -191,9 +191,7 @@ Xamarin.Android.Tools.AdbPortSpec.Protocol.get -> Xamarin.Android.Tools.AdbProto
 Xamarin.Android.Tools.AdbPortSpec.Protocol.init -> void
 Xamarin.Android.Tools.AdbPortSpec.ToSocketSpec() -> string!
 Xamarin.Android.Tools.AdbProtocol
-Xamarin.Android.Tools.AdbProtocol.LocalAbstract = 1 -> Xamarin.Android.Tools.AdbProtocol
-Xamarin.Android.Tools.AdbProtocol.LocalFilesystem = 3 -> Xamarin.Android.Tools.AdbProtocol
-Xamarin.Android.Tools.AdbProtocol.LocalReserved = 2 -> Xamarin.Android.Tools.AdbProtocol
+
 Xamarin.Android.Tools.AdbProtocol.Tcp = 0 -> Xamarin.Android.Tools.AdbProtocol
 override Xamarin.Android.Tools.AdbPortSpec.ToString() -> string!
 static Xamarin.Android.Tools.AdbPortSpec.TryParse(string? socketSpec) -> Xamarin.Android.Tools.AdbPortSpec?

@@ -15,9 +15,6 @@ public record AdbPortSpec (AdbProtocol Protocol, int Port)
 	/// </summary>
 	public string ToSocketSpec () => Protocol switch {
 		AdbProtocol.Tcp => $"tcp:{Port}",
-		AdbProtocol.LocalAbstract => $"localabstract:{Port}",
-		AdbProtocol.LocalReserved => $"localreserved:{Port}",
-		AdbProtocol.LocalFilesystem => $"localfilesystem:{Port}",
 		_ => throw new ArgumentOutOfRangeException (nameof (Protocol), Protocol, $"Unsupported ADB protocol: {Protocol}"),
 	};
 
@@ -42,9 +39,6 @@ public record AdbPortSpec (AdbProtocol Protocol, int Port)
 
 		var protocol = protocolStr.ToLowerInvariant () switch {
 			"tcp" => (AdbProtocol?) AdbProtocol.Tcp,
-			"localabstract" => AdbProtocol.LocalAbstract,
-			"localreserved" => AdbProtocol.LocalReserved,
-			"localfilesystem" => AdbProtocol.LocalFilesystem,
 			_ => null,
 		};
 

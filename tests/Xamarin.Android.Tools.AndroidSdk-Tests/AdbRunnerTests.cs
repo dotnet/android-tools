@@ -878,39 +878,9 @@ public class AdbRunnerTests
 	}
 
 	[Test]
-	public void AdbPortSpec_TryParse_ValidLocalAbstract ()
+	public void AdbPortSpec_TryParse_NonTcpProtocol_ReturnsNull ()
 	{
-		var spec = AdbPortSpec.TryParse ("localabstract:9222");
-		if (spec is null) {
-			Assert.Fail ("Expected non-null AdbPortSpec");
-			return;
-		}
-		Assert.AreEqual (AdbProtocol.LocalAbstract, spec.Protocol);
-		Assert.AreEqual (9222, spec.Port);
-	}
-
-	[Test]
-	public void AdbPortSpec_TryParse_ValidLocalReserved ()
-	{
-		var spec = AdbPortSpec.TryParse ("localreserved:1234");
-		if (spec is null) {
-			Assert.Fail ("Expected non-null AdbPortSpec");
-			return;
-		}
-		Assert.AreEqual (AdbProtocol.LocalReserved, spec.Protocol);
-		Assert.AreEqual (1234, spec.Port);
-	}
-
-	[Test]
-	public void AdbPortSpec_TryParse_ValidLocalFilesystem ()
-	{
-		var spec = AdbPortSpec.TryParse ("localfilesystem:8080");
-		if (spec is null) {
-			Assert.Fail ("Expected non-null AdbPortSpec");
-			return;
-		}
-		Assert.AreEqual (AdbProtocol.LocalFilesystem, spec.Protocol);
-		Assert.AreEqual (8080, spec.Port);
+		Assert.IsNull (AdbPortSpec.TryParse ("localabstract:9222"));
 	}
 
 	[Test]
@@ -963,10 +933,24 @@ public class AdbRunnerTests
 	}
 
 	[Test]
-	public void AdbPortSpec_ToSocketSpec_LocalAbstract ()
+	public void AdbPortSpec_ToSocketSpec_HighPort ()
 	{
-		var spec = new AdbPortSpec (AdbProtocol.LocalAbstract, 9222);
-		Assert.AreEqual ("localabstract:9222", spec.ToSocketSpec ());
+		var spec = new AdbPortSpec (AdbProtocol.Tcp, 65535);
+		Assert.AreEqual ("tcp:65535", spec.ToSocketSpec ());
+	}
+
+	[Test]
+	public void AdbPortSpec_ToSocketSpec_LowPort ()
+	{
+		var spec = new AdbPortSpec (AdbProtocol.Tcp, 1);
+		Assert.AreEqual ("tcp:1", spec.ToSocketSpec ());
+	}
+
+	[Test]
+	public void AdbPortSpec_ToSocketSpec_InvalidProtocol_Throws ()
+	{
+		var spec = new AdbPortSpec ((AdbProtocol) 99, 5000);
+		Assert.Throws<System.ArgumentOutOfRangeException> (() => spec.ToSocketSpec ());
 	}
 
 	[Test]
