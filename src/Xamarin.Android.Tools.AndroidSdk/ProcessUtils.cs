@@ -24,7 +24,8 @@ namespace Xamarin.Android.Tools
 			ExecutableFileExtensions    = pathExts;
 		}
 
-#pragma warning disable RS0027 // backward-compat overload; the shipped API already has this optional parameter
+		/// Backward-compatible overload matching the original shipped API (without environmentVariables).
+#pragma warning disable RS0027 // Public API with optional parameter(s) should have the most parameters amongst its public overloads
 		public static Task<int> StartProcess (ProcessStartInfo psi, TextWriter? stdout, TextWriter? stderr, CancellationToken cancellationToken, Action<Process>? onStarted = null)
 #pragma warning restore RS0027
 		{
