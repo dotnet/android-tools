@@ -14,7 +14,7 @@ public record AdbPortSpec (AdbProtocol Protocol, int Port)
 	/// Returns the adb socket spec string, e.g. "tcp:5000".
 	/// </summary>
 	public string ToSocketSpec () => Protocol switch {
-		AdbProtocol.Tcp => $"tcp:{Port}",
+		AdbProtocol.Tcp => FormattableString.Invariant ($"tcp:{Port})",
 		_ => throw new ArgumentOutOfRangeException (nameof (Protocol), Protocol, $"Unsupported ADB protocol: {Protocol}"),
 	};
 
