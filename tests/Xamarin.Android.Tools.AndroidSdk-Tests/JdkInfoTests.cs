@@ -312,7 +312,7 @@ namespace Xamarin.Android.Tools.Tests
 		[Test]
 		public void GetKnownSystemJdkInfos_JiJavaHome_NonDirectoryPath_NoWarning ()
 		{
-			// Reproduce https://github.com/dotnet/android-tools/issues/XXX:
+			// Reproduce https://github.com/dotnet/android-tools/issues/154:
 			// If JI_JAVA_HOME points to a path that exists but is not a directory,
 			// no Warning-level message should be logged.
 			var file = Path.GetTempFileName ();
