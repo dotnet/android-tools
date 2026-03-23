@@ -314,7 +314,7 @@ namespace Xamarin.Android.Tools.Tests
 		{
 			// Reproduce https://github.com/dotnet/android-tools/issues/154:
 			// If JI_JAVA_HOME points to a path that exists but is not a directory,
-			// no Warning-level message should be logged.
+			// no Warning-level message should be logged for that non-directory JI_JAVA_HOME path.
 			var file = Path.GetTempFileName ();
 			var previous = Environment.GetEnvironmentVariable ("JI_JAVA_HOME", EnvironmentVariableTarget.Process);
 			try {
