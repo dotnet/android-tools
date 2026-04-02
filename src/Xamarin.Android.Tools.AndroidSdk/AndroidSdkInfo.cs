@@ -134,7 +134,9 @@ namespace Xamarin.Android.Tools
 
 		public bool IsPlatformInstalled (int apiLevel)
 		{
-			return apiLevel != 0 && Directory.Exists (GetPlatformDirectory (apiLevel));
+			return apiLevel != 0 &&
+				(Directory.Exists (GetPlatformDirectory (apiLevel)) ||
+				 Directory.Exists (GetPlatformDirectoryFromId (apiLevel + ".0")));
 		}
 
 		public string? AndroidNdkPath {

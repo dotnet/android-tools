@@ -662,6 +662,9 @@ namespace Xamarin.Android.Tools.Tests
 				var dir37 = info.TryGetPlatformDirectoryFromApiLevel ("37", versions);
 				Assert.IsNotNull (dir37, "Should fall back from android-37 to android-37.0");
 				Assert.AreEqual (platform370Path, dir37);
+
+				// IsPlatformInstalled should also find android-37.0
+				Assert.IsTrue (info.IsPlatformInstalled (37), "IsPlatformInstalled should find android-37.0");
 			}
 			finally {
 				Directory.Delete (root, recursive: true);
