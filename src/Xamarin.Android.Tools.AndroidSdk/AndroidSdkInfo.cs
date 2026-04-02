@@ -120,6 +120,15 @@ namespace Xamarin.Android.Tools
 			if (dir != null && Directory.Exists (dir))
 				return dir;
 
+			// Starting with API 37, Google's SDK Manager installs platforms to
+			// "android-37.0" instead of "android-37". Try the "{major}.0" fallback.
+			// See: https://github.com/dotnet/android-tools/issues/319
+			if (int.TryParse (id, out _)) {
+				dir = GetPlatformDirectoryFromId (id + ".0");
+				if (Directory.Exists (dir))
+					return dir;
+			}
+
 			return null;
 		}
 
