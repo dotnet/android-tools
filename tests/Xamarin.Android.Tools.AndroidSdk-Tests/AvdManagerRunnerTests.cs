@@ -293,4 +293,173 @@ public class AvdManagerRunnerTests
 			Directory.Delete (tempDir, true);
 		}
 	}
+
+	// --- ParseDeviceListOutput tests ---
+
+	[Test]
+	public void ParseDeviceListOutput_MultipleProfiles ()
+	{
+		var output =
+			"Available devices definitions:\n" +
+			"id: 0 or \"automotive_1024p_landscape\"\n" +
+			"    Name: Automotive (1024p landscape)\n" +
+			"    OEM : Google\n" +
+			"    Tag : android-automotive-playstore\n" +
+			"---------\n" +
+			"id: 1 or \"pixel_7\"\n" +
+			"    Name: Pixel 7\n" +
+			"    OEM : Google\n" +
+			"---------\n" +
+			"id: 2 or \"Nexus 5X\"\n" +
+			"    Name: Nexus 5X\n" +
+			"    OEM : Google\n";
+
+		var profiles = AvdManagerRunner.ParseDeviceListOutput (output);
+
+		Assert.AreEqual (3, profiles.Count);
+
+		Assert.AreEqual ("automotive_1024p_landscape", profiles [0].Id);
+		Assert.AreEqual ("Automotive (1024p landscape)", profiles [0].Name);
+		Assert.AreEqual ("Google", profiles [0].Oem);
+		Assert.AreEqual ("android-automotive-playstore", profiles [0].Tag);
+
+		Assert.AreEqual ("pixel_7", profiles [1].Id);
+		Assert.AreEqual ("Pixel 7", profiles [1].Name);
+		Assert.AreEqual ("Google", profiles [1].Oem);
+		Assert.IsNull (profiles [1].Tag);
+
+		Assert.AreEqual ("Nexus 5X", profiles [2].Id);
+		Assert.AreEqual ("Nexus 5X", profiles [2].Name);
+	}
+
+	[Test]
+	public void ParseDeviceListOutput_EmptyOutput ()
+	{
+		var profiles = AvdManagerRunner.ParseDeviceListOutput ("");
+		Assert.AreEqual (0, profiles.Count);
+	}
+
+	[Test]
+	public void ParseDeviceListOutput_WindowsNewlines ()
+	{
+		var output =
+			"Available devices definitions:\r\n" +
+			"id: 0 or \"pixel_fold\"\r\n" +
+			"    Name: Pixel Fold\r\n" +
+			"    OEM : Google\r\n" +
+			"    Tag : default\r\n";
+
+		var profiles = AvdManagerRunner.ParseDeviceListOutput (output);
+
+		Assert.AreEqual (1, profiles.Count);
+		Assert.AreEqual ("pixel_fold", profiles [0].Id);
+		Assert.AreEqual ("Pixel Fold", profiles [0].Name);
+		Assert.AreEqual ("Google", profiles [0].Oem);
+		Assert.AreEqual ("default", profiles [0].Tag);
+	}
+
+	[Test]
+	public void ParseDeviceListOutput_NoNameFallsBackToId ()
+	{
+		var output =
+			"id: 0 or \"custom_device\"\n" +
+			"    OEM : SomeOem\n";
+
+		var profiles = AvdManagerRunner.ParseDeviceListOutput (output);
+
+		Assert.AreEqual (1, profiles.Count);
+		Assert.AreEqual ("custom_device", profiles [0].Id);
+		Assert.AreEqual ("custom_device", profiles [0].Name);
+	}
+
+	[Test]
+	public void ParseDeviceListOutput_HeaderOnly ()
+	{
+		var output = "Available devices definitions:\n";
+		var profiles = AvdManagerRunner.ParseDeviceListOutput (output);
+		Assert.AreEqual (0, profiles.Count);
+	}
+
+	[Test]
+	public void ParseDeviceListOutput_ReturnsIReadOnlyList ()
+	{
+		var profiles = AvdManagerRunner.ParseDeviceListOutput ("");
+		Assert.IsInstanceOf<IReadOnlyList<AvdDeviceProfile>> (profiles);
+	}
+
+	// --- EnumerateSkins tests ---
+
+	[Test]
+	public void EnumerateSkins_FindsStandaloneSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7_pro"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "nexus_5x"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.That (skins, Contains.Item ("nexus_5x"));
+			Assert.That (skins, Contains.Item ("pixel_7_pro"));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_FindsSystemImageSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_tablet"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (1, skins.Count);
+			Assert.AreEqual ("pixel_tablet", skins [0]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_DeduplicatesAndSorts ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_7"));
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "auto_skin"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.AreEqual ("auto_skin", skins [0]);
+			Assert.AreEqual ("pixel_7", skins [1]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_MissingSdkDir_ReturnsEmpty ()
+	{
+		var skins = AvdManagerRunner.EnumerateSkins (Path.Combine (Path.GetTempPath (), "nonexistent-sdk-dir"));
+		Assert.AreEqual (0, skins.Count);
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_NullSdkPath_ThrowsArgumentException ()
+	{
+		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (null!));
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_EmptySdkPath_ThrowsArgumentException ()
+	{
+		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (""));
+	}
 }

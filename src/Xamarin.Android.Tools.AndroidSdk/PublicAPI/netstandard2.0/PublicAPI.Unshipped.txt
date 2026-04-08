@@ -199,3 +199,20 @@ virtual Xamarin.Android.Tools.AdbRunner.ListReversePortsAsync(string! serial, Sy
 virtual Xamarin.Android.Tools.AdbRunner.RemoveAllReversePortsAsync(string! serial, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual Xamarin.Android.Tools.AdbRunner.RemoveReversePortAsync(string! serial, Xamarin.Android.Tools.AdbPortSpec! remote, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual Xamarin.Android.Tools.AdbRunner.ReversePortAsync(string! serial, Xamarin.Android.Tools.AdbPortSpec! remote, Xamarin.Android.Tools.AdbPortSpec! local, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Xamarin.Android.Tools.AvdManagerRunner.ListDeviceProfilesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Xamarin.Android.Tools.AvdDeviceProfile!>!>!
+static Xamarin.Android.Tools.AvdManagerRunner.ListAvdSkinsAsync(string! sdkPath, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
+Xamarin.Android.Tools.AvdDeviceProfile
+Xamarin.Android.Tools.AvdDeviceProfile.AvdDeviceProfile(string! Id, string! Name, string? Oem = null, string? Tag = null) -> void
+Xamarin.Android.Tools.AvdDeviceProfile.Id.get -> string!
+Xamarin.Android.Tools.AvdDeviceProfile.Id.init -> void
+Xamarin.Android.Tools.AvdDeviceProfile.Name.get -> string!
+Xamarin.Android.Tools.AvdDeviceProfile.Name.init -> void
+Xamarin.Android.Tools.AvdDeviceProfile.Oem.get -> string?
+Xamarin.Android.Tools.AvdDeviceProfile.Oem.init -> void
+Xamarin.Android.Tools.AvdDeviceProfile.Tag.get -> string?
+Xamarin.Android.Tools.AvdDeviceProfile.Tag.init -> void
+Xamarin.Android.Tools.AdbDeviceTracker
+Xamarin.Android.Tools.AdbDeviceTracker.AdbDeviceTracker(string? adbPath = null, int port = 5037, System.Collections.Generic.IDictionary<string!, string!>? environmentVariables = null, System.Action<System.Diagnostics.TraceLevel, string!>? logger = null) -> void
+Xamarin.Android.Tools.AdbDeviceTracker.CurrentDevices.get -> System.Collections.Generic.IReadOnlyList<Xamarin.Android.Tools.AdbDeviceInfo!>!
+Xamarin.Android.Tools.AdbDeviceTracker.Dispose() -> void
+Xamarin.Android.Tools.AdbDeviceTracker.StartAsync(System.Action<System.Collections.Generic.IReadOnlyList<Xamarin.Android.Tools.AdbDeviceInfo!>!>! onDevicesChanged, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

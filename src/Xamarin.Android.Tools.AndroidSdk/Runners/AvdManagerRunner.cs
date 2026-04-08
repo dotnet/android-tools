@@ -122,6 +122,111 @@ public class AvdManagerRunner
 		ProcessUtils.ThrowIfFailed (exitCode, $"avdmanager delete avd --name {name}", stderr);
 	}
 
+	/// <summary>
+	/// Lists available device profiles (hardware definitions) using <c>avdmanager list device</c>.
+	/// </summary>
+	public async Task<IReadOnlyList<AvdDeviceProfile>> ListDeviceProfilesAsync (CancellationToken cancellationToken = default)
+	{
+		using var stdout = new StringWriter ();
+		using var stderr = new StringWriter ();
+		var psi = ProcessUtils.CreateProcessStartInfo (avdManagerPath, "list", "device");
+		logger.Invoke (TraceLevel.Verbose, "Running: avdmanager list device");
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+
+		ProcessUtils.ThrowIfFailed (exitCode, "avdmanager list device", stderr, stdout);
+
+		return ParseDeviceListOutput (stdout.ToString ());
+	}
+
+	/// <summary>
+	/// Lists available AVD skins by scanning the SDK <c>skins/</c> directory.
+	/// </summary>
+	/// <param name="sdkPath">Root path of the Android SDK.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>Sorted list of unique skin directory names.</returns>
+	public static Task<IReadOnlyList<string>> ListAvdSkinsAsync (string sdkPath, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (sdkPath))
+			throw new ArgumentException ("SDK path must not be empty.", nameof (sdkPath));
+
+		cancellationToken.ThrowIfCancellationRequested ();
+
+		return Task.FromResult (EnumerateSkins (sdkPath));
+	}
+
+	internal static IReadOnlyList<string> EnumerateSkins (string sdkPath)
+	{
+		var skins = new SortedSet<string> (StringComparer.OrdinalIgnoreCase);
+
+		// Standalone skins: <sdk>/skins/<skinName>/
+		var skinsDir = Path.Combine (sdkPath, "skins");
+		AddSkinDirectories (skins, skinsDir);
+
+		// System image skins: <sdk>/system-images/<api>/<tag>/<abi>/skins/<skinName>/
+		var systemImagesDir = Path.Combine (sdkPath, "system-images");
+		if (Directory.Exists (systemImagesDir)) {
+			foreach (var apiDir in Directory.EnumerateDirectories (systemImagesDir)) {
+				foreach (var tagDir in Directory.EnumerateDirectories (apiDir)) {
+					foreach (var abiDir in Directory.EnumerateDirectories (tagDir)) {
+						var imgSkinsDir = Path.Combine (abiDir, "skins");
+						AddSkinDirectories (skins, imgSkinsDir);
+					}
+				}
+			}
+		}
+
+		return skins.ToList ();
+	}
+
+	static void AddSkinDirectories (SortedSet<string> skins, string directory)
+	{
+		if (!Directory.Exists (directory))
+			return;
+		foreach (var skinDir in Directory.EnumerateDirectories (directory))
+			skins.Add (Path.GetFileName (skinDir));
+	}
+
+	internal static IReadOnlyList<AvdDeviceProfile> ParseDeviceListOutput (string output)
+	{
+		var profiles = new List<AvdDeviceProfile> ();
+		string? currentId = null, currentName = null, currentOem = null, currentTag = null;
+
+		foreach (var line in output.Split ('\n')) {
+			var trimmed = line.Trim ();
+			if (trimmed.StartsWith ("id:", StringComparison.OrdinalIgnoreCase)) {
+				if (currentId is not null)
+					profiles.Add (new AvdDeviceProfile (currentId, currentName ?? currentId, currentOem, currentTag));
+				// Parse: id: 0 or "automotive_1024p_landscape"
+				currentOem = currentTag = null;
+				currentName = null;
+				var orIndex = trimmed.IndexOf (" or ", StringComparison.Ordinal);
+				if (orIndex >= 0) {
+					var rawId = trimmed.Substring (orIndex + 4).Trim ().Trim ('"');
+					currentId = rawId;
+				} else {
+					currentId = trimmed.Substring (3).Trim ().Trim ('"');
+				}
+			}
+			else if (trimmed.StartsWith ("Name:", StringComparison.OrdinalIgnoreCase))
+				currentName = trimmed.Substring (5).Trim ();
+			else if (trimmed.StartsWith ("OEM", StringComparison.OrdinalIgnoreCase)) {
+				var colonIndex = trimmed.IndexOf (':');
+				if (colonIndex >= 0)
+					currentOem = trimmed.Substring (colonIndex + 1).Trim ();
+			}
+			else if (trimmed.StartsWith ("Tag", StringComparison.OrdinalIgnoreCase)) {
+				var colonIndex = trimmed.IndexOf (':');
+				if (colonIndex >= 0)
+					currentTag = trimmed.Substring (colonIndex + 1).Trim ();
+			}
+		}
+
+		if (currentId is not null)
+			profiles.Add (new AvdDeviceProfile (currentId, currentName ?? currentId, currentOem, currentTag));
+
+		return profiles;
+	}
+
 	internal static IReadOnlyList<AvdInfo> ParseAvdListOutput (string output)
 	{
 		var avds = new List<AvdInfo> ();
