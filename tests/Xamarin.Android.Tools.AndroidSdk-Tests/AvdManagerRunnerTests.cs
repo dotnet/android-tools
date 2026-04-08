@@ -293,4 +293,80 @@ public class AvdManagerRunnerTests
 			Directory.Delete (tempDir, true);
 		}
 	}
+
+	// --- EnumerateSkins tests ---
+
+	[Test]
+	public void EnumerateSkins_FindsStandaloneSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7_pro"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "nexus_5x"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.That (skins, Contains.Item ("nexus_5x"));
+			Assert.That (skins, Contains.Item ("pixel_7_pro"));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_FindsSystemImageSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_tablet"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (1, skins.Count);
+			Assert.AreEqual ("pixel_tablet", skins [0]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_DeduplicatesAndSorts ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_7"));
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "auto_skin"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.AreEqual ("auto_skin", skins [0]);
+			Assert.AreEqual ("pixel_7", skins [1]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_MissingSdkDir_ReturnsEmpty ()
+	{
+		var skins = AvdManagerRunner.EnumerateSkins (Path.Combine (Path.GetTempPath (), "nonexistent-sdk-dir"));
+		Assert.AreEqual (0, skins.Count);
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_NullSdkPath_ThrowsArgumentException ()
+	{
+		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (null!));
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_EmptySdkPath_ThrowsArgumentException ()
+	{
+		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (""));
+	}
 }
