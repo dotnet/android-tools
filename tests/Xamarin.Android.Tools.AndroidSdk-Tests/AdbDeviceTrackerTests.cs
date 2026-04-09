@@ -45,6 +45,24 @@ public class AdbDeviceTrackerTests
 	}
 
 	[Test]
+	public async Task StartAsync_CalledTwice_ThrowsInvalidOperationException ()
+	{
+		// Use a port where nothing is listening so ConnectAsync yields quickly
+		using var tracker = new AdbDeviceTracker (port: 59999);
+		using var cts = new CancellationTokenSource ();
+
+		// First call sets isTracking synchronously before the first await
+		var trackingTask = tracker.StartAsync (_ => { }, cts.Token);
+
+		// Second call should throw because tracking is already active
+		Assert.ThrowsAsync<InvalidOperationException> (
+			() => tracker.StartAsync (_ => { }, cts.Token));
+
+		cts.Cancel ();
+		try { await trackingTask.ConfigureAwait (false); } catch (OperationCanceledException) { }
+	}
+
+	[Test]
 	public void Dispose_MultipleTimes_DoesNotThrow ()
 	{
 		var tracker = new AdbDeviceTracker ();
@@ -52,41 +70,41 @@ public class AdbDeviceTrackerTests
 		Assert.DoesNotThrow (() => tracker.Dispose ());
 	}
 
-	// --- TryReadLengthPrefixedAsync tests ---
+	// --- AdbClient protocol tests ---
 
 	[Test]
-	public async Task TryReadLengthPrefixedAsync_ValidPayload ()
+	public async Task ReadLengthPrefixedStringFromStreamAsync_ValidPayload ()
 	{
 		var payload = "emulator-5554\tdevice\n";
 		var hex = payload.Length.ToString ("x4");
 		var data = Encoding.ASCII.GetBytes (hex + payload);
 		using var stream = new MemoryStream (data);
 
-		var result = await AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None);
+		var result = await AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None);
 		Assert.AreEqual (payload, result);
 	}
 
 	[Test]
-	public async Task TryReadLengthPrefixedAsync_EmptyPayload ()
+	public async Task ReadLengthPrefixedStringFromStreamAsync_EmptyPayload ()
 	{
 		var data = Encoding.ASCII.GetBytes ("0000");
 		using var stream = new MemoryStream (data);
 
-		var result = await AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None);
+		var result = await AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None);
 		Assert.AreEqual (string.Empty, result);
 	}
 
 	[Test]
-	public async Task TryReadLengthPrefixedAsync_EndOfStream_ReturnsNull ()
+	public async Task ReadLengthPrefixedStringFromStreamAsync_EndOfStream_ReturnsNull ()
 	{
 		using var stream = new MemoryStream (Array.Empty<byte> ());
 
-		var result = await AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None);
+		var result = await AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None);
 		Assert.IsNull (result);
 	}
 
 	[Test]
-	public async Task TryReadLengthPrefixedAsync_MultipleDevices ()
+	public async Task ReadLengthPrefixedStringFromStreamAsync_MultipleDevices ()
 	{
 		var payload =
 			"0A041FDD400327\tdevice product:redfin model:Pixel_5 device:redfin transport_id:2\n" +
@@ -95,7 +113,7 @@ public class AdbDeviceTrackerTests
 		var data = Encoding.ASCII.GetBytes (hex + payload);
 		using var stream = new MemoryStream (data);
 
-		var result = await AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None);
+		var result = await AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None);
 		Assert.IsNotNull (result);
 
 		var devices = AdbRunner.ParseAdbDevicesOutput (result!.Split ('\n'));
@@ -105,23 +123,23 @@ public class AdbDeviceTrackerTests
 	}
 
 	[Test]
-	public void TryReadLengthPrefixedAsync_InvalidHex_ThrowsFormatException ()
+	public void ReadLengthPrefixedStringFromStreamAsync_InvalidHex_ThrowsFormatException ()
 	{
 		var data = Encoding.ASCII.GetBytes ("ZZZZ");
 		using var stream = new MemoryStream (data);
 
 		Assert.ThrowsAsync<FormatException> (
-			() => AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None));
+			() => AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None));
 	}
 
 	[Test]
-	public void TryReadLengthPrefixedAsync_TruncatedPayload_ThrowsIOException ()
+	public void ReadLengthPrefixedStringFromStreamAsync_TruncatedPayload_ThrowsIOException ()
 	{
 		// Header says 100 bytes but only 5 are present
 		var data = Encoding.ASCII.GetBytes ("0064hello");
 		using var stream = new MemoryStream (data);
 
 		Assert.ThrowsAsync<IOException> (
-			() => AdbDeviceTracker.TryReadLengthPrefixedAsync (stream, CancellationToken.None));
+			() => AdbClient.ReadLengthPrefixedStringFromStreamAsync (stream, CancellationToken.None));
 	}
 }
