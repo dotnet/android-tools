@@ -359,14 +359,14 @@ public class AvdManagerRunnerTests
 	}
 
 	[Test]
-	public void ListAvdSkinsAsync_NullSdkPath_ThrowsArgumentException ()
+	public void ListAvdSkins_NullSdkPath_ThrowsArgumentException ()
 	{
-		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (null!));
+		Assert.Throws<ArgumentException> (() => AvdManagerRunner.ListAvdSkins (null!));
 	}
 
 	[Test]
-	public void ListAvdSkinsAsync_EmptySdkPath_ThrowsArgumentException ()
+	public void ListAvdSkins_EmptySdkPath_ThrowsArgumentException ()
 	{
-		Assert.ThrowsAsync<ArgumentException> (() => AvdManagerRunner.ListAvdSkinsAsync (""));
+		Assert.Throws<ArgumentException> (() => AvdManagerRunner.ListAvdSkins (""));
 	}
 }
