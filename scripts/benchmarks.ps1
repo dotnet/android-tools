@@ -20,7 +20,7 @@ dotnet build $csproj -c Release --nologo -v quiet
 if ($LASTEXITCODE -ne 0) { throw "Build failed." }
 
 Write-Host "Running benchmarks..."
-dotnet run --project $csproj -c Release --no-build -- --filter '*' --exporters github
+dotnet run --project $csproj -c Release --no-build -- --filter '*' --exporters github --artifacts $artifactsDir
 if ($LASTEXITCODE -ne 0) { throw "Benchmarks failed." }
 
 # Find the generated markdown report
