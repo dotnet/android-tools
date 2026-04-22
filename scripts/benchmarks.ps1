@@ -24,7 +24,9 @@ dotnet run --project $csproj -c Release --no-build -- --filter '*' --exporters g
 if ($LASTEXITCODE -ne 0) { throw "Benchmarks failed." }
 
 # Find the generated markdown report
-$mdFile = Get-ChildItem -Path (Join-Path $artifactsDir 'results') -Filter '*-report-github.md' | Select-Object -First 1
+$mdFile = Get-ChildItem -Path (Join-Path $artifactsDir 'results') -Filter '*-report-github.md' |
+    Sort-Object -Property LastWriteTime -Descending |
+    Select-Object -First 1
 if (-not $mdFile) { throw "No markdown report found in $artifactsDir\results" }
 
 Copy-Item $mdFile.FullName $readme -Force
