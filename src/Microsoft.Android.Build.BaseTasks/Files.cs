@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Hashing;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -531,22 +532,22 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static string HashBytes (byte [] bytes)
 		{
-			using (HashAlgorithm hashAlg = new Crc64 ()) {
-				byte [] hash = hashAlg.ComputeHash (bytes);
-				return ToHexString (hash);
-			}
+			byte [] hash = XxHash64.Hash (bytes);
+			return ToHexString (hash);
 		}
 
 		public static string HashFile (string filename)
 		{
-			using (HashAlgorithm hashAlg = new Crc64 ()) {
-				return HashFile (filename, hashAlg);
+			var hasher = new XxHash64 ();
+			using (var file = File.OpenRead (filename)) {
+				hasher.Append (file);
 			}
+			return ToHexString (hasher.GetCurrentHash ());
 		}
 
 		public static string HashFile (string filename, HashAlgorithm hashAlg)
 		{
-			using (Stream file = new FileStream (filename, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+			using (var file = File.OpenRead (filename)) {
 				byte[] hash = hashAlg.ComputeHash (file);
 				return ToHexString (hash);
 			}
@@ -555,11 +556,9 @@ namespace Microsoft.Android.Build.Tasks
 		public static string HashStream (Stream stream)
 		{
 			stream.Position = 0;
-
-			using (HashAlgorithm hashAlg = new Crc64 ()) {
-				byte[] hash = hashAlg.ComputeHash (stream);
-				return ToHexString (hash);
-			}
+			var hasher = new XxHash64 ();
+			hasher.Append (stream);
+			return ToHexString (hasher.GetCurrentHash ());
 		}
 
 		public static string ToHexString (byte[] hash)
