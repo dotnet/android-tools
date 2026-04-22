@@ -47,7 +47,6 @@ public class FilesHashBenchmarks
 	[Benchmark]
 	public string HashStream () => Files.HashStream (_stream);
 
-	// README.md is currently 3,385 bytes
 	[Benchmark]
 	public string HashFile () => Files.HashFile (_tempFile1);
 
