@@ -12,7 +12,6 @@ public class FilesHashBenchmarks
 
 	byte [] data = Array.Empty<byte> ();
 	MemoryStream stream = new MemoryStream ();
-	string readmeFile = string.Empty;
 	string tempFile1 = string.Empty;
 	string tempFile2 = string.Empty;
 
@@ -24,20 +23,7 @@ public class FilesHashBenchmarks
 		new Random (42).NextBytes (data);
 		stream = new MemoryStream (data);
 
-		// Walk up from output directory to find README.md
-		var dir = AppContext.BaseDirectory;
-		while (dir is not null) {
-			var candidate = Path.Combine (dir, "README.md");
-			if (File.Exists (candidate)) {
-				readmeFile = candidate;
-				break;
-			}
-			dir = Path.GetDirectoryName (dir);
-		}
-		if (string.IsNullOrEmpty (readmeFile))
-			throw new FileNotFoundException ("Could not find README.md in any parent directory.");
-
-		// Two identical temp files for HasFileChanged benchmark
+		// Two identical 1MB temp files
 		tempFile1 = Path.GetTempFileName ();
 		tempFile2 = Path.GetTempFileName ();
 		File.WriteAllBytes (tempFile1, data);
@@ -64,9 +50,8 @@ public class FilesHashBenchmarks
 		return Files.HashStream (stream);
 	}
 
-	// README.md is currently 3,385 bytes
 	[Benchmark]
-	public string HashFile () => Files.HashFile (readmeFile);
+	public string HashFile () => Files.HashFile (tempFile1);
 
 	[Benchmark]
 	public bool HasFileChanged () => Files.HasFileChanged (tempFile1, tempFile2);
