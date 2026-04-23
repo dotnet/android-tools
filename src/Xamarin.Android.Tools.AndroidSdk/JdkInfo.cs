@@ -268,7 +268,6 @@ namespace Xamarin.Android.Tools
 			string? curKey  = null;
 			bool    foundPS = false;
 			var     output  = new StringBuilder ();
-			var     gate    = new object ();
 
 			if (!AnySystemJavasInstalled () && (java == "/usr/bin/java" || java == "java"))
 				return props;
@@ -280,8 +279,9 @@ namespace Xamarin.Android.Tools
 					const string ContinuedValuePrefix   = "        ";
 					const string NewValuePrefix         = "    ";
 					const string NameValueDelim         = " = ";
-					lock (gate) {
-					output.AppendLine (e.Data);
+					lock (output) {
+						output.AppendLine (e.Data);
+					}
 					if (string.IsNullOrEmpty (e.Data))
 						return;
 					if (e.Data.StartsWith (PropertySettings, StringComparison.Ordinal)) {
@@ -309,7 +309,6 @@ namespace Xamarin.Android.Tools
 						if (!props.TryGetValue (curKey!, out values))
 							props.Add (curKey, values = new List<string> ());
 						values.Add (value);
-					}
 					}
 				});
 			}
