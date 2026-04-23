@@ -706,11 +706,18 @@ public class EmulatorRunnerTests
 
 	static void KillSleepProcesses ()
 	{
-		try {
-			foreach (var p in Process.GetProcessesByName ("sleep")) {
-				try { p.Kill (); p.WaitForExit (1000); } catch { }
-			}
-		} catch { }
+		// Best-effort cleanup of fake emulator processes spawned by tests.
+		// On Unix the fake emulator runs "sleep"; on Windows it runs "ping".
+		var names = OS.IsWindows
+			? new[] { "ping" }
+			: new[] { "sleep" };
+		foreach (var name in names) {
+			try {
+				foreach (var p in Process.GetProcessesByName (name)) {
+					try { p.Kill (); p.WaitForExit (1000); } catch { }
+				}
+			} catch { }
+		}
 	}
 
 	static Process? FindEmulatorProcess (string emuPath)

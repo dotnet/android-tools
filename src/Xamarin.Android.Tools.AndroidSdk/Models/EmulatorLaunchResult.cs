@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Xamarin.Android.Tools;
 
 /// <summary>
-/// Returned by <see cref="EmulatorRunner.LaunchEmulatorWithDetails"/> with enriched launch information.
+/// Returned by <see cref="EmulatorRunner.LaunchEmulator"/> with enriched launch information.
 /// </summary>
 public sealed class EmulatorLaunchResult
 {
