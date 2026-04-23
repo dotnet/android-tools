@@ -97,6 +97,207 @@ public class EmulatorRunnerTests
 		Assert.Throws<ArgumentException> (() => runner.LaunchEmulator ("   "));
 	}
 
+	// --- EmulatorLaunchResult / new LaunchEmulator tests ---
+
+	[Test]
+	public void LaunchEmulator_PreAssignedPorts_SerialKnownImmediately ()
+	{
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			var result = runner.LaunchEmulator ("Test_AVD", consolePort: 5554);
+
+			Assert.AreEqual (5554, result.ConsolePort, "ConsolePort should be the pre-assigned value");
+			Assert.AreEqual (5555, result.AdbPort, "AdbPort should default to consolePort + 1");
+			Assert.AreEqual ("emulator-5554", result.Serial, "Serial should be derived from ConsolePort");
+			Assert.IsTrue (result.PortsResolvedAsync.IsCompleted, "PortsResolvedAsync should be completed when ports are pre-assigned");
+			Assert.IsNotNull (result.Process);
+			Assert.IsFalse (string.IsNullOrEmpty (result.LogPath), "LogPath should be non-empty");
+		} finally {
+			KillSleepProcesses ();
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void LaunchEmulator_PreAssignedPortsExplicitAdb_BothPortsSet ()
+	{
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			var result = runner.LaunchEmulator ("Test_AVD", consolePort: 5560, adbPort: 5570);
+
+			Assert.AreEqual (5560, result.ConsolePort);
+			Assert.AreEqual (5570, result.AdbPort);
+			Assert.AreEqual ("emulator-5560", result.Serial);
+			Assert.IsTrue (result.PortsResolvedAsync.IsCompleted);
+		} finally {
+			KillSleepProcesses ();
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void LaunchEmulator_NoPorts_SerialNullUntilResolved ()
+	{
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			var result = runner.LaunchEmulator ("Test_AVD");
+
+			Assert.IsNull (result.ConsolePort, "ConsolePort should be null until resolved via stdout");
+			Assert.IsNull (result.Serial, "Serial should be null until ports are resolved");
+			Assert.IsFalse (result.PortsResolvedAsync.IsCompleted, "PortsResolvedAsync should be pending");
+		} finally {
+			KillSleepProcesses ();
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public async Task LaunchEmulator_StdoutEmitsPortLines_PortsResolvedAsync_Completes ()
+	{
+		// Create a fake emulator that immediately prints the port announcement lines.
+		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-ports-test-{Path.GetRandomFileName ()}");
+		var emuDir = Path.Combine (tempDir, "emulator");
+		Directory.CreateDirectory (emuDir);
+		var emuName = OS.IsWindows ? "emulator.bat" : "emulator";
+		var emuPath = Path.Combine (emuDir, emuName);
+
+		if (OS.IsWindows) {
+			File.WriteAllText (emuPath,
+				"@echo off\r\n" +
+				"echo emulator: Listening on port 5558\r\n" +
+				"echo emulator: ADB Server has started successfully on port 5559\r\n" +
+				"ping -n 30 127.0.0.1 >nul\r\n");
+		} else {
+			File.WriteAllText (emuPath,
+				"#!/bin/sh\n" +
+				"echo 'emulator: Listening on port 5558'\n" +
+				"echo 'emulator: ADB Server has started successfully on port 5559'\n" +
+				"sleep 30\n");
+			var chmod = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
+			using var p = new Process { StartInfo = chmod };
+			p.Start ();
+			p.WaitForExit ();
+		}
+
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			var result = runner.LaunchEmulator ("Test_AVD");
+
+			using var cts = new CancellationTokenSource (TimeSpan.FromSeconds (10));
+			await result.PortsResolvedAsync.WaitAsync (cts.Token);
+
+			Assert.AreEqual (5558, result.ConsolePort);
+			Assert.AreEqual (5559, result.AdbPort);
+			Assert.AreEqual ("emulator-5558", result.Serial);
+		} finally {
+			KillSleepProcesses ();
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void LaunchEmulator_ExplicitLogFile_LogPathSet ()
+	{
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		var logPath = Path.Combine (tempDir, "my-emulator.log");
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			var result = runner.LaunchEmulator ("Test_AVD", logFile: logPath);
+
+			Assert.AreEqual (logPath, result.LogPath);
+		} finally {
+			KillSleepProcesses ();
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	public void LaunchEmulator_DefaultLogPath_ContainsAvdName ()
+	{
+		var runner = new EmulatorRunner ("/fake/emulator");
+		var logPath = runner.ResolveAvdLogPath ("My_AVD");
+
+		StringAssert.Contains ("My_AVD.avd", logPath);
+		StringAssert.EndsWith ("emulator.log", logPath);
+	}
+
+	[Test]
+	public void ResolveAvdLogPath_AndroidAvdHome_Overrides ()
+	{
+		var env = new Dictionary<string, string> { ["ANDROID_AVD_HOME"] = "/custom/avd" };
+		var runner = new EmulatorRunner ("/fake/emulator", environmentVariables: env);
+		var logPath = runner.ResolveAvdLogPath ("My_AVD");
+
+		Assert.AreEqual (Path.Combine ("/custom/avd", "My_AVD.avd", "emulator.log"), logPath);
+	}
+
+	[Test]
+	public void ResolveAvdLogPath_AndroidUserHome_UsedWhenNoAvdHome ()
+	{
+		var env = new Dictionary<string, string> { ["ANDROID_USER_HOME"] = "/custom/user" };
+		var runner = new EmulatorRunner ("/fake/emulator", environmentVariables: env);
+		var logPath = runner.ResolveAvdLogPath ("My_AVD");
+
+		Assert.AreEqual (Path.Combine ("/custom/user", "avd", "My_AVD.avd", "emulator.log"), logPath);
+	}
+
+	// --- TryResolvePortsFromLine tests ---
+
+	[Test]
+	public void TryResolvePortsFromLine_ConsolePort_Parsed ()
+	{
+		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var tcs = new TaskCompletionSource<bool> ();
+
+		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5554", result, tcs);
+
+		Assert.AreEqual (5554, result.ConsolePort);
+		Assert.IsFalse (tcs.Task.IsCompleted, "Task should not complete until ADB port is also found");
+	}
+
+	[Test]
+	public void TryResolvePortsFromLine_AdbPort_Parsed ()
+	{
+		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var tcs = new TaskCompletionSource<bool> ();
+
+		EmulatorRunner.TryResolvePortsFromLine ("emulator: ADB Server has started successfully on port 5555", result, tcs);
+
+		Assert.AreEqual (5555, result.AdbPort);
+		Assert.IsFalse (tcs.Task.IsCompleted, "Task should not complete until console port is also found");
+	}
+
+	[Test]
+	public void TryResolvePortsFromLine_BothPorts_CompletesTask ()
+	{
+		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var tcs = new TaskCompletionSource<bool> ();
+
+		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5556", result, tcs);
+		EmulatorRunner.TryResolvePortsFromLine ("emulator: ADB Server has started successfully on port 5557", result, tcs);
+
+		Assert.AreEqual (5556, result.ConsolePort);
+		Assert.AreEqual (5557, result.AdbPort);
+		Assert.AreEqual ("emulator-5556", result.Serial);
+		Assert.IsTrue (tcs.Task.IsCompleted, "Task should complete when both ports are found");
+	}
+
+	[Test]
+	public void TryResolvePortsFromLine_UnrelatedLine_NoEffect ()
+	{
+		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var tcs = new TaskCompletionSource<bool> ();
+
+		EmulatorRunner.TryResolvePortsFromLine ("emulator: cold boot", result, tcs);
+
+		Assert.IsNull (result.ConsolePort);
+		Assert.IsNull (result.AdbPort);
+		Assert.IsFalse (tcs.Task.IsCompleted);
+	}
+
 	// --- BootEmulatorAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
 
 	[Test]
@@ -501,6 +702,15 @@ public class EmulatorRunnerTests
 		}
 
 		return (tempDir, emuPath);
+	}
+
+	static void KillSleepProcesses ()
+	{
+		try {
+			foreach (var p in Process.GetProcessesByName ("sleep")) {
+				try { p.Kill (); p.WaitForExit (1000); } catch { }
+			}
+		} catch { }
 	}
 
 	static Process? FindEmulatorProcess (string emuPath)
