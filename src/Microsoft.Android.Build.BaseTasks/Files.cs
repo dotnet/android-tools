@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Hashing;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,7 +25,7 @@ namespace Microsoft.Android.Build.Tasks
 
 		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
 
-		const int XXHASH64_SIZE_IN_BYTES = 8;
+		const int CRC64_SIZE_IN_BYTES = 8;
 
 		static int fileWriteRetry = -1;
 		static int fileWriteRetryDelay = -1;
@@ -534,18 +533,20 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static string HashBytes (byte [] bytes)
 		{
-			Span<byte> hash = stackalloc byte[XXHASH64_SIZE_IN_BYTES];
-			XxHash64.Hash (bytes, hash);
+			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
+			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
+			System.IO.Hashing.Crc64.Hash (bytes, hash);
 			return ToHexString (hash);
 		}
 
 		public static string HashFile (string filename)
 		{
-			var hasher = new XxHash64 ();
+			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
+			var hasher = new System.IO.Hashing.Crc64 ();
 			using (var file = File.OpenRead (filename)) {
 				hasher.Append (file);
 			}
-			Span<byte> hash = stackalloc byte[XXHASH64_SIZE_IN_BYTES];
+			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			hasher.GetCurrentHash (hash);
 			return ToHexString (hash);
 		}
@@ -561,9 +562,10 @@ namespace Microsoft.Android.Build.Tasks
 		public static string HashStream (Stream stream)
 		{
 			stream.Position = 0;
-			var hasher = new XxHash64 ();
+			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
+			var hasher = new System.IO.Hashing.Crc64 ();
 			hasher.Append (stream);
-			Span<byte> hash = stackalloc byte[XXHASH64_SIZE_IN_BYTES];
+			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			hasher.GetCurrentHash (hash);
 			return ToHexString (hash);
 		}
