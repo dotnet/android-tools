@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Xamarin.Tools.Zip;
@@ -25,6 +26,7 @@ namespace Microsoft.Android.Build.Tasks
 
 		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
 
+		// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
 		const int CRC64_SIZE_IN_BYTES = 8;
 
 		static int fileWriteRetry = -1;
@@ -536,6 +538,7 @@ namespace Microsoft.Android.Build.Tasks
 			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
 			System.IO.Hashing.Crc64.Hash (bytes, hash);
+			XorLength (hash, (ulong) bytes.Length);
 			return ToHexString (hash);
 		}
 
@@ -543,11 +546,14 @@ namespace Microsoft.Android.Build.Tasks
 		{
 			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
 			var hasher = new System.IO.Hashing.Crc64 ();
+			long length;
 			using (var file = File.OpenRead (filename)) {
 				hasher.Append (file);
+				length = file.Length;
 			}
 			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			hasher.GetCurrentHash (hash);
+			XorLength (hash, (ulong) length);
 			return ToHexString (hash);
 		}
 
@@ -567,7 +573,15 @@ namespace Microsoft.Android.Build.Tasks
 			hasher.Append (stream);
 			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			hasher.GetCurrentHash (hash);
+			XorLength (hash, (ulong) stream.Length);
 			return ToHexString (hash);
+		}
+
+		/// XOR the data length into the hash to avoid collisions on zero-filled inputs.
+		static void XorLength (Span<byte> hash, ulong length)
+		{
+			ref var crc = ref Unsafe.As<byte, ulong> (ref hash [0]);
+			crc ^= length;
 		}
 
 		public static string ToHexString (byte[] hash)
