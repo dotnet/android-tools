@@ -730,15 +730,17 @@ namespace Microsoft.Android.Build.BaseTasks.Tests
 		[Test]
 		public void DeleteFile_NullLog_DoesNotThrow ()
 		{
-			var nonexistent = Path.Combine (tempDir, "nonexistent.txt");
-			Assert.DoesNotThrow (() => Files.DeleteFile (nonexistent, null));
+			var path = Path.Combine (tempDir, "directory-instead-of-file");
+			Directory.CreateDirectory (path);
+			Assert.DoesNotThrow (() => Files.DeleteFile (path, null));
 		}
 
 		[Test]
 		public void DeleteFile_NonTaskLoggingHelperLog_DoesNotThrow ()
 		{
-			var nonexistent = Path.Combine (tempDir, "nonexistent.txt");
-			Assert.DoesNotThrow (() => Files.DeleteFile (nonexistent, "not a TaskLoggingHelper"));
+			var path = Path.Combine (tempDir, "directory-instead-of-file-nontasklog");
+			Directory.CreateDirectory (path);
+			Assert.DoesNotThrow (() => Files.DeleteFile (path, "not a TaskLoggingHelper"));
 		}
 	}
 }
