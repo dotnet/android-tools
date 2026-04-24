@@ -280,9 +280,10 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static bool CopyIfZipChanged (Stream source, string destination)
 		{
-			string hash;
-			if (HasZipChanged (source, destination, out hash)) {
-				Directory.CreateDirectory (Path.GetDirectoryName (destination));
+			if (HasZipChanged (source, destination, out _)) {
+				var directory = Path.GetDirectoryName (destination);
+				if (!string.IsNullOrEmpty (directory))
+					Directory.CreateDirectory (directory);
 				source.Position = 0;
 				using (var f = File.Create (destination)) {
 					source.CopyTo (f);
@@ -297,9 +298,10 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static bool CopyIfZipChanged (string source, string destination)
 		{
-			string hash;
-			if (HasZipChanged (source, destination, out hash)) {
-				Directory.CreateDirectory (Path.GetDirectoryName (destination));
+			if (HasZipChanged (source, destination, out _)) {
+				var directory = Path.GetDirectoryName (destination);
+				if (!string.IsNullOrEmpty (directory))
+					Directory.CreateDirectory (directory);
 
 				File.Copy (source, destination, true);
 				File.SetLastWriteTimeUtc (destination, DateTime.UtcNow);
@@ -309,16 +311,16 @@ namespace Microsoft.Android.Build.Tasks
 			return false;
 		}
 
-		public static bool HasZipChanged (Stream source, string destination, out string hash)
+		public static bool HasZipChanged (Stream source, string destination, out string? hash)
 		{
 			hash = null;
 
-			string src_hash = hash = HashZip (source);
+			string? src_hash = hash = HashZip (source);
 
 			if (!File.Exists (destination))
 				return true;
 
-			string dst_hash = HashZip (destination);
+			string? dst_hash = HashZip (destination);
 
 			if (src_hash == null || dst_hash == null)
 				return true;
@@ -326,18 +328,18 @@ namespace Microsoft.Android.Build.Tasks
 			return src_hash != dst_hash;
 		}
 
-		public static bool HasZipChanged (string source, string destination, out string hash)
+		public static bool HasZipChanged (string source, string destination, out string? hash)
 		{
 			hash = null;
 			if (!File.Exists (source))
 				return true;
 
-			string src_hash = hash = HashZip (source);
+			string? src_hash = hash = HashZip (source);
 
 			if (!File.Exists (destination))
 				return true;
 
-			string dst_hash = HashZip (destination);
+			string? dst_hash = HashZip (destination);
 
 			if (src_hash == null || dst_hash == null)
 				return true;
@@ -396,7 +398,7 @@ namespace Microsoft.Android.Build.Tasks
 			return false;
 		}
 
-		static string HashZip (Stream stream)
+		static string? HashZip (Stream stream)
 		{
 			string hashes = String.Empty;
 
@@ -412,7 +414,7 @@ namespace Microsoft.Android.Build.Tasks
 			return hashes;
 		}
 
-		static string HashZip (string filename)
+		static string? HashZip (string filename)
 		{
 			string hashes = String.Empty;
 
@@ -445,14 +447,14 @@ namespace Microsoft.Android.Build.Tasks
 		}
 
 		[Obsolete ("Use the overload that accepts a TaskLoggingHelper parameter.")]
-		public static bool ExtractAll (ZipArchive zip, string destination, Action<int, int> progressCallback,
-			Func<string, string> modifyCallback, Func<string, bool> deleteCallback, Func<string, bool> skipCallback)
+		public static bool ExtractAll (ZipArchive zip, string destination, Action<int, int>? progressCallback,
+			Func<string, string>? modifyCallback, Func<string, bool>? deleteCallback, Func<string, bool>? skipCallback)
 		{
 			return ExtractAll (zip, destination, progressCallback, modifyCallback, deleteCallback, skipCallback, log: null);
 		}
 
-		public static bool ExtractAll (ZipArchive zip, string destination, Action<int, int> progressCallback = null, Func<string, string> modifyCallback = null,
-			Func<string, bool> deleteCallback = null, Func<string, bool> skipCallback = null, TaskLoggingHelper log = null)
+		public static bool ExtractAll (ZipArchive zip, string destination, Action<int, int>? progressCallback = null, Func<string, string>? modifyCallback = null,
+			Func<string, bool>? deleteCallback = null, Func<string, bool>? skipCallback = null, TaskLoggingHelper? log = null)
 		{
 			int i = 0;
 			int total = (int)zip.EntryCount;
@@ -598,7 +600,7 @@ namespace Microsoft.Android.Build.Tasks
 				File.Delete (filename);
 			} catch (Exception ex) {
 				var helper = log as TaskLoggingHelper;
-				helper.LogErrorFromException (ex);
+				helper?.LogErrorFromException (ex);
 			}
 		}
 
@@ -626,7 +628,7 @@ namespace Microsoft.Android.Build.Tasks
 			if (string.IsNullOrEmpty (filePath) || !File.Exists (filePath))
 				return;
 
-			string temp = null;
+			string? temp = null;
 			try {
 				using (var input = File.OpenRead (filePath)) {
 					// Check if the file actually has a BOM
