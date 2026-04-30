@@ -126,11 +126,9 @@ public class EmulatorRunner
 			? null
 			: new TaskCompletionSource<bool> (TaskCreationOptions.RunContinuationsAsynchronously);
 
-		var result = new EmulatorLaunchResult {
-			Process = process,
+		var result = new EmulatorLaunchResult (process, resolvedLogPath) {
 			ConsolePort = resolvedConsolePort,
 			AdbPort = resolvedAdbPort,
-			LogPath = resolvedLogPath,
 			PortsResolvedAsync = tcs is { } activeTcs ? (Task)activeTcs.Task : Task.CompletedTask,
 		};
 
@@ -144,7 +142,7 @@ public class EmulatorRunner
 		process.ErrorDataReceived += (_, e) => {
 			if (e.Data == null)
 				return;
-			logger.Invoke (TraceLevel.Warning, $"[emulator] {e.Data}");
+			logger.Invoke (TraceLevel.Verbose, $"[emulator stderr] {e.Data}");
 			if (tcs != null)
 				TryResolvePortsFromLine (e.Data, result, tcs);
 		};

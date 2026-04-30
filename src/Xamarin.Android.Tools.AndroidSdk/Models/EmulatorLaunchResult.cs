@@ -11,8 +11,14 @@ namespace Xamarin.Android.Tools;
 /// </summary>
 public sealed class EmulatorLaunchResult
 {
+	public EmulatorLaunchResult (Process process, string logPath)
+	{
+		Process = process;
+		LogPath = logPath;
+	}
+
 	/// <summary>The running emulator process.</summary>
-	public Process Process { get; init; } = null!;
+	public Process Process { get; }
 
 	/// <summary>The OS process ID of the emulator process.</summary>
 	public int Pid => Process.Id;
@@ -41,7 +47,7 @@ public sealed class EmulatorLaunchResult
 	/// environment variables, falling back to the AOSP default
 	/// (<c>~/.android/avd/&lt;name&gt;.avd/emulator.log</c>).
 	/// </summary>
-	public string LogPath { get; init; } = string.Empty;
+	public string LogPath { get; }
 
 	/// <summary>
 	/// A <see cref="Task"/> that completes when the emulator has reported its console and ADB

@@ -97,8 +97,6 @@ public class EmulatorRunnerTests
 		Assert.Throws<ArgumentException> (() => runner.LaunchEmulator ("   "));
 	}
 
-	// --- EmulatorLaunchResult / new LaunchEmulator tests ---
-
 	[Test]
 	public void LaunchEmulator_PreAssignedPorts_SerialKnownImmediately ()
 	{
@@ -244,12 +242,10 @@ public class EmulatorRunnerTests
 		Assert.AreEqual (Path.Combine ("/custom/user", "avd", "My_AVD.avd", "emulator.log"), logPath);
 	}
 
-	// --- TryResolvePortsFromLine tests ---
-
 	[Test]
 	public void TryResolvePortsFromLine_ConsolePort_Parsed ()
 	{
-		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var result = new EmulatorLaunchResult (null!, "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5554", result, tcs);
@@ -261,7 +257,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_AdbPort_Parsed ()
 	{
-		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var result = new EmulatorLaunchResult (null!, "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: ADB Server has started successfully on port 5555", result, tcs);
@@ -273,7 +269,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_BothPorts_CompletesTask ()
 	{
-		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var result = new EmulatorLaunchResult (null!, "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5556", result, tcs);
@@ -288,7 +284,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_UnrelatedLine_NoEffect ()
 	{
-		var result = new EmulatorLaunchResult { Process = null!, LogPath = "" };
+		var result = new EmulatorLaunchResult (null!, "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: cold boot", result, tcs);
@@ -297,8 +293,6 @@ public class EmulatorRunnerTests
 		Assert.IsNull (result.AdbPort);
 		Assert.IsFalse (tcs.Task.IsCompleted);
 	}
-
-	// --- BootEmulatorAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
 
 	[Test]
 	public async Task AlreadyOnlineDevice_PassesThrough ()
@@ -496,8 +490,6 @@ public class EmulatorRunnerTests
 		Assert.AreEqual ("emulator-5556", result.Serial, "Should find the correct AVD among multiple emulators");
 	}
 
-	// --- Tests ported from dotnet/android BootAndroidEmulatorTests ---
-
 	[Test]
 	public async Task AlreadyOnlinePhysicalDevice_PassesThrough ()
 	{
@@ -680,8 +672,6 @@ public class EmulatorRunnerTests
 		Assert.ThrowsAsync<ArgumentException> (() =>
 			runner.BootEmulatorAsync ("", mockAdb));
 	}
-
-	// --- Helpers ---
 
 	static (string tempDir, string emulatorPath) CreateFakeEmulatorSdk ()
 	{
