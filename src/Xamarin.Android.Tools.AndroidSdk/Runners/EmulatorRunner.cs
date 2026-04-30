@@ -45,7 +45,7 @@ public class EmulatorRunner
 	/// <param name="avdName">Name of the AVD to launch (as shown by <c>emulator -list-avds</c>).</param>
 	/// <param name="coldBoot">When <c>true</c>, forces a cold boot by passing <c>-no-snapshot-load</c>.</param>
 	/// <param name="consolePort">
-	/// Optional console port to pre-assign via <c>-ports</c> (must be an even number in 5554–5682).
+	/// Optional console port to pre-assign via <c>-ports</c> (typically an even number, e.g. 5554).
 	/// When specified the serial is known immediately; otherwise it is resolved by parsing stdout/stderr.
 	/// </param>
 	/// <param name="adbPort">
@@ -155,7 +155,10 @@ public class EmulatorRunner
 			process.EnableRaisingEvents = true;
 			process.Exited += (_, _) => {
 				int exitCode;
-				try { exitCode = process.ExitCode; } catch { exitCode = -1; }
+				try { exitCode = process.ExitCode; } catch (Exception ex) {
+					logger.Invoke (TraceLevel.Verbose, $"Failed to read emulator exit code: {ex.Message}");
+					exitCode = -1;
+				}
 				tcs.TrySetException (new InvalidOperationException (
 					$"Emulator process exited (code {exitCode}) before port assignment lines were emitted."));
 			};
