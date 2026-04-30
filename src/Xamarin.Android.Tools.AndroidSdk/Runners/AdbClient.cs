@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
@@ -17,8 +18,14 @@ namespace Xamarin.Android.Tools;
 /// One instance can be reused across reconnections via <see cref="ReconnectAsync"/>.
 /// Dispose closes the socket.
 /// </summary>
+/// <remarks>
+/// This class is not thread-safe. All protocol operations must be serialized by the caller.
+/// </remarks>
 internal sealed class AdbClient : IDisposable
 {
+	// Reusable 4-byte buffer for status/length reads (safe: single-caller, non-concurrent)
+	readonly byte[] headerBuffer = new byte [4];
+
 	TcpClient? client;
 	NetworkStream? stream;
 	bool disposed;
@@ -56,17 +63,24 @@ internal sealed class AdbClient : IDisposable
 	public async Task SendCommandAsync (string command, CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		// Combine length prefix + command into a single write to minimize syscalls
-		var commandBytes = Encoding.ASCII.GetBytes (command);
-		var lengthPrefix = commandBytes.Length.ToString ("x4");
-		var packet = new byte [4 + commandBytes.Length];
-		Encoding.ASCII.GetBytes (lengthPrefix, 0, 4, packet, 0);
-		Buffer.BlockCopy (commandBytes, 0, packet, 4, commandBytes.Length);
+		// Compute byte count without allocating a separate commandBytes array
+		var byteCount = Encoding.ASCII.GetByteCount (command);
+		var packetLength = 4 + byteCount;
+		var packet = ArrayPool<byte>.Shared.Rent (packetLength);
+		try {
+			// Write 4-hex-digit length prefix directly into packet
+			WriteHexLength (packet, byteCount);
+			// Encode command directly into packet after the prefix
+			Encoding.ASCII.GetBytes (command, 0, command.Length, packet, 4);
 #if NET5_0_OR_GREATER
-		await s.WriteAsync (packet.AsMemory (), cancellationToken).ConfigureAwait (false);
+			await s.WriteAsync (packet.AsMemory (0, packetLength), cancellationToken).ConfigureAwait (false);
 #else
-		await s.WriteAsync (packet, 0, packet.Length, cancellationToken).ConfigureAwait (false);
+			await s.WriteAsync (packet, 0, packetLength, cancellationToken).ConfigureAwait (false);
 #endif
+		}
+		finally {
+			ArrayPool<byte>.Shared.Return (packet);
+		}
 		await s.FlushAsync (cancellationToken).ConfigureAwait (false);
 	}
 
@@ -76,16 +90,15 @@ internal sealed class AdbClient : IDisposable
 	public async Task<AdbResponseStatus> ReadStatusAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		var statusBytes = await ReadExactBytesIntoNewArrayAsync (s, 4, cancellationToken).ConfigureAwait (false);
-		// Status is always 4 ASCII chars
-		if (statusBytes [0] == (byte) 'O' && statusBytes [1] == (byte) 'K' &&
-			statusBytes [2] == (byte) 'A' && statusBytes [3] == (byte) 'Y')
+		await ReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false);
+		if (headerBuffer [0] == (byte) 'O' && headerBuffer [1] == (byte) 'K' &&
+			headerBuffer [2] == (byte) 'A' && headerBuffer [3] == (byte) 'Y')
 			return AdbResponseStatus.Okay;
-		if (statusBytes [0] == (byte) 'F' && statusBytes [1] == (byte) 'A' &&
-			statusBytes [2] == (byte) 'I' && statusBytes [3] == (byte) 'L')
+		if (headerBuffer [0] == (byte) 'F' && headerBuffer [1] == (byte) 'A' &&
+			headerBuffer [2] == (byte) 'I' && headerBuffer [3] == (byte) 'L')
 			return AdbResponseStatus.Fail;
 
-		var status = Encoding.ASCII.GetString (statusBytes, 0, 4);
+		var status = Encoding.ASCII.GetString (headerBuffer, 0, 4);
 		throw new InvalidOperationException ($"Unexpected ADB status: '{status}'");
 	}
 
@@ -116,17 +129,46 @@ internal sealed class AdbClient : IDisposable
 	public async Task<string?> ReadLengthPrefixedStringAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		return await ReadLengthPrefixedStringCoreAsync (s, cancellationToken).ConfigureAwait (false);
+		// Read 4-byte length prefix into reusable buffer
+		if (!await TryReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false))
+			return null;
+
+		var length = ParseHexLength (headerBuffer);
+
+		if (length == 0)
+			return string.Empty;
+
+		// Rent from pool, decode to string, return immediately
+		var buffer = ArrayPool<byte>.Shared.Rent (length);
+		try {
+			await ReadExactBytesIntoBufferAsync (s, buffer, length, cancellationToken).ConfigureAwait (false);
+			return Encoding.ASCII.GetString (buffer, 0, length);
+		}
+		finally {
+			ArrayPool<byte>.Shared.Return (buffer);
+		}
 	}
 
 	/// <summary>
 	/// Reads a length-prefixed byte payload from the daemon.
 	/// Returns null if the connection is closed cleanly before the length prefix.
+	/// The returned byte[] is caller-owned (not pooled).
 	/// </summary>
 	public async Task<byte[]?> ReadLengthPrefixedBytesAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		return await ReadLengthPrefixedBytesCoreAsync (s, cancellationToken).ConfigureAwait (false);
+		// Read 4-byte length prefix into reusable buffer
+		if (!await TryReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false))
+			return null;
+
+		var length = ParseHexLength (headerBuffer);
+
+		if (length == 0)
+			return Array.Empty<byte> ();
+
+		var result = new byte [length];
+		await ReadExactBytesIntoBufferAsync (s, result, length, cancellationToken).ConfigureAwait (false);
+		return result;
 	}
 
 	/// <summary>
@@ -170,52 +212,58 @@ internal sealed class AdbClient : IDisposable
 			throw new ObjectDisposedException (nameof (AdbClient));
 	}
 
-	// --- Shared core implementations (used by both instance and static methods) ---
+	// --- Shared core implementations (used by static method for tests) ---
 
 	/// <summary>
 	/// Reads a length-prefixed ASCII string from a raw stream.
-	/// Shared core for both instance and static access patterns.
+	/// Used by tests that cannot construct an AdbClient instance.
+	/// Allocates fresh buffers (no pooling) since it has no instance state.
 	/// </summary>
 	internal static async Task<string?> ReadLengthPrefixedStringFromStreamAsync (Stream stream, CancellationToken cancellationToken)
 	{
-		return await ReadLengthPrefixedStringCoreAsync (stream, cancellationToken).ConfigureAwait (false);
-	}
-
-	static async Task<string?> ReadLengthPrefixedStringCoreAsync (Stream stream, CancellationToken cancellationToken)
-	{
-		var bytes = await ReadLengthPrefixedBytesCoreAsync (stream, cancellationToken).ConfigureAwait (false);
-		if (bytes == null)
-			return null;
-		return Encoding.ASCII.GetString (bytes, 0, bytes.Length);
-	}
-
-	static async Task<byte[]?> ReadLengthPrefixedBytesCoreAsync (Stream stream, CancellationToken cancellationToken)
-	{
-		var lengthBytes = await ReadExactBytesOrNullAsync (stream, 4, cancellationToken).ConfigureAwait (false);
-		if (lengthBytes == null)
+		var lengthBytes = new byte [4];
+		if (!await TryReadExactBytesIntoBufferAsync (stream, lengthBytes, 4, cancellationToken).ConfigureAwait (false))
 			return null;
 
-		var lengthHex = Encoding.ASCII.GetString (lengthBytes, 0, 4);
-		if (!int.TryParse (lengthHex, System.Globalization.NumberStyles.HexNumber, null, out var length))
-			throw new FormatException ($"Invalid ADB length prefix: '{lengthHex}'");
+		var length = ParseHexLength (lengthBytes);
 
 		if (length == 0)
-			return Array.Empty<byte> ();
+			return string.Empty;
 
-		return await ReadExactBytesIntoNewArrayAsync (stream, length, cancellationToken).ConfigureAwait (false);
+		var payload = new byte [length];
+		await ReadExactBytesIntoBufferAsync (stream, payload, length, cancellationToken).ConfigureAwait (false);
+		return Encoding.ASCII.GetString (payload, 0, length);
 	}
 
-	static async Task<byte[]> ReadExactBytesIntoNewArrayAsync (Stream stream, int count, CancellationToken cancellationToken)
+	// --- Low-level I/O helpers ---
+
+	/// <summary>
+	/// Reads exactly <paramref name="count"/> bytes into the provided buffer.
+	/// Throws IOException if the stream ends prematurely.
+	/// </summary>
+	static async Task ReadExactBytesIntoBufferAsync (Stream stream, byte[] buffer, int count, CancellationToken cancellationToken)
 	{
-		var result = await ReadExactBytesOrNullAsync (stream, count, cancellationToken).ConfigureAwait (false);
-		if (result == null)
-			throw new IOException ($"Unexpected end of stream (expected {count} bytes).");
-		return result;
+		var totalRead = 0;
+		while (totalRead < count) {
+			cancellationToken.ThrowIfCancellationRequested ();
+#if NET5_0_OR_GREATER
+			var read = await stream.ReadAsync (buffer.AsMemory (totalRead, count - totalRead), cancellationToken).ConfigureAwait (false);
+#else
+			var read = await stream.ReadAsync (buffer, totalRead, count - totalRead, cancellationToken).ConfigureAwait (false);
+#endif
+			if (read == 0)
+				throw new IOException ($"Unexpected end of stream (read {totalRead} of {count} bytes).");
+			totalRead += read;
+		}
 	}
 
-	static async Task<byte[]?> ReadExactBytesOrNullAsync (Stream stream, int count, CancellationToken cancellationToken)
+	/// <summary>
+	/// Tries to read exactly <paramref name="count"/> bytes into the buffer.
+	/// Returns false if the stream ends cleanly before the first byte.
+	/// Throws IOException on partial reads.
+	/// </summary>
+	static async Task<bool> TryReadExactBytesIntoBufferAsync (Stream stream, byte[] buffer, int count, CancellationToken cancellationToken)
 	{
-		var buffer = new byte [count];
 		var totalRead = 0;
 		while (totalRead < count) {
 			cancellationToken.ThrowIfCancellationRequested ();
@@ -226,11 +274,48 @@ internal sealed class AdbClient : IDisposable
 #endif
 			if (read == 0) {
 				if (totalRead == 0)
-					return null;
+					return false;
 				throw new IOException ($"Unexpected end of stream (read {totalRead} of {count} bytes).");
 			}
 			totalRead += read;
 		}
-		return buffer;
+		return true;
+	}
+
+	// --- Hex encoding/decoding helpers (avoid string allocations) ---
+
+	static readonly byte[] HexChars = Encoding.ASCII.GetBytes ("0123456789abcdef");
+
+	/// <summary>
+	/// Writes a 4-digit lowercase hex representation of <paramref name="value"/> into the first 4 bytes of <paramref name="buffer"/>.
+	/// </summary>
+	static void WriteHexLength (byte[] buffer, int value)
+	{
+		buffer [0] = HexChars [(value >> 12) & 0xF];
+		buffer [1] = HexChars [(value >> 8) & 0xF];
+		buffer [2] = HexChars [(value >> 4) & 0xF];
+		buffer [3] = HexChars [value & 0xF];
+	}
+
+	/// <summary>
+	/// Parses a 4-byte ASCII hex length prefix without allocating a string.
+	/// </summary>
+	static int ParseHexLength (byte[] buffer)
+	{
+		var value = 0;
+		for (var i = 0; i < 4; i++) {
+			var b = buffer [i];
+			int nibble;
+			if (b >= (byte) '0' && b <= (byte) '9')
+				nibble = b - '0';
+			else if (b >= (byte) 'a' && b <= (byte) 'f')
+				nibble = b - 'a' + 10;
+			else if (b >= (byte) 'A' && b <= (byte) 'F')
+				nibble = b - 'A' + 10;
+			else
+				throw new FormatException ($"Invalid ADB length prefix: '{Encoding.ASCII.GetString (buffer, 0, 4)}'");
+			value = (value << 4) | nibble;
+		}
+		return value;
 	}
 }
