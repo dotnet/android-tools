@@ -20,8 +20,8 @@ public sealed class AdbDeviceTracker : IDisposable
 	readonly object syncLock = new object ();
 	readonly int port;
 	readonly Action<TraceLevel, string> logger;
+	readonly AdbClient adbClient;
 	volatile IReadOnlyList<AdbDeviceInfo> currentDevices = Array.Empty<AdbDeviceInfo> ();
-	AdbClient? activeClient;
 	CancellationTokenSource? trackingCts;
 	bool isTracking;
 	bool disposed;
@@ -38,6 +38,7 @@ public sealed class AdbDeviceTracker : IDisposable
 			throw new ArgumentOutOfRangeException (nameof (port), "Port must be between 1 and 65535.");
 		this.port = port;
 		this.logger = logger ?? RunnerDefaults.NullLogger;
+		this.adbClient = new AdbClient ();
 	}
 
 	/// <summary>
@@ -90,7 +91,9 @@ public sealed class AdbDeviceTracker : IDisposable
 						break;
 					}
 					backoffMs = Math.Min (backoffMs * 2, MaxBackoffMs);
+					continue;
 				}
+				backoffMs = InitialBackoffMs;
 			}
 		} finally {
 			lock (syncLock) {
@@ -108,35 +111,24 @@ public sealed class AdbDeviceTracker : IDisposable
 		Action<IReadOnlyList<AdbDeviceInfo>> onDevicesChanged,
 		CancellationToken cancellationToken)
 	{
-		var adb = new AdbClient ();
-		lock (syncLock) {
-			activeClient = adb;
-		}
-		try {
-			await adb.ConnectAsync (port, cancellationToken).ConfigureAwait (false);
-			logger.Invoke (TraceLevel.Verbose, "Connected to ADB daemon, sending track-devices-l command");
+		await adbClient.ReconnectAsync (port, cancellationToken).ConfigureAwait (false);
+		logger.Invoke (TraceLevel.Verbose, "Connected to ADB daemon, sending track-devices-l command");
 
-			await adb.SendCommandAsync ("host:track-devices-l", cancellationToken).ConfigureAwait (false);
-			await adb.EnsureOkayAsync (cancellationToken).ConfigureAwait (false);
+		await adbClient.SendCommandAsync ("host:track-devices-l", cancellationToken).ConfigureAwait (false);
+		await adbClient.EnsureOkayAsync (cancellationToken).ConfigureAwait (false);
 
-			logger.Invoke (TraceLevel.Verbose, "ADB tracking active");
+		logger.Invoke (TraceLevel.Verbose, "ADB tracking active");
 
-			// Read length-prefixed device list updates
-			while (!cancellationToken.IsCancellationRequested) {
-				var payload = await adb.ReadLengthPrefixedStringAsync (cancellationToken).ConfigureAwait (false);
-				if (payload == null)
-					throw new IOException ("ADB daemon closed the connection.");
+		// Read length-prefixed device list updates
+		while (!cancellationToken.IsCancellationRequested) {
+			var payload = await adbClient.ReadLengthPrefixedStringAsync (cancellationToken).ConfigureAwait (false);
+			if (payload == null)
+				throw new IOException ("ADB daemon closed the connection.");
 
-				var lines = payload.Split ('\n');
-				var devices = AdbRunner.ParseAdbDevicesOutput (lines);
-				currentDevices = devices;
-				onDevicesChanged (devices);
-			}
-		} finally {
-			lock (syncLock) {
-				activeClient = null;
-			}
-			adb.Dispose ();
+			var lines = payload.Split ('\n');
+			var devices = AdbRunner.ParseAdbDevicesOutput (lines);
+			currentDevices = devices;
+			onDevicesChanged (devices);
 		}
 	}
 
@@ -147,8 +139,9 @@ public sealed class AdbDeviceTracker : IDisposable
 				return;
 			disposed = true;
 			trackingCts?.Cancel ();
-			activeClient?.Close ();
+			adbClient.Close ();
 			trackingCts?.Dispose ();
 		}
+		adbClient.Dispose ();
 	}
 }

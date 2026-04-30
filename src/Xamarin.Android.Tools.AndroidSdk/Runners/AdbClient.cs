@@ -14,18 +14,14 @@ namespace Xamarin.Android.Tools;
 /// Low-level ADB daemon socket protocol client.
 /// Encapsulates a single TCP connection to the ADB server and exposes
 /// the wire protocol operations (send command, read status, read length-prefixed payloads).
-/// One instance = one connection. Dispose closes the socket.
+/// One instance can be reused across reconnections via <see cref="ReconnectAsync"/>.
+/// Dispose closes the socket.
 /// </summary>
 internal sealed class AdbClient : IDisposable
 {
-	readonly TcpClient client;
+	TcpClient? client;
 	NetworkStream? stream;
 	bool disposed;
-
-	public AdbClient ()
-	{
-		client = new TcpClient ();
-	}
 
 	/// <summary>
 	/// Connects to the ADB daemon at 127.0.0.1 on the specified port.
@@ -33,13 +29,24 @@ internal sealed class AdbClient : IDisposable
 	public async Task ConnectAsync (int port, CancellationToken cancellationToken = default)
 	{
 		ThrowIfDisposed ();
+		var tcp = new TcpClient ();
+		client = tcp;
 #if NET5_0_OR_GREATER
-		await client.ConnectAsync ("127.0.0.1", port, cancellationToken).ConfigureAwait (false);
+		await tcp.ConnectAsync ("127.0.0.1", port, cancellationToken).ConfigureAwait (false);
 #else
-		await client.ConnectAsync ("127.0.0.1", port).ConfigureAwait (false);
+		await tcp.ConnectAsync ("127.0.0.1", port).ConfigureAwait (false);
 		cancellationToken.ThrowIfCancellationRequested ();
 #endif
-		stream = client.GetStream ();
+		stream = tcp.GetStream ();
+	}
+
+	/// <summary>
+	/// Closes the current connection and establishes a new one.
+	/// </summary>
+	public async Task ReconnectAsync (int port, CancellationToken cancellationToken = default)
+	{
+		CloseConnection ();
+		await ConnectAsync (port, cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
@@ -49,29 +56,37 @@ internal sealed class AdbClient : IDisposable
 	public async Task SendCommandAsync (string command, CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
+		// Combine length prefix + command into a single write to minimize syscalls
 		var commandBytes = Encoding.ASCII.GetBytes (command);
-		var header = commandBytes.Length.ToString ("x4");
-		var headerBytes = Encoding.ASCII.GetBytes (header);
-
-		await s.WriteAsync (headerBytes, 0, headerBytes.Length, cancellationToken).ConfigureAwait (false);
-		await s.WriteAsync (commandBytes, 0, commandBytes.Length, cancellationToken).ConfigureAwait (false);
+		var lengthPrefix = commandBytes.Length.ToString ("x4");
+		var packet = new byte [4 + commandBytes.Length];
+		Encoding.ASCII.GetBytes (lengthPrefix, 0, 4, packet, 0);
+		Buffer.BlockCopy (commandBytes, 0, packet, 4, commandBytes.Length);
+#if NET5_0_OR_GREATER
+		await s.WriteAsync (packet.AsMemory (), cancellationToken).ConfigureAwait (false);
+#else
+		await s.WriteAsync (packet, 0, packet.Length, cancellationToken).ConfigureAwait (false);
+#endif
 		await s.FlushAsync (cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
 	/// Reads the 4-byte status response from the ADB daemon.
-	/// Returns <see cref="AdbResponseStatus.Okay"/> or <see cref="AdbResponseStatus.Fail"/>.
 	/// </summary>
 	public async Task<AdbResponseStatus> ReadStatusAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		var statusBytes = await ReadExactBytesAsync (s, 4, cancellationToken).ConfigureAwait (false);
+		var statusBytes = await ReadExactBytesIntoNewArrayAsync (s, 4, cancellationToken).ConfigureAwait (false);
+		// Status is always 4 ASCII chars
+		if (statusBytes [0] == (byte) 'O' && statusBytes [1] == (byte) 'K' &&
+			statusBytes [2] == (byte) 'A' && statusBytes [3] == (byte) 'Y')
+			return AdbResponseStatus.Okay;
+		if (statusBytes [0] == (byte) 'F' && statusBytes [1] == (byte) 'A' &&
+			statusBytes [2] == (byte) 'I' && statusBytes [3] == (byte) 'L')
+			return AdbResponseStatus.Fail;
+
 		var status = Encoding.ASCII.GetString (statusBytes, 0, 4);
-		return status switch {
-			"OKAY" => AdbResponseStatus.Okay,
-			"FAIL" => AdbResponseStatus.Fail,
-			_ => throw new InvalidOperationException ($"Unexpected ADB status: '{status}'"),
-		};
+		throw new InvalidOperationException ($"Unexpected ADB status: '{status}'");
 	}
 
 	/// <summary>
@@ -100,10 +115,8 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public async Task<string?> ReadLengthPrefixedStringAsync (CancellationToken cancellationToken = default)
 	{
-		var bytes = await ReadLengthPrefixedBytesAsync (cancellationToken).ConfigureAwait (false);
-		if (bytes == null)
-			return null;
-		return Encoding.ASCII.GetString (bytes, 0, bytes.Length);
+		var s = GetStream ();
+		return await ReadLengthPrefixedStringCoreAsync (s, cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
@@ -113,18 +126,7 @@ internal sealed class AdbClient : IDisposable
 	public async Task<byte[]?> ReadLengthPrefixedBytesAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		var lengthBytes = await ReadExactBytesOrNullAsync (s, 4, cancellationToken).ConfigureAwait (false);
-		if (lengthBytes == null)
-			return null;
-
-		var lengthHex = Encoding.ASCII.GetString (lengthBytes, 0, 4);
-		if (!int.TryParse (lengthHex, System.Globalization.NumberStyles.HexNumber, null, out var length))
-			throw new FormatException ($"Invalid ADB length prefix: '{lengthHex}'");
-
-		if (length == 0)
-			return Array.Empty<byte> ();
-
-		return await ReadExactBytesAsync (s, length, cancellationToken).ConfigureAwait (false);
+		return await ReadLengthPrefixedBytesCoreAsync (s, cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
@@ -132,7 +134,7 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public void Close ()
 	{
-		client.Close ();
+		CloseConnection ();
 	}
 
 	public void Dispose ()
@@ -140,8 +142,18 @@ internal sealed class AdbClient : IDisposable
 		if (disposed)
 			return;
 		disposed = true;
-		client.Close ();
-		client.Dispose ();
+		CloseConnection ();
+	}
+
+	void CloseConnection ()
+	{
+		stream = null;
+		var tcp = client;
+		client = null;
+		if (tcp != null) {
+			tcp.Close ();
+			tcp.Dispose ();
+		}
 	}
 
 	NetworkStream GetStream ()
@@ -158,11 +170,26 @@ internal sealed class AdbClient : IDisposable
 			throw new ObjectDisposedException (nameof (AdbClient));
 	}
 
+	// --- Shared core implementations (used by both instance and static methods) ---
+
 	/// <summary>
 	/// Reads a length-prefixed ASCII string from a raw stream.
-	/// Useful for testing and for callers that already have a stream.
+	/// Shared core for both instance and static access patterns.
 	/// </summary>
 	internal static async Task<string?> ReadLengthPrefixedStringFromStreamAsync (Stream stream, CancellationToken cancellationToken)
+	{
+		return await ReadLengthPrefixedStringCoreAsync (stream, cancellationToken).ConfigureAwait (false);
+	}
+
+	static async Task<string?> ReadLengthPrefixedStringCoreAsync (Stream stream, CancellationToken cancellationToken)
+	{
+		var bytes = await ReadLengthPrefixedBytesCoreAsync (stream, cancellationToken).ConfigureAwait (false);
+		if (bytes == null)
+			return null;
+		return Encoding.ASCII.GetString (bytes, 0, bytes.Length);
+	}
+
+	static async Task<byte[]?> ReadLengthPrefixedBytesCoreAsync (Stream stream, CancellationToken cancellationToken)
 	{
 		var lengthBytes = await ReadExactBytesOrNullAsync (stream, 4, cancellationToken).ConfigureAwait (false);
 		if (lengthBytes == null)
@@ -173,13 +200,12 @@ internal sealed class AdbClient : IDisposable
 			throw new FormatException ($"Invalid ADB length prefix: '{lengthHex}'");
 
 		if (length == 0)
-			return string.Empty;
+			return Array.Empty<byte> ();
 
-		var payload = await ReadExactBytesAsync (stream, length, cancellationToken).ConfigureAwait (false);
-		return Encoding.ASCII.GetString (payload, 0, payload.Length);
+		return await ReadExactBytesIntoNewArrayAsync (stream, length, cancellationToken).ConfigureAwait (false);
 	}
 
-	static async Task<byte[]> ReadExactBytesAsync (Stream stream, int count, CancellationToken cancellationToken)
+	static async Task<byte[]> ReadExactBytesIntoNewArrayAsync (Stream stream, int count, CancellationToken cancellationToken)
 	{
 		var result = await ReadExactBytesOrNullAsync (stream, count, cancellationToken).ConfigureAwait (false);
 		if (result == null)
