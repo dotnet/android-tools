@@ -863,6 +863,168 @@ public class AdbRunnerTests
 		Assert.AreEqual (8081, rules [1].Remote.Port);
 	}
 
+	// --- ParseForwardListOutput tests ---
+	// Consumer: MAUI DevTools (via ListForwardPortsAsync — host→device tunnel for JDWP debugger
+	// attach, perf endpoints, host-side DevFlow agent connect), vscode-maui ServiceHub replacement.
+	// Output format differs from reverse: "(reverse) <remote> <local>" → "<serial> <local> <remote>".
+
+	[Test]
+	public void ParseForwardListOutput_SingleRule ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:6000",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Local.Protocol);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (AdbProtocol.Tcp, rules [0].Remote.Protocol);
+		Assert.AreEqual (6000, rules [0].Remote.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_MultipleRulesSameDevice ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:6000",
+			"emulator-5554 tcp:8081 tcp:8081",
+			"emulator-5554 tcp:9222 tcp:9223",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		Assert.AreEqual (3, rules.Count);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (6000, rules [0].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Local.Port);
+		Assert.AreEqual (8081, rules [1].Remote.Port);
+		Assert.AreEqual (9222, rules [2].Local.Port);
+		Assert.AreEqual (9223, rules [2].Remote.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_FiltersByDeviceSerial ()
+	{
+		// adb forward --list returns rules across ALL devices; we must filter.
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:5000",
+			"emulator-5556 tcp:5001 tcp:5001",
+			"emulator-5554 tcp:8081 tcp:8081",
+			"abcd1234device tcp:9000 tcp:9000",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		Assert.AreEqual (2, rules.Count);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (8081, rules [1].Local.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_EmptyOutput ()
+	{
+		var output = new [] { "", "  " };
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_NoLines ()
+	{
+		var rules = AdbRunner.ParseForwardListOutput (Array.Empty<string> (), "emulator-5554");
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_EmptySerial_ReturnsEmpty ()
+	{
+		var output = new [] { "emulator-5554 tcp:5000 tcp:5000" };
+		var rules = AdbRunner.ParseForwardListOutput (output, "");
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_NoMatchingDevice ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:5000",
+			"emulator-5556 tcp:5001 tcp:5001",
+		};
+		var rules = AdbRunner.ParseForwardListOutput (output, "missing-device");
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_MalformedLine_InsufficientParts ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:5000",  // missing remote spec
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+		Assert.AreEqual (0, rules.Count);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_NonTcpSpecs_SkipsUnparseable ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:9222 localabstract:chrome_devtools_remote",
+			"emulator-5554 tcp:5000 tcp:5000",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		// localabstract:chrome_devtools_remote has a non-numeric port, so it is skipped
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (5000, rules [0].Remote.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_WindowsLineEndings ()
+	{
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:6000\r",
+			"emulator-5554 tcp:8081 tcp:8081\r",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		Assert.AreEqual (2, rules.Count);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (6000, rules [0].Remote.Port);
+		Assert.AreEqual (8081, rules [1].Local.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_TabSeparated ()
+	{
+		var output = new [] {
+			"emulator-5554\ttcp:5000\ttcp:6000",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "emulator-5554");
+
+		Assert.AreEqual (1, rules.Count);
+		Assert.AreEqual (5000, rules [0].Local.Port);
+		Assert.AreEqual (6000, rules [0].Remote.Port);
+	}
+
+	[Test]
+	public void ParseForwardListOutput_SerialMatch_IsCaseSensitive ()
+	{
+		// adb device serials are case-sensitive.
+		var output = new [] {
+			"emulator-5554 tcp:5000 tcp:5000",
+		};
+
+		var rules = AdbRunner.ParseForwardListOutput (output, "EMULATOR-5554");
+		Assert.AreEqual (0, rules.Count);
+	}
+
 	// --- AdbPortSpec tests ---
 
 	[Test]
@@ -1067,6 +1229,70 @@ public class AdbRunnerTests
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
 		Assert.ThrowsAsync<System.ArgumentException> (
 			async () => await runner.ListReversePortsAsync (""));
+	}
+
+	// --- ForwardPortAsync parameter validation tests ---
+
+	[Test]
+	public void ForwardPortAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.ForwardPortAsync ("", new AdbPortSpec (AdbProtocol.Tcp, 5000), new AdbPortSpec (AdbProtocol.Tcp, 5000)));
+	}
+
+	[Test]
+	public void ForwardPortAsync_NullLocal_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.ForwardPortAsync ("emulator-5554", (AdbPortSpec) null!, new AdbPortSpec (AdbProtocol.Tcp, 5000)));
+	}
+
+	[Test]
+	public void ForwardPortAsync_NullRemote_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.ForwardPortAsync ("emulator-5554", new AdbPortSpec (AdbProtocol.Tcp, 5000), (AdbPortSpec) null!));
+	}
+
+	// --- RemoveForwardPortAsync parameter validation tests ---
+
+	[Test]
+	public void RemoveForwardPortAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.RemoveForwardPortAsync ("", new AdbPortSpec (AdbProtocol.Tcp, 5000)));
+	}
+
+	[Test]
+	public void RemoveForwardPortAsync_NullLocal_ThrowsArgumentNull ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentNullException> (
+			async () => await runner.RemoveForwardPortAsync ("emulator-5554", (AdbPortSpec) null!));
+	}
+
+	// --- RemoveAllForwardPortsAsync parameter validation tests ---
+
+	[Test]
+	public void RemoveAllForwardPortsAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.RemoveAllForwardPortsAsync (""));
+	}
+
+	// --- ListForwardPortsAsync parameter validation tests ---
+
+	[Test]
+	public void ListForwardPortsAsync_EmptySerial_ThrowsArgumentException ()
+	{
+		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");
+		Assert.ThrowsAsync<System.ArgumentException> (
+			async () => await runner.ListForwardPortsAsync (""));
 	}
 
 	// --- GetEmulatorAvdNameAsync + ListDevicesAsync tests ---
