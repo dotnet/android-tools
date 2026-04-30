@@ -184,7 +184,6 @@ Xamarin.Android.Tools.EmulatorLaunchResult.ConsolePort.get -> int?
 Xamarin.Android.Tools.EmulatorLaunchResult.LogPath.get -> string!
 Xamarin.Android.Tools.EmulatorLaunchResult.Pid.get -> int
 Xamarin.Android.Tools.EmulatorLaunchResult.PortsResolvedAsync.get -> System.Threading.Tasks.Task!
-Xamarin.Android.Tools.EmulatorLaunchResult.PortsResolvedAsync.init -> void
 Xamarin.Android.Tools.EmulatorLaunchResult.Process.get -> System.Diagnostics.Process!
 Xamarin.Android.Tools.EmulatorLaunchResult.Serial.get -> string?
 Xamarin.Android.Tools.AdbPortRule

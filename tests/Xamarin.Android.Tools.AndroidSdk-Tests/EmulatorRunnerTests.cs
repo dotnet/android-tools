@@ -245,7 +245,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_ConsolePort_Parsed ()
 	{
-		var result = new EmulatorLaunchResult (null!, "");
+		var result = new EmulatorLaunchResult (new Process (), "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5554", result, tcs);
@@ -257,7 +257,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_AdbPort_Parsed ()
 	{
-		var result = new EmulatorLaunchResult (null!, "");
+		var result = new EmulatorLaunchResult (new Process (), "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: ADB Server has started successfully on port 5555", result, tcs);
@@ -269,7 +269,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_BothPorts_CompletesTask ()
 	{
-		var result = new EmulatorLaunchResult (null!, "");
+		var result = new EmulatorLaunchResult (new Process (), "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: Listening on port 5556", result, tcs);
@@ -284,7 +284,7 @@ public class EmulatorRunnerTests
 	[Test]
 	public void TryResolvePortsFromLine_UnrelatedLine_NoEffect ()
 	{
-		var result = new EmulatorLaunchResult (null!, "");
+		var result = new EmulatorLaunchResult (new Process (), "");
 		var tcs = new TaskCompletionSource<bool> ();
 
 		EmulatorRunner.TryResolvePortsFromLine ("emulator: cold boot", result, tcs);

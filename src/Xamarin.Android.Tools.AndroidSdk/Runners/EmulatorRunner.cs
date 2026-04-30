@@ -73,6 +73,8 @@ public class EmulatorRunner
 	{
 		if (string.IsNullOrWhiteSpace (avdName))
 			throw new ArgumentException ("AVD name must not be empty.", nameof (avdName));
+		if (adbPort.HasValue && !consolePort.HasValue)
+			throw new ArgumentException ("adbPort requires consolePort to be specified.", nameof (adbPort));
 
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
@@ -129,8 +131,8 @@ public class EmulatorRunner
 		var result = new EmulatorLaunchResult (process, resolvedLogPath) {
 			ConsolePort = resolvedConsolePort,
 			AdbPort = resolvedAdbPort,
-			PortsResolvedAsync = tcs is { } activeTcs ? (Task)activeTcs.Task : Task.CompletedTask,
 		};
+		result.PortsResolvedAsync = tcs is { } activeTcs ? (Task)activeTcs.Task : Task.CompletedTask;
 
 		process.OutputDataReceived += (_, e) => {
 			if (e.Data == null)

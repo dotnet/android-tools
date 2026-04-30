@@ -13,6 +13,8 @@ public sealed class EmulatorLaunchResult
 {
 	public EmulatorLaunchResult (Process process, string logPath)
 	{
+		if (process is null)
+			throw new System.ArgumentNullException (nameof (process));
 		Process = process;
 		LogPath = logPath;
 	}
@@ -57,5 +59,5 @@ public sealed class EmulatorLaunchResult
 	/// The task faults with <see cref="System.InvalidOperationException"/> if the emulator
 	/// process exits before the port lines are emitted.
 	/// </summary>
-	public Task PortsResolvedAsync { get; init; } = Task.CompletedTask;
+	public Task PortsResolvedAsync { get; internal set; } = Task.CompletedTask;
 }
