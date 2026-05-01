@@ -24,6 +24,9 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | **OperationCanceledException** | Catch-all blocks (`catch (Exception)`) must NOT swallow `OperationCanceledException`. Either catch it explicitly first and rethrow, or use a type filter. |
 | **GetStringAsync** | On netstandard2.0, `GetStringAsync(url)` doesn't accept a `CancellationToken`. Use `GetAsync(url, ct)` + `ReadAsStringAsync()` instead. |
 | **Thread safety of shared state** | If a new field or property can be accessed from multiple threads (e.g., static caches, event handlers), verify thread-safe access: `ConcurrentDictionary`, `Interlocked`, or explicit locks. A `Dictionary<K,V>` read concurrently with a write is undefined behavior. |
+| **Lock ordering** | If code acquires multiple locks, the order must be consistent everywhere. Document the ordering. Inconsistent ordering → deadlock. |
+| **Avoid double-checked locking** | The double-checked locking (DCL) pattern is error-prone and [discouraged by Microsoft](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/volatile). Prefer `Lazy<T>` or `LazyInitializer.EnsureInitialized()` — they handle thread-safe initialization correctly. If DCL is truly necessary (e.g., for performance in a hot path with evidence), verify all initialization completes before the field is assigned and no thread can observe a partially-initialized instance. |
+| **Singleton initialization completeness** | When a singleton is initialized behind a lock, ensure ALL setup steps (not just construction) complete before publishing the instance. If `Initialize()` does `instance = new Foo(); instance.Setup();`, another thread can see `instance != null` and use it before `Setup()` runs. Either do all setup in the constructor, or don't publish the reference until all setup is done. |
 
 ---
 
@@ -47,7 +50,11 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | **Fail fast on critical ops** | If an operation like `chmod` or checksum verification fails, throw immediately. Silently continuing leads to confusing downstream failures. |
 | **Mandatory verification** | Checksum/hash verification must NOT be optional. If the checksum can't be fetched, the operation must fail — not proceed unverified. |
 | **Include actionable details in exceptions** | Use `nameof` for parameter names. Include the unsupported value or unexpected type. Never throw empty exceptions. |
-| **Use `ThrowIf` helpers where available** | In .NET 7+ projects, prefer `ArgumentOutOfRangeException.ThrowIfNegative`, `ArgumentNullException.ThrowIfNull`, etc. over manual if-then-throw patterns. In `netstandard2.0` projects where these helpers are unavailable, use explicit checks such as `if (x is null) throw new ArgumentNullException (nameof (x));`. |
+| **Log messages must have context** | A bare `"Operation failed"` could be anything. Include *what* you were doing and relevant identifiers so the message is actionable without a debugger. |
+| **Differentiate similar error messages** | Two messages saying `"X failed"` for different operations are impossible to debug. Make each unique so log output is unambiguous. |
+| **Assert boundary invariants** | If a name=value pair array must have even length, assert `(length % 2) == 0` before indexing `[i+1]`. Validate structural assumptions at the boundary, not deep inside the logic. |
+| **Initialize output parameters in all paths** | Methods with `out` parameters must initialize them in all error paths, not just the success path. |
+| **Use `ThrowIf` helpers where available** | Prefer `ArgumentOutOfRangeException.ThrowIfNegative`, `ArgumentNullException.ThrowIfNull`, etc. over manual if-then-throw patterns where these helpers are available. In `netstandard2.0` projects where these helpers are unavailable, use explicit checks such as `if (x is null) throw new ArgumentNullException (nameof (x));`. |
 | **Challenge exception swallowing** | When a PR adds `catch { continue; }` or `catch { return null; }`, question whether the exception is truly expected or masking a deeper problem. The default should be to let unexpected exceptions propagate. |
 
 ---
@@ -64,6 +71,11 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | **Avoid closures in hot paths** | Lambdas that capture local variables allocate a closure object on every call. In loops or frequently-called methods, extract the lambda to a static method or cache the delegate. |
 | **Place cheap checks before expensive ones** | In validation chains, test simple conditions (null checks, boolean flags) before allocating strings or doing I/O. Short-circuit with `&&`/`||`. |
 | **Watch for O(n²)** | Nested loops over the same or related collections, repeated `.Contains()` on a `List<T>`, or LINQ `.Where()` inside a loop are O(n²). Switch to `HashSet<T>` or `Dictionary<TK, TV>` for lookups. |
+| **`HashSet.Add()` already handles duplicates** | Calling `.Contains()` before `.Add()` does the hash lookup twice. Just call `.Add()` — it returns `false` if the item already exists. |
+| **Don't wrap a value in an interpolated string** | `$"{someString}"` creates an unnecessary `string.Format` call when `someString` is already a string. Just use `someString` directly. |
+| **`Split()` with count parameter** | `line.Split(new char[]{'='}, 2)` prevents values containing `=` from being split incorrectly. Follow existing patterns that limit the split count. |
+| **Cache repeated accessor calls** | If `foo.Bar.Baz` is used multiple times in a block, assign it to a local. This avoids repeated property evaluation and makes intent clearer. |
+| **Extract throw helpers** | Code like `if (x) throw new SomeException(...)` in a frequently-called method prevents inlining. Extract into a `[DoesNotReturn]` helper so the JIT can inline the happy path. |
 
 ---
 
@@ -77,6 +89,8 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | **No commented-out code** | Commented-out code should be deleted — Git has history. |
 | **Reduce indentation with early returns** | Invert conditions with `continue` or early `return` to reduce nesting. `foreach (var x in items ?? Array.Empty<T>())` eliminates null-check nesting. |
 | **Don't initialize fields to default values** | `bool flag = false;` and `int count = 0;` are noise. The CLR zero-initializes all fields. Only assign when the initial value is non-default. |
+| **`sealed` classes skip full Dispose** | A `sealed` class doesn't need `Dispose(bool)` + `GC.SuppressFinalize`. Just implement `IDisposable.Dispose()` directly. The full pattern is only for unsealed base classes. |
+| **Use interfaces over concrete types** | Fields and parameters should prefer interfaces (`IMetadataResolver`) over concrete classes. When the implementation changes, you swap the implementation — not every call site. |
 
 ---
 
