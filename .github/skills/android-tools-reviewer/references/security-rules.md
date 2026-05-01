@@ -17,5 +17,5 @@ Security checklist for code reviews. Applicable to any repository handling file 
 
 | Check | What to look for |
 |-------|-----------------|
-| **Command injection** | Arguments passed to `Process.Start` or written to `.cmd`/`.sh` scripts must be sanitized. Use `ProcessStartInfo.ArgumentList` on net5+ (no shell parsing). Never interpolate user/external input into command strings. |
+| **Command injection** | Arguments passed to external processes must be sanitized. Pass arguments as separate strings (not a single interpolated string) so they are never parsed by a shell. Never interpolate user/external input into command strings. |
 | **Elevation** | Don't auto-elevate. Don't include `IsElevated()` helpers that silently re-launch elevated. The calling tool should handle elevation prompts. The library should error if it lacks permissions. |

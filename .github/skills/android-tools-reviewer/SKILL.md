@@ -69,7 +69,7 @@ Based on the changed files from step 2, load the appropriate rule files from `re
 
 **Conditionally load:**
 - `references/csharp-rules.md` — if any `.cs` files changed
-- `references/msbuild-rules.md` — if any `.targets`, `.props`, or `.projitems` files changed, or if changed `.cs` files are MSBuild task implementations
+- `references/msbuild-rules.md` — if any `.targets`, `.props`, or `.projitems` files changed, or if changed `.cs` files are under `src/Microsoft.Android.Build.BaseTasks/`
 - `references/testing-rules.md` — if any files under `tests/` changed or files with `Test` in the path changed
 
 ### 6. Analyze the diff
