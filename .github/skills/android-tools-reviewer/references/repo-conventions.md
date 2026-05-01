@@ -1,5 +1,7 @@
 # Repo Conventions
 
+<!-- Derived from docs/CODE_REVIEW_POSTMORTEM.md — see that file for the original 56 findings. -->
+
 Patterns, naming, and style rules specific to this repository (`dotnet/android-tools`). Always loaded during reviews.
 
 ---
