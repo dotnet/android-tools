@@ -32,6 +32,7 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | Check | What to look for |
 |-------|-----------------|
 | **HttpClient must be static** | `HttpClient` instances should be `static readonly` fields, not per-instance. Creating/disposing `HttpClient` leads to socket exhaustion via `TIME_WAIT` accumulation. See [Microsoft guidelines](https://learn.microsoft.com/dotnet/fundamentals/networking/http/httpclient-guidelines). |
+| **No HttpClient injection (YAGNI)** | Don't add `HttpClient` constructor parameters "for testability" unless a caller actually needs it today. The AI tends to over-engineer this. |
 | **ArrayPool for large buffers** | Buffers ≥ 1KB (especially 80KB+ download buffers) should use `ArrayPool<byte>.Shared.Rent()` with `try/finally` return. Large allocations go to the LOH and are expensive to GC. |
 | **IDisposable** | Classes that own unmanaged resources or expensive managed resources must implement `IDisposable` with a dispose guard (`ThrowIfDisposed`). |
 
@@ -46,7 +47,7 @@ When a library multi-targets (e.g., `netstandard2.0` + a modern TFM), every API 
 | **Fail fast on critical ops** | If an operation like `chmod` or checksum verification fails, throw immediately. Silently continuing leads to confusing downstream failures. |
 | **Mandatory verification** | Checksum/hash verification must NOT be optional. If the checksum can't be fetched, the operation must fail — not proceed unverified. |
 | **Include actionable details in exceptions** | Use `nameof` for parameter names. Include the unsupported value or unexpected type. Never throw empty exceptions. |
-| **Use `ThrowIf` helpers where available** | In .NET 7+ projects, prefer `ArgumentOutOfRangeException.ThrowIfNegative`, `ArgumentNullException.ThrowIfNull`, etc. over manual if-then-throw patterns. In `netstandard2.0` projects where these helpers are unavailable, use explicit checks. |
+| **Use `ThrowIf` helpers where available** | In .NET 7+ projects, prefer `ArgumentOutOfRangeException.ThrowIfNegative`, `ArgumentNullException.ThrowIfNull`, etc. over manual if-then-throw patterns. In `netstandard2.0` projects where these helpers are unavailable, use explicit checks such as `if (x is null) throw new ArgumentNullException (nameof (x));`. |
 | **Challenge exception swallowing** | When a PR adds `catch { continue; }` or `catch { return null; }`, question whether the exception is truly expected or masking a deeper problem. The default should be to let unexpected exceptions propagate. |
 
 ---

@@ -18,7 +18,7 @@ Patterns, naming, and style rules specific to this repository (`dotnet/android-t
 
 | Check | What to look for |
 |-------|-----------------|
-| **Assign null-object sentinels early** | Methods accepting nullable dependencies (`IProgress<T>?`, `ILogger?`, `Action<string>?`) should assign a null-object sentinel early (e.g., `progress ??= NullProgress.Instance`) and then use the dependency without `?.` null checks throughout the method. Scattered `?.` calls are noise, invite missed spots, and signal a missing null-object type. |
+| **Assign null-object sentinels early** | Methods accepting nullable dependencies (`IProgress<T>?`, `ILogger?`, `Action<string>?`) should assign a null-object sentinel early (e.g., `progress ??= NullProgress.Instance`) and then use the dependency without `?.` null checks throughout the method. Scattered `?.` calls are noise, invite missed spots, and signal a missing null-object type. If no null-object type exists yet, recommend creating one. |
 
 ---
 
