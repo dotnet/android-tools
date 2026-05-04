@@ -122,6 +122,66 @@ public class AvdManagerRunner
 		ProcessUtils.ThrowIfFailed (exitCode, $"avdmanager delete avd --name {name}", stderr);
 	}
 
+	/// <summary>
+	/// Lists available AVD skins by scanning the SDK <c>skins/</c> directory
+	/// and <c>system-images/.../skins/</c> directories.
+	/// </summary>
+	/// <param name="sdkPath">Root path of the Android SDK.</param>
+	/// <param name="cancellationToken">Cancellation token checked during directory enumeration.</param>
+	/// <returns>Sorted list of unique skin directory names.</returns>
+	public static IReadOnlyList<string> ListAvdSkins (string sdkPath, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (sdkPath))
+			throw new ArgumentException ("SDK path must not be empty.", nameof (sdkPath));
+
+		return EnumerateSkins (sdkPath, cancellationToken);
+	}
+
+	internal static IReadOnlyList<string> EnumerateSkins (string sdkPath, CancellationToken cancellationToken = default)
+	{
+		var skins = new SortedSet<string> (StringComparer.OrdinalIgnoreCase);
+
+		// Standalone skins: <sdk>/skins/<skinName>/
+		var skinsDir = Path.Combine (sdkPath, "skins");
+		AddSkinDirectories (skins, skinsDir);
+
+		// System image skins: <sdk>/system-images/<api>/<tag>/<abi>/skins/<skinName>/
+		var systemImagesDir = Path.Combine (sdkPath, "system-images");
+		if (Directory.Exists (systemImagesDir)) {
+			try {
+				foreach (var apiDir in Directory.EnumerateDirectories (systemImagesDir)) {
+					cancellationToken.ThrowIfCancellationRequested ();
+					try {
+						foreach (var tagDir in Directory.EnumerateDirectories (apiDir)) {
+							foreach (var abiDir in Directory.EnumerateDirectories (tagDir)) {
+								var imgSkinsDir = Path.Combine (abiDir, "skins");
+								AddSkinDirectories (skins, imgSkinsDir);
+							}
+						}
+					} catch (IOException) {
+					} catch (UnauthorizedAccessException) {
+					}
+				}
+			} catch (IOException) {
+			} catch (UnauthorizedAccessException) {
+			}
+		}
+
+		return skins.ToList ();
+	}
+
+	static void AddSkinDirectories (SortedSet<string> skins, string directory)
+	{
+		if (!Directory.Exists (directory))
+			return;
+		try {
+			foreach (var skinDir in Directory.EnumerateDirectories (directory))
+				skins.Add (Path.GetFileName (skinDir));
+		} catch (IOException) {
+		} catch (UnauthorizedAccessException) {
+		}
+	}
+
 	internal static IReadOnlyList<AvdInfo> ParseAvdListOutput (string output)
 	{
 		var avds = new List<AvdInfo> ();
