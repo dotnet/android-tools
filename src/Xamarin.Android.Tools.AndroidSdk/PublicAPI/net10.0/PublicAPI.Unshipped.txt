@@ -177,13 +177,13 @@ Xamarin.Android.Tools.EmulatorRunner.BootEmulatorAsync(string! deviceOrAvdName, 
 Xamarin.Android.Tools.EmulatorRunner.EmulatorRunner(string! emulatorPath, System.Collections.Generic.IDictionary<string!, string!>? environmentVariables = null, System.Action<System.Diagnostics.TraceLevel, string!>? logger = null) -> void
 Xamarin.Android.Tools.EmulatorRunner.ListAvdNamesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string!>!>!
 Xamarin.Android.Tools.EmulatorRunner.LaunchEmulator(string! avdName, bool coldBoot = false, int? consolePort = null, int? adbPort = null, string? logFile = null, System.Collections.Generic.List<string!>? additionalArgs = null) -> Xamarin.Android.Tools.EmulatorLaunchResult!
+Xamarin.Android.Tools.EmulatorRunner.LaunchEmulatorAsync(string! avdName, bool coldBoot = false, int? consolePort = null, int? adbPort = null, string? logFile = null, System.Collections.Generic.List<string!>? additionalArgs = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Xamarin.Android.Tools.EmulatorLaunchResult!>!
 Xamarin.Android.Tools.EmulatorLaunchResult
 Xamarin.Android.Tools.EmulatorLaunchResult.EmulatorLaunchResult(System.Diagnostics.Process! process, string! logPath) -> void
 Xamarin.Android.Tools.EmulatorLaunchResult.AdbPort.get -> int?
 Xamarin.Android.Tools.EmulatorLaunchResult.ConsolePort.get -> int?
 Xamarin.Android.Tools.EmulatorLaunchResult.LogPath.get -> string!
 Xamarin.Android.Tools.EmulatorLaunchResult.Pid.get -> int
-Xamarin.Android.Tools.EmulatorLaunchResult.PortsResolvedAsync.get -> System.Threading.Tasks.Task!
 Xamarin.Android.Tools.EmulatorLaunchResult.Process.get -> System.Diagnostics.Process!
 Xamarin.Android.Tools.EmulatorLaunchResult.Serial.get -> string?
 Xamarin.Android.Tools.AdbPortRule

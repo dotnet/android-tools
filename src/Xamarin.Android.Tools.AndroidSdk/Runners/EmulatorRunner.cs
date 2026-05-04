@@ -174,6 +174,30 @@ public class EmulatorRunner
 	}
 
 	/// <summary>
+	/// Launches an emulator and waits until its console and ADB ports are resolved.
+	/// When <paramref name="consolePort"/> is provided the ports are known immediately;
+	/// otherwise stdout/stderr is parsed for the emulator's port-announcement lines.
+	/// </summary>
+	public async Task<EmulatorLaunchResult> LaunchEmulatorAsync (
+		string avdName,
+		bool coldBoot = false,
+		int? consolePort = null,
+		int? adbPort = null,
+		string? logFile = null,
+		List<string>? additionalArgs = null,
+		CancellationToken cancellationToken = default)
+	{
+		var result = LaunchEmulator (avdName, coldBoot, consolePort, adbPort, logFile, additionalArgs);
+
+		using var registration = cancellationToken.Register (() => {
+			try { result.Process.Kill (); } catch { }
+		});
+
+		await result.PortsResolvedAsync.ConfigureAwait (false);
+		return result;
+	}
+
+	/// <summary>
 	/// Parses a single emulator output line and, when the relevant port-assignment patterns are
 	/// found, updates <paramref name="result"/> and completes <paramref name="tcs"/>.
 	/// </summary>
@@ -354,12 +378,13 @@ public class EmulatorRunner
 
 				// Detect early process exit for fast failure
 				if (emulatorProcess.HasExited && !processExitedWithZero) {
-					if (emulatorProcess.ExitCode != 0) {
+					var exitCode = emulatorProcess.ExitCode;
+					if (exitCode != 0) {
 						emulatorProcess.Dispose ();
 						return new EmulatorBootResult {
 							Success = false,
 							ErrorKind = EmulatorBootErrorKind.LaunchFailed,
-							ErrorMessage = $"Emulator process for '{deviceOrAvdName}' exited with code {emulatorProcess.ExitCode} before becoming available.",
+							ErrorMessage = $"Emulator process for '{deviceOrAvdName}' exited with code {exitCode} before becoming available.",
 						};
 					}
 					// Exit code 0: emulator likely forked (common on macOS).

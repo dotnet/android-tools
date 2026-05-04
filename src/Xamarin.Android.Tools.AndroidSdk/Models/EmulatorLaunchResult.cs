@@ -56,10 +56,7 @@ public sealed class EmulatorLaunchResult
 	/// <summary>
 	/// A <see cref="Task"/> that completes when the emulator has reported its console and ADB
 	/// port assignments via stdout/stderr. If ports were pre-assigned via <c>-ports</c>, this
-	/// task is already completed. Await this before reading <see cref="ConsolePort"/>,
-	/// <see cref="AdbPort"/>, or <see cref="Serial"/> when ports were not pre-assigned.
-	/// The task faults with <see cref="System.InvalidOperationException"/> if the emulator
-	/// process exits before the port lines are emitted.
+	/// task is already completed.
 	/// </summary>
-	public Task PortsResolvedAsync { get; internal set; } = Task.CompletedTask;
+	internal Task PortsResolvedAsync { get; set; } = Task.CompletedTask;
 }

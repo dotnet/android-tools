@@ -101,18 +101,18 @@ public class EmulatorRunnerTests
 	public void LaunchEmulator_PreAssignedPorts_SerialKnownImmediately ()
 	{
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		EmulatorLaunchResult? result = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			var result = runner.LaunchEmulator ("Test_AVD", consolePort: 5554);
+			result = runner.LaunchEmulator ("Test_AVD", consolePort: 5554);
 
 			Assert.AreEqual (5554, result.ConsolePort, "ConsolePort should be the pre-assigned value");
 			Assert.AreEqual (5555, result.AdbPort, "AdbPort should default to consolePort + 1");
 			Assert.AreEqual ("emulator-5554", result.Serial, "Serial should be derived from ConsolePort");
-			Assert.IsTrue (result.PortsResolvedAsync.IsCompleted, "PortsResolvedAsync should be completed when ports are pre-assigned");
 			Assert.IsNotNull (result.Process);
 			Assert.IsFalse (string.IsNullOrEmpty (result.LogPath), "LogPath should be non-empty");
 		} finally {
-			KillSleepProcesses ();
+			TryKillProcess (result?.Process);
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -121,16 +121,16 @@ public class EmulatorRunnerTests
 	public void LaunchEmulator_PreAssignedPortsExplicitAdb_BothPortsSet ()
 	{
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		EmulatorLaunchResult? result = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			var result = runner.LaunchEmulator ("Test_AVD", consolePort: 5560, adbPort: 5570);
+			result = runner.LaunchEmulator ("Test_AVD", consolePort: 5560, adbPort: 5570);
 
 			Assert.AreEqual (5560, result.ConsolePort);
 			Assert.AreEqual (5570, result.AdbPort);
 			Assert.AreEqual ("emulator-5560", result.Serial);
-			Assert.IsTrue (result.PortsResolvedAsync.IsCompleted);
 		} finally {
-			KillSleepProcesses ();
+			TryKillProcess (result?.Process);
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -139,23 +139,22 @@ public class EmulatorRunnerTests
 	public void LaunchEmulator_NoPorts_SerialNullUntilResolved ()
 	{
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		EmulatorLaunchResult? result = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			var result = runner.LaunchEmulator ("Test_AVD");
+			result = runner.LaunchEmulator ("Test_AVD");
 
 			Assert.IsNull (result.ConsolePort, "ConsolePort should be null until resolved via stdout");
 			Assert.IsNull (result.Serial, "Serial should be null until ports are resolved");
-			Assert.IsFalse (result.PortsResolvedAsync.IsCompleted, "PortsResolvedAsync should be pending");
 		} finally {
-			KillSleepProcesses ();
+			TryKillProcess (result?.Process);
 			Directory.Delete (tempDir, true);
 		}
 	}
 
 	[Test]
-	public async Task LaunchEmulator_StdoutEmitsPortLines_PortsResolvedAsync_Completes ()
+	public async Task LaunchEmulatorAsync_ResolvesPortsFromStdout ()
 	{
-		// Create a fake emulator that immediately prints the port announcement lines.
 		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-ports-test-{Path.GetRandomFileName ()}");
 		var emuDir = Path.Combine (tempDir, "emulator");
 		Directory.CreateDirectory (emuDir);
@@ -167,31 +166,30 @@ public class EmulatorRunnerTests
 				"@echo off\r\n" +
 				"echo emulator: Listening on port 5558\r\n" +
 				"echo emulator: ADB Server has started successfully on port 5559\r\n" +
-				"ping -n 30 127.0.0.1 >nul\r\n");
+				"ping -n 5 127.0.0.1 >nul\r\n");
 		} else {
 			File.WriteAllText (emuPath,
 				"#!/bin/sh\n" +
 				"echo 'emulator: Listening on port 5558'\n" +
 				"echo 'emulator: ADB Server has started successfully on port 5559'\n" +
-				"sleep 30\n");
+				"sleep 5\n");
 			var chmod = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
 			using var p = new Process { StartInfo = chmod };
 			p.Start ();
 			p.WaitForExit ();
 		}
 
+		EmulatorLaunchResult? result = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			var result = runner.LaunchEmulator ("Test_AVD");
-
 			using var cts = new CancellationTokenSource (TimeSpan.FromSeconds (10));
-			await result.PortsResolvedAsync.WaitAsync (cts.Token);
+			result = await runner.LaunchEmulatorAsync ("Test_AVD", cancellationToken: cts.Token);
 
 			Assert.AreEqual (5558, result.ConsolePort);
 			Assert.AreEqual (5559, result.AdbPort);
 			Assert.AreEqual ("emulator-5558", result.Serial);
 		} finally {
-			KillSleepProcesses ();
+			TryKillProcess (result?.Process);
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -201,13 +199,14 @@ public class EmulatorRunnerTests
 	{
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
 		var logPath = Path.Combine (tempDir, "my-emulator.log");
+		EmulatorLaunchResult? result = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			var result = runner.LaunchEmulator ("Test_AVD", logFile: logPath);
+			result = runner.LaunchEmulator ("Test_AVD", logFile: logPath);
 
 			Assert.AreEqual (logPath, result.LogPath);
 		} finally {
-			KillSleepProcesses ();
+			TryKillProcess (result?.Process);
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -363,7 +362,6 @@ public class EmulatorRunnerTests
 		};
 
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
-		Process? emulatorProcess = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
 			var options = new EmulatorBootOptions {
@@ -377,12 +375,6 @@ public class EmulatorRunnerTests
 			Assert.AreEqual ("emulator-5554", result.Serial);
 			Assert.IsTrue (pollCount >= 2);
 		} finally {
-			// Kill any emulator process spawned by the test
-			try {
-				emulatorProcess = FindEmulatorProcess (emuPath);
-				emulatorProcess?.Kill ();
-				emulatorProcess?.WaitForExit (1000);
-			} catch { }
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -525,9 +517,9 @@ public class EmulatorRunnerTests
 
 		// Rewrite the fake emulator to log its arguments
 		if (OS.IsWindows) {
-			File.WriteAllText (emuPath, $"@echo off\r\necho %* > \"{argsLogPath}\"\r\nping -n 60 127.0.0.1 >nul\r\n");
+			File.WriteAllText (emuPath, $"@echo off\r\necho %* > \"{argsLogPath}\"\r\nping -n 3 127.0.0.1 >nul\r\n");
 		} else {
-			File.WriteAllText (emuPath, $"#!/bin/sh\necho \"$@\" > \"{argsLogPath}\"\nsleep 60\n");
+			File.WriteAllText (emuPath, $"#!/bin/sh\necho \"$@\" > \"{argsLogPath}\"\nsleep 3\n");
 		}
 
 		try {
@@ -559,12 +551,6 @@ public class EmulatorRunnerTests
 				Assert.That (logged, Does.Contain ("Test_AVD"), "Should contain AVD name");
 			}
 		} finally {
-			// Clean up any spawned processes
-			try {
-				foreach (var p in Process.GetProcessesByName ("sleep")) {
-					try { p.Kill (); p.WaitForExit (1000); } catch { }
-				}
-			} catch { }
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -602,11 +588,6 @@ public class EmulatorRunnerTests
 					"Cancellation should abort within a few seconds, not wait for full timeout");
 			}
 		} finally {
-			try {
-				foreach (var p in Process.GetProcessesByName ("sleep")) {
-					try { p.Kill (); p.WaitForExit (1000); } catch { }
-				}
-			} catch { }
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -619,9 +600,9 @@ public class EmulatorRunnerTests
 		var argsLogPath = Path.Combine (tempDir, "args.log");
 
 		if (OS.IsWindows) {
-			File.WriteAllText (emuPath, $"@echo off\r\necho %* > \"{argsLogPath}\"\r\nping -n 60 127.0.0.1 >nul\r\n");
+			File.WriteAllText (emuPath, $"@echo off\r\necho %* > \"{argsLogPath}\"\r\nping -n 3 127.0.0.1 >nul\r\n");
 		} else {
-			File.WriteAllText (emuPath, $"#!/bin/sh\necho \"$@\" > \"{argsLogPath}\"\nsleep 60\n");
+			File.WriteAllText (emuPath, $"#!/bin/sh\necho \"$@\" > \"{argsLogPath}\"\nsleep 3\n");
 		}
 
 		try {
@@ -645,11 +626,6 @@ public class EmulatorRunnerTests
 				Assert.That (logged, Does.Contain ("-no-snapshot-load"), "ColdBoot should pass -no-snapshot-load");
 			}
 		} finally {
-			try {
-				foreach (var p in Process.GetProcessesByName ("sleep")) {
-					try { p.Kill (); p.WaitForExit (1000); } catch { }
-				}
-			} catch { }
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -682,9 +658,9 @@ public class EmulatorRunnerTests
 		var emuName = OS.IsWindows ? "emulator.bat" : "emulator";
 		var emuPath = Path.Combine (emulatorDir, emuName);
 		if (OS.IsWindows) {
-			File.WriteAllText (emuPath, "@echo off\r\nping -n 60 127.0.0.1 >nul\r\n");
+			File.WriteAllText (emuPath, "@echo off\r\nping -n 5 127.0.0.1 >nul\r\n");
 		} else {
-			File.WriteAllText (emuPath, "#!/bin/sh\nsleep 60\n");
+			File.WriteAllText (emuPath, "#!/bin/sh\nsleep 5\n");
 			var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
 			using var chmod = new Process { StartInfo = psi };
 			chmod.Start ();
@@ -694,34 +670,13 @@ public class EmulatorRunnerTests
 		return (tempDir, emuPath);
 	}
 
-	static void KillSleepProcesses ()
+	static void TryKillProcess (Process? process)
 	{
-		// Best-effort cleanup of fake emulator processes spawned by tests.
-		// On Unix the fake emulator runs "sleep"; on Windows it runs "ping".
-		var names = OS.IsWindows
-			? new[] { "ping" }
-			: new[] { "sleep" };
-		foreach (var name in names) {
-			try {
-				foreach (var p in Process.GetProcessesByName (name)) {
-					try { p.Kill (); p.WaitForExit (1000); } catch { }
-				}
-			} catch { }
-		}
-	}
-
-	static Process? FindEmulatorProcess (string emuPath)
-	{
-		// Best-effort: find the process by matching the command line
-		try {
-			foreach (var p in Process.GetProcessesByName ("emulator")) {
-				return p;
-			}
-			foreach (var p in Process.GetProcessesByName ("sleep")) {
-				return p;
-			}
-		} catch { }
-		return null;
+		if (process is null)
+			return;
+		try { process.Kill (true); } catch { }
+		try { process.WaitForExit (1000); } catch { }
+		process.Dispose ();
 	}
 
 	/// <summary>
