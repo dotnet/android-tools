@@ -93,10 +93,10 @@ public class EmulatorRunner
 
 		// Resolve log path: use explicit override or compute from env vars.
 		string resolvedLogPath;
-		if (logFile is { Length: > 0 } nonEmptyLogFile) {
-			resolvedLogPath = nonEmptyLogFile;
+		if (!string.IsNullOrWhiteSpace (logFile)) {
+			resolvedLogPath = logFile;
 			args.Add ("-logfile");
-			args.Add (nonEmptyLogFile);
+			args.Add (logFile);
 		} else {
 			resolvedLogPath = ResolveAvdLogPath (avdName);
 		}

@@ -15,6 +15,8 @@ public sealed class EmulatorLaunchResult
 	{
 		if (process is null)
 			throw new System.ArgumentNullException (nameof (process));
+		if (logPath is null)
+			throw new System.ArgumentNullException (nameof (logPath));
 		Process = process;
 		LogPath = logPath;
 	}
