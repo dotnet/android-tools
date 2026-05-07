@@ -205,7 +205,7 @@ public class EmulatorRunnerTests
 		var result = await runner.BootEmulatorAsync ("Pixel_7_API_35", mockAdb, options);
 
 		Assert.IsFalse (result.Success);
-		Assert.That (result.ErrorMessage, Does.Contain ("Failed to launch"));
+		Assert.AreEqual (EmulatorBootErrorKind.LaunchFailed, result.ErrorKind);
 	}
 
 	[Test]
@@ -481,6 +481,68 @@ public class EmulatorRunnerTests
 	}
 
 	// --- Helpers ---
+
+	[Test]
+	[Platform ("Linux,MacOsX")]
+	public void LaunchEmulator_SurvivesSigint ()
+	{
+		// Verify that the emulator process launched by LaunchEmulator ignores
+		// SIGINT (Ctrl+C) so it is not killed when the parent receives the signal.
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			using var process = runner.LaunchEmulator ("TestAVD");
+
+			Assert.IsFalse (process.HasExited, "Process should be running after launch");
+
+			// Send SIGINT to the emulator process
+			var killPsi = ProcessUtils.CreateProcessStartInfo ("kill", "-INT", process.Id.ToString ());
+			using var kill = new Process { StartInfo = killPsi };
+			kill.Start ();
+			kill.WaitForExit (5000);
+
+			// Give the signal a moment to be delivered
+			Thread.Sleep (500);
+
+			Assert.IsFalse (process.HasExited, "Emulator process should survive SIGINT");
+
+			process.Kill ();
+			process.WaitForExit (5000);
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
+	[Platform ("Linux,MacOsX")]
+	public void ShellQuote_EscapesSingleQuotes ()
+	{
+		// Verify that paths with special characters are handled correctly
+		// by launching a fake emulator with a path containing a single quote.
+		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-quote-test-{Path.GetRandomFileName ()}");
+		var emulatorDir = Path.Combine (tempDir, "emu'dir");
+		Directory.CreateDirectory (emulatorDir);
+
+		var emuPath = Path.Combine (emulatorDir, "emulator");
+		File.WriteAllText (emuPath, "#!/bin/sh\nsleep 60\n");
+		var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
+		using (var chmod = new Process { StartInfo = psi }) {
+			chmod.Start ();
+			chmod.WaitForExit ();
+		}
+
+		try {
+			var runner = new EmulatorRunner (emuPath);
+			using var process = runner.LaunchEmulator ("TestAVD");
+
+			Assert.IsFalse (process.HasExited, "Process should start even with single-quote in path");
+
+			process.Kill ();
+			process.WaitForExit (5000);
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
 
 	static (string tempDir, string emulatorPath) CreateFakeEmulatorSdk ()
 	{
