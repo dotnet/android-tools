@@ -65,7 +65,8 @@ public class EmulatorRunner
 			// On Unix, launch through a shell that ignores SIGINT before exec'ing
 			// the emulator. This prevents Ctrl+C in the parent terminal from killing
 			// the emulator process. 'trap "" INT' sets SIGINT to SIG_IGN, which POSIX
-			// guarantees is preserved across exec.
+			// guarantees is preserved across exec:
+			// https://pubs.opengroup.org/onlinepubs/9699919799/functions/exec.html
 			var shellCmd = new StringBuilder ("trap '' INT; exec ");
 			shellCmd.Append (ShellQuote (emulatorPath));
 			foreach (var arg in args) {

@@ -97,8 +97,6 @@ public class EmulatorRunnerTests
 		Assert.Throws<ArgumentException> (() => runner.LaunchEmulator ("   "));
 	}
 
-	// --- BootEmulatorAsync tests (ported from dotnet/android BootAndroidEmulatorTests) ---
-
 	[Test]
 	public async Task AlreadyOnlineDevice_PassesThrough ()
 	{
@@ -295,8 +293,6 @@ public class EmulatorRunnerTests
 		Assert.AreEqual ("emulator-5556", result.Serial, "Should find the correct AVD among multiple emulators");
 	}
 
-	// --- Tests ported from dotnet/android BootAndroidEmulatorTests ---
-
 	[Test]
 	public async Task AlreadyOnlinePhysicalDevice_PassesThrough ()
 	{
@@ -480,18 +476,15 @@ public class EmulatorRunnerTests
 			runner.BootEmulatorAsync ("", mockAdb));
 	}
 
-	// --- Helpers ---
-
 	[Test]
 	[Platform ("Linux,MacOsX")]
 	public void LaunchEmulator_SurvivesSigint ()
 	{
-		// Verify that the emulator process launched by LaunchEmulator ignores
-		// SIGINT (Ctrl+C) so it is not killed when the parent receives the signal.
 		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+		Process? process = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			using var process = runner.LaunchEmulator ("TestAVD");
+			process = runner.LaunchEmulator ("TestAVD");
 
 			Assert.IsFalse (process.HasExited, "Process should be running after launch");
 
@@ -499,16 +492,16 @@ public class EmulatorRunnerTests
 			var killPsi = ProcessUtils.CreateProcessStartInfo ("kill", "-INT", process.Id.ToString ());
 			using var kill = new Process { StartInfo = killPsi };
 			kill.Start ();
-			kill.WaitForExit (5000);
+			Assert.IsTrue (kill.WaitForExit (5000), "kill command should exit promptly");
+			Assert.AreEqual (0, kill.ExitCode, "kill -INT should succeed");
 
 			// Give the signal a moment to be delivered
 			Thread.Sleep (500);
 
 			Assert.IsFalse (process.HasExited, "Emulator process should survive SIGINT");
-
-			process.Kill ();
-			process.WaitForExit (5000);
 		} finally {
+			try { process?.Kill (); process?.WaitForExit (5000); } catch { }
+			process?.Dispose ();
 			Directory.Delete (tempDir, true);
 		}
 	}
@@ -517,8 +510,6 @@ public class EmulatorRunnerTests
 	[Platform ("Linux,MacOsX")]
 	public void ShellQuote_EscapesSingleQuotes ()
 	{
-		// Verify that paths with special characters are handled correctly
-		// by launching a fake emulator with a path containing a single quote.
 		var tempDir = Path.Combine (Path.GetTempPath (), $"emu-quote-test-{Path.GetRandomFileName ()}");
 		var emulatorDir = Path.Combine (tempDir, "emu'dir");
 		Directory.CreateDirectory (emulatorDir);
@@ -528,18 +519,18 @@ public class EmulatorRunnerTests
 		var psi = ProcessUtils.CreateProcessStartInfo ("chmod", "+x", emuPath);
 		using (var chmod = new Process { StartInfo = psi }) {
 			chmod.Start ();
-			chmod.WaitForExit ();
+			Assert.IsTrue (chmod.WaitForExit (5000), "chmod should exit promptly");
 		}
 
+		Process? process = null;
 		try {
 			var runner = new EmulatorRunner (emuPath);
-			using var process = runner.LaunchEmulator ("TestAVD");
+			process = runner.LaunchEmulator ("TestAVD");
 
 			Assert.IsFalse (process.HasExited, "Process should start even with single-quote in path");
-
-			process.Kill ();
-			process.WaitForExit (5000);
 		} finally {
+			try { process?.Kill (); process?.WaitForExit (5000); } catch { }
+			process?.Dispose ();
 			Directory.Delete (tempDir, true);
 		}
 	}
