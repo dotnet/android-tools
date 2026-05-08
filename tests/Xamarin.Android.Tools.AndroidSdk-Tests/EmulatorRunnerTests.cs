@@ -507,6 +507,38 @@ public class EmulatorRunnerTests
 	}
 
 	[Test]
+	public async Task InvalidEmulatorBinary_ReturnsLaunchFailed ()
+	{
+		var (tempDir, emuPath) = CreateFakeEmulatorSdk ();
+
+		// Overwrite with a script that exits immediately with error code 1
+		if (OS.IsWindows) {
+			File.WriteAllText (emuPath, "@echo off\r\nexit /b 1\r\n");
+		} else {
+			File.WriteAllText (emuPath, "#!/bin/sh\nexit 1\n");
+		}
+
+		try {
+			var devices = new List<AdbDeviceInfo> ();
+			var mockAdb = new MockAdbRunner (devices);
+
+			var runner = new EmulatorRunner (emuPath);
+			var options = new EmulatorBootOptions {
+				BootTimeout = TimeSpan.FromSeconds (5),
+				PollInterval = TimeSpan.FromMilliseconds (50),
+			};
+
+			var result = await runner.BootEmulatorAsync ("Test_AVD", mockAdb, options);
+
+			Assert.IsFalse (result.Success);
+			Assert.AreEqual (EmulatorBootErrorKind.LaunchFailed, result.ErrorKind);
+			Assert.That (result.ErrorMessage, Does.Contain ("exited with code"));
+		} finally {
+			Directory.Delete (tempDir, true);
+		}
+	}
+
+	[Test]
 	[Platform ("Linux,MacOsX")]
 	public void ShellQuote_EscapesSingleQuotes ()
 	{
@@ -534,6 +566,8 @@ public class EmulatorRunnerTests
 			Directory.Delete (tempDir, true);
 		}
 	}
+
+	// --- Helpers ---
 
 	static (string tempDir, string emulatorPath) CreateFakeEmulatorSdk ()
 	{
