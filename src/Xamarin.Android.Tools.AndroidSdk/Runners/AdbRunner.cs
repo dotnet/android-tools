@@ -378,9 +378,10 @@ public class AdbRunner
 			throw new ArgumentOutOfRangeException (nameof (remote), remote.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", local.ToSocketSpec (), remote.ToSocketSpec ());
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward {local} {remote}", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward {local} {remote}", stderr, stdout);
 	}
 
 	/// <summary>
@@ -400,9 +401,10 @@ public class AdbRunner
 			throw new ArgumentOutOfRangeException (nameof (local), local.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", "--remove", local.ToSocketSpec ());
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove {local}", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove {local}", stderr, stdout);
 	}
 
 	/// <summary>
@@ -416,9 +418,10 @@ public class AdbRunner
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", "--remove-all");
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove-all", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove-all", stderr, stdout);
 	}
 
 	/// <summary>
