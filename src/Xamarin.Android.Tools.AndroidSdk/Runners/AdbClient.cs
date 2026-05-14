@@ -128,25 +128,7 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public async Task<string?> ReadLengthPrefixedStringAsync (CancellationToken cancellationToken = default)
 	{
-		var s = GetStream ();
-		// Read 4-byte length prefix into reusable buffer
-		if (!await TryReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false))
-			return null;
-
-		var length = ParseHexLength (headerBuffer);
-
-		if (length == 0)
-			return string.Empty;
-
-		// Rent from pool, decode to string, return immediately
-		var buffer = ArrayPool<byte>.Shared.Rent (length);
-		try {
-			await ReadExactBytesIntoBufferAsync (s, buffer, length, cancellationToken).ConfigureAwait (false);
-			return Encoding.ASCII.GetString (buffer, 0, length);
-		}
-		finally {
-			ArrayPool<byte>.Shared.Return (buffer);
-		}
+		return await ReadLengthPrefixedStringFromStreamAsync (GetStream (), cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
