@@ -190,6 +190,18 @@ csharp_space_before_open_square_brackets = true
 csharp_preserve_single_line_statements = true
 csharp_preserve_single_line_blocks = true
 
+###############################
+# Analyzer Rules              #
+###############################
+
+# Library source files target netstandard2.0 and may run inside hosts that
+# provide a SynchronizationContext (e.g. MSBuild, IDEs). Missing
+# ConfigureAwait(false) on awaited Tasks can cause deadlocks, so enforce
+# CA2007 as an error for production source. Tests do not need this rule.
+[src/**.cs]
+# CA2007: Consider calling ConfigureAwait on the awaited task
+dotnet_diagnostic.CA2007.severity = error
+
 ##################################
 # Visual Basic Code Style Rules  #
 ##################################
