@@ -144,9 +144,17 @@ namespace Xamarin.Android.Tools
 		{
 			if (ex is UnauthorizedAccessException)
 				return true;
-			// IOException covers sharing violations ("being used by another process") on Windows.
-			if (ex is IOException io && io.Message.IndexOf ("being used by another process", StringComparison.OrdinalIgnoreCase) >= 0)
-				return true;
+			if (ex is IOException io) {
+				// Windows: ERROR_SHARING_VIOLATION (0x80070020) and ERROR_LOCK_VIOLATION (0x80070021)
+				// surface as IOException with these HResult values. Prefer HResult over message
+				// matching, which is fragile across locales and runtime versions.
+				int hr = io.HResult & 0xFFFF;
+				if (hr == 0x20 /* ERROR_SHARING_VIOLATION */ || hr == 0x21 /* ERROR_LOCK_VIOLATION */)
+					return true;
+				// Fallback for runtimes/platforms where HResult is not set: check the message.
+				if (io.Message.IndexOf ("being used by another process", StringComparison.OrdinalIgnoreCase) >= 0)
+					return true;
+			}
 			return false;
 		}
 
