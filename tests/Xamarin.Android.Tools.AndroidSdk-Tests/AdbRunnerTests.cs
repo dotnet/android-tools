@@ -1257,6 +1257,70 @@ public class AdbRunnerTests
 	}
 
 	[Test]
+	public async Task RemoveAllForwardPortsAsync_RemovesOnlyPortsForGivenSerial ()
+	{
+		var listedSerials = new List<string> ();
+		var removed = new List<(string Serial, AdbPortSpec Local)> ();
+		var runner = new RecordingAdbRunner (
+			listForwards: (serial, _) => {
+				listedSerials.Add (serial);
+				return Task.FromResult<IReadOnlyList<AdbPortRule>> (new [] {
+					new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 6000), new AdbPortSpec (AdbProtocol.Tcp, 5000)),
+					new AdbPortRule (new AdbPortSpec (AdbProtocol.Tcp, 6001), new AdbPortSpec (AdbProtocol.Tcp, 5001)),
+				});
+			},
+			removeForward: (serial, local, _) => {
+				removed.Add ((serial, local));
+				return Task.CompletedTask;
+			});
+
+		await runner.RemoveAllForwardPortsAsync ("emulator-5554");
+
+		Assert.AreEqual (new [] { "emulator-5554" }, listedSerials, "ListForwardPortsAsync should be called exactly once with the target serial.");
+		Assert.AreEqual (2, removed.Count, "Both listed rules should be removed.");
+		Assert.That (removed.Select (r => r.Serial), Is.All.EqualTo ("emulator-5554"), "Removes must target only the requested serial.");
+		Assert.AreEqual (5000, removed [0].Local.Port);
+		Assert.AreEqual (5001, removed [1].Local.Port);
+	}
+
+	[Test]
+	public async Task RemoveAllForwardPortsAsync_EmptyList_IsNoOp ()
+	{
+		var removed = new List<(string Serial, AdbPortSpec Local)> ();
+		var runner = new RecordingAdbRunner (
+			listForwards: (_, __) => Task.FromResult<IReadOnlyList<AdbPortRule>> (Array.Empty<AdbPortRule> ()),
+			removeForward: (serial, local, _) => {
+				removed.Add ((serial, local));
+				return Task.CompletedTask;
+			});
+
+		await runner.RemoveAllForwardPortsAsync ("emulator-5554");
+
+		Assert.IsEmpty (removed, "No removes should be issued when the listing is empty.");
+	}
+
+	sealed class RecordingAdbRunner : AdbRunner
+	{
+		readonly Func<string, System.Threading.CancellationToken, Task<IReadOnlyList<AdbPortRule>>> listForwards;
+		readonly Func<string, AdbPortSpec, System.Threading.CancellationToken, Task> removeForward;
+
+		public RecordingAdbRunner (
+			Func<string, System.Threading.CancellationToken, Task<IReadOnlyList<AdbPortRule>>> listForwards,
+			Func<string, AdbPortSpec, System.Threading.CancellationToken, Task> removeForward)
+			: base ("/fake/sdk/platform-tools/adb")
+		{
+			this.listForwards = listForwards;
+			this.removeForward = removeForward;
+		}
+
+		public override Task<IReadOnlyList<AdbPortRule>> ListForwardPortsAsync (string serial, System.Threading.CancellationToken cancellationToken = default)
+			=> listForwards (serial, cancellationToken);
+
+		public override Task RemoveForwardPortAsync (string serial, AdbPortSpec local, System.Threading.CancellationToken cancellationToken = default)
+			=> removeForward (serial, local, cancellationToken);
+	}
+
+	[Test]
 	public void ListForwardPortsAsync_EmptySerial_ThrowsArgumentException ()
 	{
 		var runner = new AdbRunner ("/fake/sdk/platform-tools/adb");

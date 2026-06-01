@@ -408,20 +408,27 @@ public class AdbRunner
 	}
 
 	/// <summary>
-	/// Removes all forward port forwarding rules for the device via
-	/// 'adb -s &lt;serial&gt; forward --remove-all'.
-	/// Note that the underlying adb command operates globally, but we scope it via -s.
+	/// Removes all forward port forwarding rules for the specified device.
 	/// </summary>
+	/// <remarks>
+	/// The underlying <c>adb forward --remove-all</c> command (and its wire-protocol
+	/// equivalent <c>host-serial:&lt;serial&gt;:killforward-all</c>) operates globally on the
+	/// adb daemon — the <c>-s &lt;serial&gt;</c> flag does not scope it, and calling it
+	/// would remove forwards for every connected device. To honour the per-device
+	/// contract of this method, we list the forwards for <paramref name="serial"/>
+	/// via <see cref="ListForwardPortsAsync"/> and remove them individually via
+	/// <see cref="RemoveForwardPortAsync"/>.
+	/// </remarks>
 	public virtual async Task RemoveAllForwardPortsAsync (string serial, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace (serial))
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
-		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", "--remove-all");
-		using var stdout = new StringWriter ();
-		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove-all", stderr, stdout);
+		var rules = await ListForwardPortsAsync (serial, cancellationToken).ConfigureAwait (false);
+		foreach (var rule in rules) {
+			cancellationToken.ThrowIfCancellationRequested ();
+			await RemoveForwardPortAsync (serial, rule.Local, cancellationToken).ConfigureAwait (false);
+		}
 	}
 
 	/// <summary>
