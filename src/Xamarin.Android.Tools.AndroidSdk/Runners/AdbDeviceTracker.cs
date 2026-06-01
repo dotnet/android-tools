@@ -79,11 +79,16 @@ public sealed class AdbDeviceTracker : IDisposable
 			while (!token.IsCancellationRequested) {
 				try {
 					await ConnectAndHandshakeAsync (token).ConfigureAwait (false);
-					// Reset backoff only after a fully successful connection + protocol handshake,
-					// so a long-lived session that drops after hours starts retrying from InitialBackoffMs
-					// instead of using the accumulated backoff from the previous reconnect storm.
-					backoffMs = InitialBackoffMs;
-					await ReadTrackingUpdatesAsync (onDevicesChanged, token).ConfigureAwait (false);
+					await ReadTrackingUpdatesAsync (
+						onDevicesChanged,
+						// Reset backoff only after the first payload is delivered — proof that the
+						// session is actually usable, not just that the TCP socket accepted us.
+						// Resetting at handshake (OKAY) would let a daemon that flaps OKAY-then-drop
+						// pin reconnects at InitialBackoffMs forever instead of climbing to MaxBackoffMs.
+						// host:track-devices-l always pushes the full device list immediately on
+						// connect, so under healthy conditions this fires within milliseconds.
+						onConnectionStable: () => backoffMs = InitialBackoffMs,
+						token).ConfigureAwait (false);
 				} catch (OperationCanceledException) when (token.IsCancellationRequested) {
 					break;
 				} catch (Exception ex) when (ex is IOException || ex is SocketException || ex is ObjectDisposedException) {
@@ -123,13 +128,20 @@ public sealed class AdbDeviceTracker : IDisposable
 
 	async Task ReadTrackingUpdatesAsync (
 		Action<IReadOnlyList<AdbDeviceInfo>> onDevicesChanged,
+		Action onConnectionStable,
 		CancellationToken cancellationToken)
 	{
+		var connectionProven = false;
 		// Read length-prefixed device list updates
 		while (!cancellationToken.IsCancellationRequested) {
 			var payload = await adbClient.ReadLengthPrefixedStringAsync (cancellationToken).ConfigureAwait (false);
 			if (payload == null)
 				throw new IOException ("ADB daemon closed the connection.");
+
+			if (!connectionProven) {
+				onConnectionStable ();
+				connectionProven = true;
+			}
 
 			var lines = payload.Split ('\n');
 			var devices = AdbRunner.ParseAdbDevicesOutput (lines);
