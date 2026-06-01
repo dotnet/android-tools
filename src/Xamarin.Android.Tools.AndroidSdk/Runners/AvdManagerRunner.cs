@@ -151,6 +151,106 @@ public class AvdManagerRunner
 		return profiles;
 	}
 
+	/// <summary>
+	/// Lists available AVD skins by scanning the SDK for built-in and downloaded skin definitions.
+	/// </summary>
+	/// <remarks>
+	/// The following SDK locations are scanned and the discovered skin directory names are deduplicated:
+	/// <list type="bullet">
+	///   <item><description><c>&lt;sdk&gt;/skins/</c> — top-level shared skins.</description></item>
+	///   <item><description><c>&lt;sdk&gt;/platforms/&lt;api&gt;/skins/</c> — per-platform built-in skins (e.g. <c>HVGA</c>, <c>WVGA800</c>, <c>WXGA720</c>).</description></item>
+	///   <item><description><c>&lt;sdk&gt;/add-ons/&lt;addon&gt;/skins/</c> — legacy SDK add-on skins (e.g. older Google APIs add-ons).</description></item>
+	///   <item><description><c>&lt;sdk&gt;/system-images/&lt;api&gt;/&lt;tag&gt;/&lt;abi&gt;/skins/</c> — per-system-image skins shipped with recent Pixel images.</description></item>
+	/// </list>
+	/// </remarks>
+	/// <param name="sdkPath">Root path of the Android SDK.</param>
+	/// <param name="cancellationToken">Cancellation token observed throughout directory enumeration.</param>
+	/// <returns>A sorted, deduplicated list of skin directory names discovered across the SDK.</returns>
+	public Task<IReadOnlyList<string>> ListAvdSkinsAsync (string sdkPath, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace (sdkPath))
+			throw new ArgumentException ("SDK path must not be empty.", nameof (sdkPath));
+
+		// Skin enumeration is purely synchronous filesystem work, but it can walk a large SDK tree;
+		// offload to the thread pool so callers don't block, and to keep the runner's async surface consistent.
+		return Task.Run (() => EnumerateSkins (sdkPath, cancellationToken), cancellationToken);
+	}
+
+	internal static IReadOnlyList<string> EnumerateSkins (string sdkPath, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested ();
+
+		// Skin directory names round-trip case-sensitively on Linux/macOS, so only collapse case on Windows.
+		var skins = new SortedSet<string> (OS.IsWindows ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+		// Standalone skins: <sdk>/skins/<skinName>/
+		AddSkinDirectories (skins, Path.Combine (sdkPath, "skins"), cancellationToken);
+
+		// Per-platform built-in skins: <sdk>/platforms/<api>/skins/<skinName>/
+		// This is where the SDK Platforms package ships skins (HVGA, WVGA800, WXGA720, ...).
+		AddNestedSkinDirectories (skins, Path.Combine (sdkPath, "platforms"), cancellationToken);
+
+		// Legacy add-on skins: <sdk>/add-ons/<addon>/skins/<skinName>/
+		AddNestedSkinDirectories (skins, Path.Combine (sdkPath, "add-ons"), cancellationToken);
+
+		// Per-system-image skins: <sdk>/system-images/<api>/<tag>/<abi>/skins/<skinName>/
+		var systemImagesDir = Path.Combine (sdkPath, "system-images");
+		if (Directory.Exists (systemImagesDir)) {
+			try {
+				foreach (var apiDir in Directory.EnumerateDirectories (systemImagesDir)) {
+					cancellationToken.ThrowIfCancellationRequested ();
+					try {
+						foreach (var tagDir in Directory.EnumerateDirectories (apiDir)) {
+							cancellationToken.ThrowIfCancellationRequested ();
+							foreach (var abiDir in Directory.EnumerateDirectories (tagDir)) {
+								cancellationToken.ThrowIfCancellationRequested ();
+								AddSkinDirectories (skins, Path.Combine (abiDir, "skins"), cancellationToken);
+							}
+						}
+					} catch (IOException) {
+					} catch (UnauthorizedAccessException) {
+					}
+				}
+			} catch (IOException) {
+			} catch (UnauthorizedAccessException) {
+			}
+		}
+
+		return skins.ToList ();
+	}
+
+	// Walk a single level of subdirectories (e.g. platforms/<api> or add-ons/<addon>) and
+	// pull skin names out of each child's "skins" subdirectory if it exists.
+	static void AddNestedSkinDirectories (SortedSet<string> skins, string parentDir, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested ();
+		if (!Directory.Exists (parentDir))
+			return;
+		try {
+			foreach (var childDir in Directory.EnumerateDirectories (parentDir)) {
+				cancellationToken.ThrowIfCancellationRequested ();
+				AddSkinDirectories (skins, Path.Combine (childDir, "skins"), cancellationToken);
+			}
+		} catch (IOException) {
+		} catch (UnauthorizedAccessException) {
+		}
+	}
+
+	static void AddSkinDirectories (SortedSet<string> skins, string directory, CancellationToken cancellationToken)
+	{
+		cancellationToken.ThrowIfCancellationRequested ();
+		if (!Directory.Exists (directory))
+			return;
+		try {
+			foreach (var skinDir in Directory.EnumerateDirectories (directory)) {
+				cancellationToken.ThrowIfCancellationRequested ();
+				skins.Add (Path.GetFileName (skinDir));
+			}
+		} catch (IOException) {
+		} catch (UnauthorizedAccessException) {
+		}
+	}
+
 	internal static IReadOnlyList<AvdInfo> ParseAvdListOutput (string output)
 	{
 		var avds = new List<AvdInfo> ();
