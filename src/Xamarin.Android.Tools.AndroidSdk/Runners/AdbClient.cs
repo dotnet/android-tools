@@ -228,21 +228,8 @@ internal sealed class AdbClient : IDisposable
 	/// Reads exactly <paramref name="count"/> bytes into the provided buffer.
 	/// Throws IOException if the stream ends prematurely.
 	/// </summary>
-	static async Task ReadExactBytesIntoBufferAsync (Stream stream, byte[] buffer, int count, CancellationToken cancellationToken)
-	{
-		var totalRead = 0;
-		while (totalRead < count) {
-			cancellationToken.ThrowIfCancellationRequested ();
-#if NET5_0_OR_GREATER
-			var read = await stream.ReadAsync (buffer.AsMemory (totalRead, count - totalRead), cancellationToken).ConfigureAwait (false);
-#else
-			var read = await stream.ReadAsync (buffer, totalRead, count - totalRead, cancellationToken).ConfigureAwait (false);
-#endif
-			if (read == 0)
-				throw new IOException ($"Unexpected end of stream (read {totalRead} of {count} bytes).");
-			totalRead += read;
-		}
-	}
+	static Task ReadExactBytesIntoBufferAsync (Stream stream, byte[] buffer, int count, CancellationToken cancellationToken)
+		=> ReadExactBytesCoreAsync (stream, buffer, count, allowCleanEof: false, cancellationToken);
 
 	/// <summary>
 	/// Tries to read exactly <paramref name="count"/> bytes into the buffer.
@@ -250,6 +237,14 @@ internal sealed class AdbClient : IDisposable
 	/// Throws IOException on partial reads.
 	/// </summary>
 	static async Task<bool> TryReadExactBytesIntoBufferAsync (Stream stream, byte[] buffer, int count, CancellationToken cancellationToken)
+		=> await ReadExactBytesCoreAsync (stream, buffer, count, allowCleanEof: true, cancellationToken).ConfigureAwait (false);
+
+	/// <summary>
+	/// Shared core for exact-byte reads. When <paramref name="allowCleanEof"/> is true, returns false
+	/// if the stream ends before any byte has been read; otherwise throws <see cref="IOException"/>.
+	/// Partial reads (some bytes read then EOF) always throw <see cref="IOException"/>.
+	/// </summary>
+	static async Task<bool> ReadExactBytesCoreAsync (Stream stream, byte[] buffer, int count, bool allowCleanEof, CancellationToken cancellationToken)
 	{
 		var totalRead = 0;
 		while (totalRead < count) {
@@ -260,7 +255,7 @@ internal sealed class AdbClient : IDisposable
 			var read = await stream.ReadAsync (buffer, totalRead, count - totalRead, cancellationToken).ConfigureAwait (false);
 #endif
 			if (read == 0) {
-				if (totalRead == 0)
+				if (allowCleanEof && totalRead == 0)
 					return false;
 				throw new IOException ($"Unexpected end of stream (read {totalRead} of {count} bytes).");
 			}
