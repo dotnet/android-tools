@@ -78,7 +78,12 @@ public sealed class AdbDeviceTracker : IDisposable
 		try {
 			while (!token.IsCancellationRequested) {
 				try {
-					await TrackDevicesAsync (onDevicesChanged, token).ConfigureAwait (false);
+					await ConnectAndHandshakeAsync (token).ConfigureAwait (false);
+					// Reset backoff only after a fully successful connection + protocol handshake,
+					// so a long-lived session that drops after hours starts retrying from InitialBackoffMs
+					// instead of using the accumulated backoff from the previous reconnect storm.
+					backoffMs = InitialBackoffMs;
+					await ReadTrackingUpdatesAsync (onDevicesChanged, token).ConfigureAwait (false);
 				} catch (OperationCanceledException) when (token.IsCancellationRequested) {
 					break;
 				} catch (Exception ex) when (ex is IOException || ex is SocketException || ex is ObjectDisposedException) {
@@ -91,9 +96,7 @@ public sealed class AdbDeviceTracker : IDisposable
 						break;
 					}
 					backoffMs = Math.Min (backoffMs * 2, MaxBackoffMs);
-					continue;
 				}
-				backoffMs = InitialBackoffMs;
 			}
 		} finally {
 			lock (syncLock) {
@@ -107,9 +110,7 @@ public sealed class AdbDeviceTracker : IDisposable
 	const int InitialBackoffMs = 500;
 	const int MaxBackoffMs = 16000;
 
-	async Task TrackDevicesAsync (
-		Action<IReadOnlyList<AdbDeviceInfo>> onDevicesChanged,
-		CancellationToken cancellationToken)
+	async Task ConnectAndHandshakeAsync (CancellationToken cancellationToken)
 	{
 		await adbClient.ReconnectAsync (port, cancellationToken).ConfigureAwait (false);
 		logger.Invoke (TraceLevel.Verbose, "Connected to ADB daemon, sending track-devices-l command");
@@ -118,7 +119,12 @@ public sealed class AdbDeviceTracker : IDisposable
 		await adbClient.EnsureOkayAsync (cancellationToken).ConfigureAwait (false);
 
 		logger.Invoke (TraceLevel.Verbose, "ADB tracking active");
+	}
 
+	async Task ReadTrackingUpdatesAsync (
+		Action<IReadOnlyList<AdbDeviceInfo>> onDevicesChanged,
+		CancellationToken cancellationToken)
+	{
 		// Read length-prefixed device list updates
 		while (!cancellationToken.IsCancellationRequested) {
 			var payload = await adbClient.ReadLengthPrefixedStringAsync (cancellationToken).ConfigureAwait (false);

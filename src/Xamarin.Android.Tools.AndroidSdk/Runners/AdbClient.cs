@@ -128,7 +128,10 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public async Task<string?> ReadLengthPrefixedStringAsync (CancellationToken cancellationToken = default)
 	{
-		return await ReadLengthPrefixedStringFromStreamAsync (GetStream (), cancellationToken).ConfigureAwait (false);
+		var bytes = await ReadLengthPrefixedBytesAsync (cancellationToken).ConfigureAwait (false);
+		if (bytes == null)
+			return null;
+		return Encoding.ASCII.GetString (bytes, 0, bytes.Length);
 	}
 
 	/// <summary>
@@ -138,19 +141,7 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public async Task<byte[]?> ReadLengthPrefixedBytesAsync (CancellationToken cancellationToken = default)
 	{
-		var s = GetStream ();
-		// Read 4-byte length prefix into reusable buffer
-		if (!await TryReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false))
-			return null;
-
-		var length = ParseHexLength (headerBuffer);
-
-		if (length == 0)
-			return Array.Empty<byte> ();
-
-		var result = new byte [length];
-		await ReadExactBytesIntoBufferAsync (s, result, length, cancellationToken).ConfigureAwait (false);
-		return result;
+		return await ReadLengthPrefixedBytesFromStreamAsync (GetStream (), headerBuffer, cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
@@ -199,22 +190,36 @@ internal sealed class AdbClient : IDisposable
 	/// <summary>
 	/// Reads a length-prefixed ASCII string from a raw stream.
 	/// Used by tests that cannot construct an AdbClient instance.
-	/// Allocates fresh buffers (no pooling) since it has no instance state.
+	/// Allocates a fresh length-prefix buffer (no pooling) since it has no instance state.
 	/// </summary>
 	internal static async Task<string?> ReadLengthPrefixedStringFromStreamAsync (Stream stream, CancellationToken cancellationToken)
 	{
-		var lengthBytes = new byte [4];
-		if (!await TryReadExactBytesIntoBufferAsync (stream, lengthBytes, 4, cancellationToken).ConfigureAwait (false))
+		var bytes = await ReadLengthPrefixedBytesFromStreamAsync (stream, new byte [4], cancellationToken).ConfigureAwait (false);
+		if (bytes == null)
+			return null;
+		return Encoding.ASCII.GetString (bytes, 0, bytes.Length);
+	}
+
+	/// <summary>
+	/// Shared core for length-prefixed payload reads. Reads a 4-byte hex length prefix
+	/// into <paramref name="lengthBuffer"/>, then reads that many bytes from <paramref name="stream"/>.
+	/// Returns null if the stream closes cleanly before the length prefix.
+	/// Returns <see cref="Array.Empty{T}"/> when the prefix is "0000".
+	/// Throws <see cref="IOException"/> if the stream ends mid-prefix or mid-payload.
+	/// </summary>
+	static async Task<byte[]?> ReadLengthPrefixedBytesFromStreamAsync (Stream stream, byte[] lengthBuffer, CancellationToken cancellationToken)
+	{
+		if (!await TryReadExactBytesIntoBufferAsync (stream, lengthBuffer, 4, cancellationToken).ConfigureAwait (false))
 			return null;
 
-		var length = ParseHexLength (lengthBytes);
+		var length = ParseHexLength (lengthBuffer);
 
 		if (length == 0)
-			return string.Empty;
+			return Array.Empty<byte> ();
 
-		var payload = new byte [length];
-		await ReadExactBytesIntoBufferAsync (stream, payload, length, cancellationToken).ConfigureAwait (false);
-		return Encoding.ASCII.GetString (payload, 0, length);
+		var result = new byte [length];
+		await ReadExactBytesIntoBufferAsync (stream, result, length, cancellationToken).ConfigureAwait (false);
+		return result;
 	}
 
 	// --- Low-level I/O helpers ---
