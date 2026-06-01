@@ -378,9 +378,10 @@ public class AdbRunner
 			throw new ArgumentOutOfRangeException (nameof (remote), remote.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", local.ToSocketSpec (), remote.ToSocketSpec ());
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward {local} {remote}", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward {local} {remote}", stderr, stdout);
 	}
 
 	/// <summary>
@@ -400,9 +401,10 @@ public class AdbRunner
 			throw new ArgumentOutOfRangeException (nameof (local), local.Port, "Port must be between 1 and 65535.");
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", "--remove", local.ToSocketSpec ());
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove {local}", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove {local}", stderr, stdout);
 	}
 
 	/// <summary>
@@ -416,9 +418,10 @@ public class AdbRunner
 			throw new ArgumentException ("Serial must not be empty.", nameof (serial));
 
 		var psi = ProcessUtils.CreateProcessStartInfo (adbPath, "-s", serial, "forward", "--remove-all");
+		using var stdout = new StringWriter ();
 		using var stderr = new StringWriter ();
-		var exitCode = await ProcessUtils.StartProcess (psi, null, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
-		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove-all", stderr);
+		var exitCode = await ProcessUtils.StartProcess (psi, stdout, stderr, cancellationToken, environmentVariables).ConfigureAwait (false);
+		ProcessUtils.ThrowIfFailed (exitCode, $"adb -s {serial} forward --remove-all", stderr, stdout);
 	}
 
 	/// <summary>
@@ -447,6 +450,14 @@ public class AdbRunner
 	/// Only rules matching <paramref name="serial"/> are returned. Lines with
 	/// unparseable socket specs are skipped.
 	/// </summary>
+	/// <remarks>
+	/// Note the field-order asymmetry vs <see cref="ParseReverseListOutput"/>:
+	///   forward --list: &lt;serial&gt; &lt;local&gt; &lt;remote&gt;
+	///   reverse --list: (reverse) &lt;remote&gt; &lt;local&gt;
+	/// Both parsers construct an <see cref="AdbPortRule"/> whose constructor takes
+	/// (Remote, Local), so the order in which we pass the parsed parts differs between
+	/// the two parsers — keep that in mind when modifying either of them.
+	/// </remarks>
 	internal static IReadOnlyList<AdbPortRule> ParseForwardListOutput (IEnumerable<string> lines, string serial)
 	{
 		var rules = new List<AdbPortRule> ();
@@ -458,7 +469,8 @@ public class AdbRunner
 			if (string.IsNullOrEmpty (trimmed))
 				continue;
 
-			// Expected format: "<serial> <local> <remote>"
+			// Expected format: "<serial> <local> <remote>" — see <remarks> above for
+			// the field-order asymmetry with reverse --list.
 			var parts = trimmed.Split ((char[]?) null, StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length < 3)
 				continue;
