@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 
 namespace Xamarin.Android.Tools.Tests;
@@ -349,5 +350,211 @@ public class AvdManagerRunnerTests
 	{
 		var profiles = AvdManagerRunner.ParseCompactDeviceListOutput ("");
 		Assert.IsInstanceOf<IReadOnlyList<AvdDeviceProfile>> (profiles);
+	}
+
+	// --- EnumerateSkins tests ---
+
+	[Test]
+	public void EnumerateSkins_FindsStandaloneSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7_pro"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "nexus_5x"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.That (skins, Contains.Item ("nexus_5x"));
+			Assert.That (skins, Contains.Item ("pixel_7_pro"));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_FindsSystemImageSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_tablet"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (1, skins.Count);
+			Assert.AreEqual ("pixel_tablet", skins [0]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_DeduplicatesAndSorts ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			var imgSkinsDir = Path.Combine (sdkDir, "system-images", "android-35", "google_apis", "x86_64", "skins");
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "pixel_7"));
+			Directory.CreateDirectory (Path.Combine (imgSkinsDir, "auto_skin"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.AreEqual ("auto_skin", skins [0]);
+			Assert.AreEqual ("pixel_7", skins [1]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_MissingSdkDir_ReturnsEmpty ()
+	{
+		var skins = AvdManagerRunner.EnumerateSkins (Path.Combine (Path.GetTempPath (), "nonexistent-sdk-dir"));
+		Assert.AreEqual (0, skins.Count);
+	}
+
+	[Test]
+	public void EnumerateSkins_FindsPlatformSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-34", "skins", "HVGA"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-34", "skins", "WVGA800"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-35", "skins", "WXGA720"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (3, skins.Count);
+			Assert.AreEqual ("HVGA", skins [0]);
+			Assert.AreEqual ("WVGA800", skins [1]);
+			Assert.AreEqual ("WXGA720", skins [2]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_FindsAddOnSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "add-ons", "addon-google_apis-google-24", "skins", "WSVGA"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (1, skins.Count);
+			Assert.AreEqual ("WSVGA", skins [0]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	// Regression test for the Visual Studio-installed SDK layout reported on PR #326:
+	// `<sdk>/system-images/...` exists with no `skins/` subfolder; skins live under
+	// `<sdk>/platforms/<api>/skins/` and `<sdk>/skins/`.
+	[Test]
+	public void EnumerateSkins_VsStyleLayout_FindsAll ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "AndroidWearRound"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-34", "skins", "HVGA"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-34", "skins", "WVGA800"));
+			// system-images tree exists with no skins/ subdirectories (the VS layout case)
+			Directory.CreateDirectory (Path.Combine (sdkDir, "system-images", "android-34", "google_apis", "x86_64"));
+
+			var skins = AvdManagerRunner.EnumerateSkins (sdkDir);
+
+			Assert.AreEqual (3, skins.Count);
+			Assert.AreEqual ("AndroidWearRound", skins [0]);
+			Assert.AreEqual ("HVGA", skins [1]);
+			Assert.AreEqual ("WVGA800", skins [2]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_CancelledToken_Throws ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			using var cts = new CancellationTokenSource ();
+			cts.Cancel ();
+
+			Assert.Throws<OperationCanceledException> (() => AvdManagerRunner.EnumerateSkins (sdkDir, cts.Token));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void EnumerateSkins_CancelledToken_EmptySdk_Throws ()
+	{
+		// Regression: an SDK directory with no skin subtrees must still observe cancellation
+		// rather than silently returning an empty list.
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (sdkDir);
+			using var cts = new CancellationTokenSource ();
+			cts.Cancel ();
+
+			Assert.Throws<OperationCanceledException> (() => AvdManagerRunner.EnumerateSkins (sdkDir, cts.Token));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_ReturnsSkins ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			Directory.CreateDirectory (Path.Combine (sdkDir, "platforms", "android-34", "skins", "HVGA"));
+
+			var runner = new AvdManagerRunner ("/fake/avdmanager");
+			var skins = runner.ListAvdSkinsAsync (sdkDir).GetAwaiter ().GetResult ();
+
+			Assert.AreEqual (2, skins.Count);
+			Assert.AreEqual ("HVGA", skins [0]);
+			Assert.AreEqual ("pixel_7", skins [1]);
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_CancelledToken_Throws ()
+	{
+		var sdkDir = Path.Combine (Path.GetTempPath (), $"sdk-skin-test-{Path.GetRandomFileName ()}");
+		try {
+			Directory.CreateDirectory (Path.Combine (sdkDir, "skins", "pixel_7"));
+			using var cts = new CancellationTokenSource ();
+			cts.Cancel ();
+
+			var runner = new AvdManagerRunner ("/fake/avdmanager");
+			Assert.CatchAsync<OperationCanceledException> (() => runner.ListAvdSkinsAsync (sdkDir, cts.Token));
+		} finally {
+			Directory.Delete (sdkDir, true);
+		}
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_NullSdkPath_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
+		Assert.Throws<ArgumentException> (() => runner.ListAvdSkinsAsync (null!));
+	}
+
+	[Test]
+	public void ListAvdSkinsAsync_EmptySdkPath_ThrowsArgumentException ()
+	{
+		var runner = new AvdManagerRunner ("/fake/avdmanager");
+		Assert.Throws<ArgumentException> (() => runner.ListAvdSkinsAsync (""));
 	}
 }
