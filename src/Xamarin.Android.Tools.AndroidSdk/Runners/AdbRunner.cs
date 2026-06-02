@@ -178,6 +178,50 @@ public class AdbRunner
 	}
 
 	/// <summary>
+	/// Populates null device metadata fields from <c>adb shell getprop</c>.
+	/// Skips offline devices and preserves existing non-empty values.
+	/// </summary>
+	public virtual async Task EnrichDeviceAsync (AdbDeviceInfo device, CancellationToken cancellationToken = default)
+	{
+		if (device is null)
+			throw new ArgumentNullException (nameof (device));
+
+		if (device.Status != AdbDeviceStatus.Online) {
+			logger.Invoke (TraceLevel.Verbose, $"Skipping enrichment for {device.Status} device {device.Serial}");
+			return;
+		}
+
+		var abiListTask = GetShellPropertySafeAsync (device.Serial, "ro.product.cpu.abilist", cancellationToken);
+		var abiTask = GetShellPropertySafeAsync (device.Serial, "ro.product.cpu.abi", cancellationToken);
+		var manufacturerTask = GetShellPropertySafeAsync (device.Serial, "ro.product.manufacturer", cancellationToken);
+		var brandTask = GetShellPropertySafeAsync (device.Serial, "ro.product.brand", cancellationToken);
+		var releaseTask = GetShellPropertySafeAsync (device.Serial, "ro.build.version.release", cancellationToken);
+		var sdkTask = GetShellPropertySafeAsync (device.Serial, "ro.build.version.sdk", cancellationToken);
+		var modelTask = GetShellPropertySafeAsync (device.Serial, "ro.product.model", cancellationToken);
+
+		await Task.WhenAll (abiListTask, abiTask, manufacturerTask, brandTask, releaseTask, sdkTask, modelTask).ConfigureAwait (false);
+
+		if (string.IsNullOrWhiteSpace (device.CpuAbi)) {
+			device.CpuAbi = ParsePrimaryAbi (abiListTask.Result) ??
+				TrimOrNull (abiTask.Result);
+		}
+
+		if (string.IsNullOrWhiteSpace (device.Manufacturer)) {
+			device.Manufacturer = TrimOrNull (manufacturerTask.Result) ??
+				TrimOrNull (brandTask.Result);
+		}
+
+		if (string.IsNullOrWhiteSpace (device.ReleaseVersion))
+			device.ReleaseVersion = TrimOrNull (releaseTask.Result);
+
+		if (string.IsNullOrWhiteSpace (device.SdkVersion))
+			device.SdkVersion = TrimOrNull (sdkTask.Result);
+
+		if (string.IsNullOrWhiteSpace (device.Model))
+			device.Model = TrimOrNull (modelTask.Result);
+	}
+
+	/// <summary>
 	/// Runs a shell command on a device via 'adb -s &lt;serial&gt; shell &lt;command&gt;'.
 	/// Returns the full stdout output trimmed, or <c>null</c> on failure.
 	/// </summary>
@@ -242,6 +286,44 @@ public class AdbRunner
 				return trimmed;
 		}
 		return null;
+	}
+
+	async Task<string?> GetShellPropertySafeAsync (string serial, string propertyName, CancellationToken cancellationToken)
+	{
+		try {
+			return await GetShellPropertyAsync (serial, propertyName, cancellationToken).ConfigureAwait (false);
+		} catch (OperationCanceledException) {
+			throw;
+		} catch (Exception ex) {
+			logger.Invoke (TraceLevel.Warning, $"adb shell getprop {propertyName} threw for {serial}: {ex.Message}");
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Extracts the first ABI from a comma-separated <c>ro.product.cpu.abilist</c> value.
+	/// </summary>
+	static string? ParsePrimaryAbi (string? abiList)
+	{
+		var value = TrimOrNull (abiList);
+		if (value is null)
+			return null;
+
+		var comma = value.IndexOf (',');
+		return comma >= 0
+			? TrimOrNull (value.Substring (0, comma))
+			: value;
+	}
+
+	/// <summary>
+	/// Returns the trimmed value, or null for null/empty/whitespace input.
+	/// </summary>
+	static string? TrimOrNull (string? value)
+	{
+		if (string.IsNullOrWhiteSpace (value))
+			return null;
+
+		return value.Trim ();
 	}
 
 	/// <summary>
@@ -668,4 +750,3 @@ public class AdbRunner
 		return result;
 	}
 }
-

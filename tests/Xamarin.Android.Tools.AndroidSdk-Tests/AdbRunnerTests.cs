@@ -1299,6 +1299,94 @@ public class AdbRunnerTests
 		Assert.IsEmpty (removed, "No removes should be issued when the listing is empty.");
 	}
 
+	[Test]
+	public async Task EnrichDeviceAsync_Offline_NoOp ()
+	{
+		var calls = new List<string> ();
+		var runner = new EnrichmentTestAdbRunner ((_, propertyName, _) => {
+			calls.Add (propertyName);
+			return Task.FromResult ("unexpected");
+		});
+		var device = new AdbDeviceInfo {
+			Serial = "emulator-5554",
+			Status = AdbDeviceStatus.Offline,
+			Type = AdbDeviceType.Emulator,
+		};
+
+		await runner.EnrichDeviceAsync (device);
+
+		Assert.IsEmpty (calls, "Offline devices should not be queried.");
+		Assert.IsNull (device.CpuAbi);
+		Assert.IsNull (device.Manufacturer);
+		Assert.IsNull (device.ReleaseVersion);
+		Assert.IsNull (device.SdkVersion);
+		Assert.IsNull (device.Model);
+	}
+
+	[Test]
+	public async Task EnrichDeviceAsync_PopulatesFieldsAndPreservesExistingValues ()
+	{
+		var runner = new EnrichmentTestAdbRunner ((_, propertyName, _) => Task.FromResult (propertyName switch {
+			"ro.product.cpu.abilist" => "arm64-v8a,armeabi-v7a",
+			"ro.product.cpu.abi" => "armeabi-v7a",
+			"ro.product.manufacturer" => "Google",
+			"ro.product.brand" => "google",
+			"ro.build.version.release" => "16",
+			"ro.build.version.sdk" => "36",
+			"ro.product.model" => "Pixel 9 Pro",
+			_ => null,
+		}));
+
+		var device = new AdbDeviceInfo {
+			Serial = "device-1",
+			Status = AdbDeviceStatus.Online,
+			Type = AdbDeviceType.Device,
+			Manufacturer = "ExistingManufacturer",
+		};
+
+		await runner.EnrichDeviceAsync (device);
+
+		Assert.AreEqual ("arm64-v8a", device.CpuAbi);
+		Assert.AreEqual ("ExistingManufacturer", device.Manufacturer, "Existing values should be preserved.");
+		Assert.AreEqual ("16", device.ReleaseVersion);
+		Assert.AreEqual ("36", device.SdkVersion);
+		Assert.AreEqual ("Pixel 9 Pro", device.Model);
+	}
+
+	[Test]
+	public async Task EnrichDeviceAsync_ToleratesFailuresAndUsesFallbacks ()
+	{
+		var runner = new EnrichmentTestAdbRunner ((_, propertyName, _) => {
+			if (propertyName == "ro.product.cpu.abilist")
+				throw new InvalidOperationException ("abilist failed");
+			if (propertyName == "ro.build.version.release")
+				throw new InvalidOperationException ("release failed");
+
+			return Task.FromResult (propertyName switch {
+				"ro.product.cpu.abi" => "x86_64",
+				"ro.product.manufacturer" => null,
+				"ro.product.brand" => "Google",
+				"ro.build.version.sdk" => "34",
+				"ro.product.model" => "Pixel 8",
+				_ => null,
+			});
+		});
+
+		var device = new AdbDeviceInfo {
+			Serial = "device-2",
+			Status = AdbDeviceStatus.Online,
+			Type = AdbDeviceType.Device,
+		};
+
+		await runner.EnrichDeviceAsync (device);
+
+		Assert.AreEqual ("x86_64", device.CpuAbi);
+		Assert.AreEqual ("Google", device.Manufacturer);
+		Assert.IsNull (device.ReleaseVersion);
+		Assert.AreEqual ("34", device.SdkVersion);
+		Assert.AreEqual ("Pixel 8", device.Model);
+	}
+
 	sealed class RecordingAdbRunner : AdbRunner
 	{
 		readonly Func<string, System.Threading.CancellationToken, Task<IReadOnlyList<AdbPortRule>>> listForwards;
@@ -1318,6 +1406,20 @@ public class AdbRunnerTests
 
 		public override Task RemoveForwardPortAsync (string serial, AdbPortSpec local, System.Threading.CancellationToken cancellationToken = default)
 			=> removeForward (serial, local, cancellationToken);
+	}
+
+	sealed class EnrichmentTestAdbRunner : AdbRunner
+	{
+		readonly Func<string, string, System.Threading.CancellationToken, Task<string>> getShellProperty;
+
+		public EnrichmentTestAdbRunner (Func<string, string, System.Threading.CancellationToken, Task<string>> getShellProperty)
+			: base ("/fake/sdk/platform-tools/adb")
+		{
+			this.getShellProperty = getShellProperty;
+		}
+
+		public override Task<string> GetShellPropertyAsync (string serial, string propertyName, System.Threading.CancellationToken cancellationToken = default)
+			=> getShellProperty (serial, propertyName, cancellationToken);
 	}
 
 	[Test]

@@ -3,15 +3,23 @@ Xamarin.Android.Tools.AdbDeviceInfo
 Xamarin.Android.Tools.AdbDeviceInfo.AdbDeviceInfo() -> void
 Xamarin.Android.Tools.AdbDeviceInfo.AvdName.get -> string?
 Xamarin.Android.Tools.AdbDeviceInfo.AvdName.set -> void
+Xamarin.Android.Tools.AdbDeviceInfo.CpuAbi.get -> string?
+Xamarin.Android.Tools.AdbDeviceInfo.CpuAbi.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Description.get -> string!
 Xamarin.Android.Tools.AdbDeviceInfo.Description.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Device.get -> string?
 Xamarin.Android.Tools.AdbDeviceInfo.Device.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.IsEmulator.get -> bool
+Xamarin.Android.Tools.AdbDeviceInfo.Manufacturer.get -> string?
+Xamarin.Android.Tools.AdbDeviceInfo.Manufacturer.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Model.get -> string?
 Xamarin.Android.Tools.AdbDeviceInfo.Model.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Product.get -> string?
 Xamarin.Android.Tools.AdbDeviceInfo.Product.set -> void
+Xamarin.Android.Tools.AdbDeviceInfo.ReleaseVersion.get -> string?
+Xamarin.Android.Tools.AdbDeviceInfo.ReleaseVersion.set -> void
+Xamarin.Android.Tools.AdbDeviceInfo.SdkVersion.get -> string?
+Xamarin.Android.Tools.AdbDeviceInfo.SdkVersion.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Serial.get -> string!
 Xamarin.Android.Tools.AdbDeviceInfo.Serial.set -> void
 Xamarin.Android.Tools.AdbDeviceInfo.Status.get -> Xamarin.Android.Tools.AdbDeviceStatus
@@ -32,6 +40,7 @@ Xamarin.Android.Tools.AdbDeviceType.Device = 0 -> Xamarin.Android.Tools.AdbDevic
 Xamarin.Android.Tools.AdbDeviceType.Emulator = 1 -> Xamarin.Android.Tools.AdbDeviceType
 Xamarin.Android.Tools.AdbRunner
 Xamarin.Android.Tools.AdbRunner.AdbRunner(string! adbPath, System.Collections.Generic.IDictionary<string!, string!>? environmentVariables = null, System.Action<System.Diagnostics.TraceLevel, string!>? logger = null) -> void
+virtual Xamarin.Android.Tools.AdbRunner.EnrichDeviceAsync(Xamarin.Android.Tools.AdbDeviceInfo! device, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 virtual Xamarin.Android.Tools.AdbRunner.ListDevicesAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Xamarin.Android.Tools.AdbDeviceInfo!>!>!
 Xamarin.Android.Tools.AdbRunner.StopEmulatorAsync(string! serial, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
 Xamarin.Android.Tools.AdbRunner.WaitForDeviceAsync(string? serial = null, System.TimeSpan? timeout = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
