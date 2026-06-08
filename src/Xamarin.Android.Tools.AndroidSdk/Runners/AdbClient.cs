@@ -23,9 +23,6 @@ namespace Xamarin.Android.Tools;
 /// </remarks>
 internal sealed class AdbClient : IDisposable
 {
-	// Reusable 4-byte buffer for status/length reads (safe: single-caller, non-concurrent)
-	readonly byte[] headerBuffer = new byte [4];
-
 	TcpClient? client;
 	NetworkStream? stream;
 	bool disposed;
@@ -90,15 +87,16 @@ internal sealed class AdbClient : IDisposable
 	public async Task<AdbResponseStatus> ReadStatusAsync (CancellationToken cancellationToken = default)
 	{
 		var s = GetStream ();
-		await ReadExactBytesIntoBufferAsync (s, headerBuffer, 4, cancellationToken).ConfigureAwait (false);
-		if (headerBuffer [0] == (byte) 'O' && headerBuffer [1] == (byte) 'K' &&
-			headerBuffer [2] == (byte) 'A' && headerBuffer [3] == (byte) 'Y')
+		var statusBuffer = new byte [4];
+		await ReadExactBytesIntoBufferAsync (s, statusBuffer, 4, cancellationToken).ConfigureAwait (false);
+		if (statusBuffer [0] == (byte) 'O' && statusBuffer [1] == (byte) 'K' &&
+			statusBuffer [2] == (byte) 'A' && statusBuffer [3] == (byte) 'Y')
 			return AdbResponseStatus.Okay;
-		if (headerBuffer [0] == (byte) 'F' && headerBuffer [1] == (byte) 'A' &&
-			headerBuffer [2] == (byte) 'I' && headerBuffer [3] == (byte) 'L')
+		if (statusBuffer [0] == (byte) 'F' && statusBuffer [1] == (byte) 'A' &&
+			statusBuffer [2] == (byte) 'I' && statusBuffer [3] == (byte) 'L')
 			return AdbResponseStatus.Fail;
 
-		var status = Encoding.ASCII.GetString (headerBuffer, 0, 4);
+		var status = Encoding.ASCII.GetString (statusBuffer, 0, 4);
 		throw new InvalidOperationException ($"Unexpected ADB status: '{status}'");
 	}
 
@@ -141,7 +139,7 @@ internal sealed class AdbClient : IDisposable
 	/// </summary>
 	public async Task<byte[]?> ReadLengthPrefixedBytesAsync (CancellationToken cancellationToken = default)
 	{
-		return await ReadLengthPrefixedBytesFromStreamAsync (GetStream (), headerBuffer, cancellationToken).ConfigureAwait (false);
+		return await ReadLengthPrefixedBytesFromStreamAsync (GetStream (), new byte [4], cancellationToken).ConfigureAwait (false);
 	}
 
 	/// <summary>
@@ -185,8 +183,6 @@ internal sealed class AdbClient : IDisposable
 			throw new ObjectDisposedException (nameof (AdbClient));
 	}
 
-	// --- Shared core implementations (used by static method for tests) ---
-
 	/// <summary>
 	/// Reads a length-prefixed ASCII string from a raw stream.
 	/// Used by tests that cannot construct an AdbClient instance.
@@ -221,8 +217,6 @@ internal sealed class AdbClient : IDisposable
 		await ReadExactBytesIntoBufferAsync (stream, result, length, cancellationToken).ConfigureAwait (false);
 		return result;
 	}
-
-	// --- Low-level I/O helpers ---
 
 	/// <summary>
 	/// Reads exactly <paramref name="count"/> bytes into the provided buffer.
@@ -264,20 +258,18 @@ internal sealed class AdbClient : IDisposable
 		return true;
 	}
 
-	// --- Hex encoding/decoding helpers (avoid string allocations) ---
-
-	static readonly byte[] HexChars = Encoding.ASCII.GetBytes ("0123456789abcdef");
-
 	/// <summary>
 	/// Writes a 4-digit lowercase hex representation of <paramref name="value"/> into the first 4 bytes of <paramref name="buffer"/>.
 	/// </summary>
 	static void WriteHexLength (byte[] buffer, int value)
 	{
-		buffer [0] = HexChars [(value >> 12) & 0xF];
-		buffer [1] = HexChars [(value >> 8) & 0xF];
-		buffer [2] = HexChars [(value >> 4) & 0xF];
-		buffer [3] = HexChars [value & 0xF];
+		buffer [0] = ToAsciiHexNibble ((value >> 12) & 0xF);
+		buffer [1] = ToAsciiHexNibble ((value >> 8) & 0xF);
+		buffer [2] = ToAsciiHexNibble ((value >> 4) & 0xF);
+		buffer [3] = ToAsciiHexNibble (value & 0xF);
 	}
+
+	static byte ToAsciiHexNibble (int value) => (byte) (value < 10 ? '0' + value : 'a' + value - 10);
 
 	/// <summary>
 	/// Parses a 4-byte ASCII hex length prefix without allocating a string.
