@@ -37,24 +37,71 @@ public class EmulatorRunner
 	}
 
 	/// <summary>
-	/// Launches an emulator process for the specified AVD and returns immediately.
-	/// The returned <see cref="Process"/> represents the running emulator — the caller
-	/// is responsible for managing its lifetime (e.g., killing it on shutdown).
+	/// Launches an emulator process for the specified AVD and returns immediately with enriched
+	/// launch information (process, PID, ports, serial, log path).
+	/// The caller is responsible for managing the process lifetime (e.g., killing it on shutdown).
 	/// This method does <b>not</b> wait for the emulator to finish booting.
 	/// To launch <i>and</i> wait until the device is fully booted, use <see cref="BootEmulatorAsync"/> instead.
 	/// </summary>
 	/// <param name="avdName">Name of the AVD to launch (as shown by <c>emulator -list-avds</c>).</param>
 	/// <param name="coldBoot">When <c>true</c>, forces a cold boot by passing <c>-no-snapshot-load</c>.</param>
+	/// <param name="consolePort">
+	/// Optional console port to pre-assign via <c>-ports</c> (typically an even number, e.g. 5554).
+	/// When specified the serial is known immediately; otherwise it is resolved by parsing stdout/stderr.
+	/// </param>
+	/// <param name="adbPort">
+	/// Optional ADB port to pair with <paramref name="consolePort"/>. Defaults to
+	/// <c>consolePort + 1</c> when <paramref name="consolePort"/> is provided.
+	/// </param>
+	/// <param name="logFile">
+	/// Optional path for the emulator log file, passed via <c>-logfile</c>. When <c>null</c> the
+	/// default AOSP path is resolved from <c>ANDROID_AVD_HOME</c> / <c>ANDROID_USER_HOME</c>.
+	/// </param>
 	/// <param name="additionalArgs">Optional extra arguments to pass to the emulator command line.</param>
-	/// <returns>The <see cref="Process"/> running the emulator. Stdout/stderr are redirected and forwarded to the logger.</returns>
-	public Process LaunchEmulator (string avdName, bool coldBoot = false, List<string>? additionalArgs = null)
+	/// <returns>
+	/// An <see cref="EmulatorLaunchResult"/> with the running process and launch details.
+	/// Await <see cref="EmulatorLaunchResult.PortsResolvedAsync"/> before reading
+	/// <see cref="EmulatorLaunchResult.ConsolePort"/> / <see cref="EmulatorLaunchResult.Serial"/>
+	/// when ports were not pre-assigned.
+	/// </returns>
+	public EmulatorLaunchResult LaunchEmulator (
+		string avdName,
+		bool coldBoot = false,
+		int? consolePort = null,
+		int? adbPort = null,
+		string? logFile = null,
+		List<string>? additionalArgs = null)
 	{
 		if (string.IsNullOrWhiteSpace (avdName))
 			throw new ArgumentException ("AVD name must not be empty.", nameof (avdName));
+		if (adbPort.HasValue && !consolePort.HasValue)
+			throw new ArgumentException ("adbPort requires consolePort to be specified.", nameof (adbPort));
 
 		var args = new List<string> { "-avd", avdName };
 		if (coldBoot)
 			args.Add ("-no-snapshot-load");
+
+		// Pre-assign ports when requested; the serial is then known before the process starts.
+		int? resolvedConsolePort = consolePort;
+		int? resolvedAdbPort = adbPort;
+		bool portsPreAssigned = consolePort.HasValue;
+
+		if (consolePort.HasValue) {
+			resolvedAdbPort ??= consolePort.Value + 1;
+			args.Add ("-ports");
+			args.Add ($"{consolePort.Value},{resolvedAdbPort.Value}");
+		}
+
+		// Resolve log path: use explicit override or compute from env vars.
+		string resolvedLogPath;
+		if (!string.IsNullOrWhiteSpace (logFile)) {
+			resolvedLogPath = logFile!;
+			args.Add ("-logfile");
+			args.Add (logFile!);
+		} else {
+			resolvedLogPath = ResolveAvdLogPath (avdName);
+		}
+
 		if (additionalArgs != null)
 			args.AddRange (additionalArgs);
 
@@ -91,27 +138,117 @@ public class EmulatorRunner
 
 		var process = new Process { StartInfo = psi };
 
-		// Forward emulator output to the logger so crash messages (e.g. "HAX is
-		// not working", "image not found") are captured instead of silently lost.
-		process.OutputDataReceived += (_, e) => {
-			if (e.Data != null)
-				logger.Invoke (TraceLevel.Verbose, $"[emulator] {e.Data}");
-		};
-		process.ErrorDataReceived += (_, e) => {
-			if (e.Data != null)
-				logger.Invoke (TraceLevel.Warning, $"[emulator] {e.Data}");
-		};
+		// When ports are not pre-assigned, parse stdout/stderr for the well-known boot lines
+		// that report the assigned ports. A TaskCompletionSource signals callers once both
+		// ports have been observed.
+		TaskCompletionSource<bool>? tcs = portsPreAssigned
+			? null
+			: new TaskCompletionSource<bool> (TaskCreationOptions.RunContinuationsAsynchronously);
 
-		if (!process.Start ()) {
-			process.Dispose ();
-			throw new InvalidOperationException ($"Failed to start emulator process '{emulatorPath}'.");
+		var result = new EmulatorLaunchResult (process, resolvedLogPath) {
+			ConsolePort = resolvedConsolePort,
+			AdbPort = resolvedAdbPort,
+		};
+		result.PortsResolvedAsync = tcs is { } activeTcs ? (Task)activeTcs.Task : Task.CompletedTask;
+
+		ProcessUtils.StartFireAndForget (
+			process,
+			onOutputLine: line => {
+				logger.Invoke (TraceLevel.Verbose, $"[emulator] {line}");
+				if (tcs != null)
+					TryResolvePortsFromLine (line, result, tcs);
+			},
+			onErrorLine: line => {
+				logger.Invoke (TraceLevel.Verbose, $"[emulator stderr] {line}");
+				if (tcs != null)
+					TryResolvePortsFromLine (line, result, tcs);
+			},
+			onStreamsClosed: tcs != null ? exitCode => {
+				tcs.TrySetException (new InvalidOperationException (
+					$"Emulator process exited (code {exitCode}) before port assignment lines were emitted."));
+			} : null);
+
+		return result;
+	}
+
+	/// <summary>
+	/// Launches an emulator and waits until its console and ADB ports are resolved.
+	/// When <paramref name="consolePort"/> is provided the ports are known immediately;
+	/// otherwise stdout/stderr is parsed for the emulator's port-announcement lines.
+	/// </summary>
+	public async Task<EmulatorLaunchResult> LaunchEmulatorAsync (
+		string avdName,
+		bool coldBoot = false,
+		int? consolePort = null,
+		int? adbPort = null,
+		string? logFile = null,
+		List<string>? additionalArgs = null,
+		CancellationToken cancellationToken = default)
+	{
+		var result = LaunchEmulator (avdName, coldBoot, consolePort, adbPort, logFile, additionalArgs);
+
+		using var registration = cancellationToken.Register (() => {
+			try { result.Process.Kill (); } catch { }
+		});
+
+		await result.PortsResolvedAsync.ConfigureAwait (false);
+		return result;
+	}
+
+	/// <summary>
+	/// Parses a single emulator output line and, when the relevant port-assignment patterns are
+	/// found, updates <paramref name="result"/> and completes <paramref name="tcs"/>.
+	/// </summary>
+	/// <remarks>
+	/// The emulator emits (on stdout or stderr):
+	///   <c>emulator: Listening on port NNNN</c>  (console port)
+	///   <c>emulator: ADB Server has started successfully on port NNNN</c>  (adb port)
+	/// These lines have been stable across emulator releases for years.
+	/// </remarks>
+	internal static void TryResolvePortsFromLine (string line, EmulatorLaunchResult result, TaskCompletionSource<bool> tcs)
+	{
+		const string listeningPrefix = "emulator: Listening on port ";
+		const string adbPrefix = "emulator: ADB Server has started successfully on port ";
+
+		if (line.StartsWith (listeningPrefix, StringComparison.Ordinal)) {
+			if (int.TryParse (line.Substring (listeningPrefix.Length).Trim (), out var port))
+				result.ConsolePort = port;
+		} else if (line.StartsWith (adbPrefix, StringComparison.Ordinal)) {
+			if (int.TryParse (line.Substring (adbPrefix.Length).Trim (), out var port))
+				result.AdbPort = port;
 		}
 
-		// Drain redirected streams asynchronously to prevent pipe buffer deadlocks
-		process.BeginOutputReadLine ();
-		process.BeginErrorReadLine ();
+		if (result.ConsolePort.HasValue && result.AdbPort.HasValue)
+			tcs.TrySetResult (true);
+	}
 
-		return process;
+	/// <summary>
+	/// Resolves the default emulator log path for the given AVD name, respecting the
+	/// <c>ANDROID_AVD_HOME</c> and <c>ANDROID_USER_HOME</c> environment variables
+	/// (including any overrides set on this <see cref="EmulatorRunner"/> instance).
+	/// Falls back to the AOSP convention: <c>~/.android/avd/&lt;name&gt;.avd/emulator.log</c>.
+	/// </summary>
+	internal string ResolveAvdLogPath (string avdName)
+	{
+		var avdDirName = avdName + ".avd";
+
+		var avdHome = GetEffectiveEnvVar (EnvironmentVariableNames.AndroidAvdHome);
+		if (!string.IsNullOrEmpty (avdHome))
+			return Path.Combine (avdHome, avdDirName, "emulator.log");
+
+		var userHome = GetEffectiveEnvVar (EnvironmentVariableNames.AndroidUserHome);
+		if (!string.IsNullOrEmpty (userHome))
+			return Path.Combine (userHome, "avd", avdDirName, "emulator.log");
+
+		var home = Environment.GetFolderPath (Environment.SpecialFolder.UserProfile);
+		return Path.Combine (home, ".android", "avd", avdDirName, "emulator.log");
+	}
+
+	string? GetEffectiveEnvVar (string name)
+	{
+		if (environmentVariables != null && environmentVariables.TryGetValue (name, out var val))
+			return val;
+		return Environment.GetEnvironmentVariable (name);
 	}
 
 	public async Task<IReadOnlyList<string>> ListAvdNamesAsync (CancellationToken cancellationToken = default)
@@ -210,9 +347,9 @@ public class EmulatorRunner
 
 		// Phase 3: Launch the emulator
 		logger.Invoke (TraceLevel.Info, $"Launching AVD '{deviceOrAvdName}'...");
-		Process emulatorProcess;
+		EmulatorLaunchResult launchResult;
 		try {
-			emulatorProcess = LaunchEmulator (deviceOrAvdName, options.ColdBoot, options.AdditionalArgs);
+			launchResult = LaunchEmulator (deviceOrAvdName, options.ColdBoot, additionalArgs: options.AdditionalArgs);
 		} catch (Exception ex) {
 			return new EmulatorBootResult {
 				Success = false,
@@ -231,7 +368,7 @@ public class EmulatorRunner
 		// as immediate failures; exit code 0 means we continue polling.
 		//
 		// Dispose the Process handle when done — the emulator process keeps running.
-		using (emulatorProcess) {
+		using (launchResult.Process) {
 			try {
 				string? newSerial = null;
 				bool processExitedWithZero = false;
@@ -242,12 +379,12 @@ public class EmulatorRunner
 					// Guard against InvalidOperationException in case no OS process
 					// is associated with the object (e.g. broken emulator binary).
 					try {
-						if (emulatorProcess.HasExited && !processExitedWithZero) {
-							if (emulatorProcess.ExitCode != 0) {
+						if (launchResult.Process.HasExited && !processExitedWithZero) {
+							if (launchResult.Process.ExitCode != 0) {
 								return new EmulatorBootResult {
 									Success = false,
 									ErrorKind = EmulatorBootErrorKind.LaunchFailed,
-									ErrorMessage = $"Emulator process for '{deviceOrAvdName}' exited with code {emulatorProcess.ExitCode} before becoming available.",
+									ErrorMessage = $"Emulator process for '{deviceOrAvdName}' exited with code {launchResult.Process.ExitCode} before becoming available.",
 								};
 							}
 							// Exit code 0: emulator likely forked (common on macOS).
@@ -272,14 +409,14 @@ public class EmulatorRunner
 				logger.Invoke (TraceLevel.Info, $"Emulator appeared as '{newSerial}', waiting for full boot...");
 				return await WaitForFullBootAsync (adbRunner, newSerial, options, timeoutCts.Token).ConfigureAwait (false);
 			} catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
-				TryKillProcess (emulatorProcess);
+				TryKillProcess (launchResult.Process);
 				return new EmulatorBootResult {
 					Success = false,
 					ErrorKind = EmulatorBootErrorKind.Timeout,
 					ErrorMessage = $"Timed out waiting for emulator '{deviceOrAvdName}' to boot within {options.BootTimeout.TotalSeconds}s.",
 				};
 			} catch {
-				TryKillProcess (emulatorProcess);
+				TryKillProcess (launchResult.Process);
 				throw;
 			}
 		}
@@ -337,4 +474,3 @@ public class EmulatorRunner
 	/// Wraps in single quotes and escapes embedded single quotes.
 	static string ShellQuote (string arg) => "'" + arg.Replace ("'", "'\\''") + "'";
 }
-

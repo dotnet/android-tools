@@ -341,6 +341,80 @@ namespace Xamarin.Android.Tools
 			yield return executable;
 		}
 
+		/// <summary>
+		/// Starts a process without waiting for it to exit (fire-and-forget). Attaches async
+		/// line-by-line stdout/stderr callbacks, starts the process, and begins async reads.
+		/// The caller is responsible for the process lifetime.
+		/// </summary>
+		/// <param name="process">A <see cref="Process"/> whose <see cref="ProcessStartInfo"/> is already configured.</param>
+		/// <param name="onOutputLine">Optional callback invoked for each line written to stdout.</param>
+		/// <param name="onErrorLine">Optional callback invoked for each line written to stderr.</param>
+		/// <param name="onExited">Optional callback invoked with the exit code when the process exits.</param>
+		/// <exception cref="InvalidOperationException">Thrown when the process fails to start.</exception>
+		internal static void StartFireAndForget (
+			Process process,
+			Action<string>? onOutputLine,
+			Action<string>? onErrorLine,
+			Action<int>? onExited = null,
+			Action<int>? onStreamsClosed = null)
+		{
+			int streamsClosed = 0;
+			int totalStreams = 0;
+			if (process.StartInfo.RedirectStandardOutput)
+				totalStreams++;
+			if (process.StartInfo.RedirectStandardError)
+				totalStreams++;
+
+			void CheckStreamsClosed ()
+			{
+				if (onStreamsClosed != null && Interlocked.Increment (ref streamsClosed) == totalStreams) {
+					int exitCode;
+					try { exitCode = process.ExitCode; }
+					catch (InvalidOperationException) { exitCode = -1; }
+					catch (SystemException) { exitCode = -1; }
+					onStreamsClosed (exitCode);
+				}
+			}
+
+			if (process.StartInfo.RedirectStandardOutput) {
+				process.OutputDataReceived += (_, e) => {
+					if (e.Data != null)
+						onOutputLine?.Invoke (e.Data);
+					else
+						CheckStreamsClosed ();
+				};
+			}
+			if (process.StartInfo.RedirectStandardError) {
+				process.ErrorDataReceived += (_, e) => {
+					if (e.Data != null)
+						onErrorLine?.Invoke (e.Data);
+					else
+						CheckStreamsClosed ();
+				};
+			}
+
+			if (onExited != null) {
+				process.EnableRaisingEvents = true;
+				process.Exited += (_, _) => {
+					int exitCode;
+					try { exitCode = process.ExitCode; }
+					catch (InvalidOperationException) { exitCode = -1; }
+					catch (SystemException) { exitCode = -1; }
+					onExited (exitCode);
+				};
+			}
+
+			if (!process.Start ()) {
+				process.Dispose ();
+				throw new InvalidOperationException ($"Failed to start process '{process.StartInfo.FileName}'.");
+			}
+
+			if (process.StartInfo.RedirectStandardOutput)
+				process.BeginOutputReadLine ();
+			if (process.StartInfo.RedirectStandardError)
+				process.BeginErrorReadLine ();
+		}
+
 		/// <summary>Checks if running as Administrator (Windows) or root (macOS/Linux).</summary>
 		public static bool IsElevated ()
 		{
