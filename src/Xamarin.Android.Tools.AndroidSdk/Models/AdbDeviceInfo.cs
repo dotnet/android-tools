@@ -56,6 +56,26 @@ public class AdbDeviceInfo
 	public string? TransportId { get; set; }
 
 	/// <summary>
+	/// Primary CPU ABI from ro.product.cpu.abilist (e.g., "arm64-v8a", "x86_64").
+	/// </summary>
+	public string? CpuAbi { get; set; }
+
+	/// <summary>
+	/// Device manufacturer from ro.product.manufacturer (e.g., "Google", "Samsung").
+	/// </summary>
+	public string? Manufacturer { get; set; }
+
+	/// <summary>
+	/// Android release version from ro.build.version.release (e.g., "16", "14").
+	/// </summary>
+	public string? ReleaseVersion { get; set; }
+
+	/// <summary>
+	/// Android SDK level from ro.build.version.sdk (e.g., "36", "34").
+	/// </summary>
+	public string? SdkVersion { get; set; }
+
+	/// <summary>
 	/// Whether this device is an emulator.
 	/// </summary>
 	public bool IsEmulator => Type == AdbDeviceType.Emulator;
