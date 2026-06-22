@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Xamarin.Tools.Zip;
@@ -24,9 +23,6 @@ namespace Microsoft.Android.Build.Tasks
 		const int DEFAULT_FILE_WRITE_RETRY_ATTEMPTS = 10;
 
 		const int DEFAULT_FILE_WRITE_RETRY_DELAY_MS = 1000;
-
-		// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
-		const int CRC64_SIZE_IN_BYTES = 8;
 
 		static int fileWriteRetry = -1;
 		static int fileWriteRetryDelay = -1;
@@ -536,26 +532,14 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static string HashBytes (byte [] bytes)
 		{
-			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
-			var hasher = new System.IO.Hashing.Crc64 ();
-			hasher.Append (bytes);
-			byte [] hash = hasher.GetCurrentHash ();
-			XorLength (hash, (ulong) bytes.Length);
-			return ToHexString (hash);
+			return ToHexString (Crc64Helper.Compute (bytes));
 		}
 
 		public static string HashFile (string filename)
 		{
-			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
-			var hasher = new System.IO.Hashing.Crc64 ();
-			long length;
 			using (var file = File.OpenRead (filename)) {
-				hasher.Append (file);
-				length = file.Length;
+				return HashStream (file);
 			}
-			byte [] hash = hasher.GetCurrentHash ();
-			XorLength (hash, (ulong) length);
-			return ToHexString (hash);
 		}
 
 		public static string HashFile (string filename, HashAlgorithm hashAlg)
@@ -569,19 +553,8 @@ namespace Microsoft.Android.Build.Tasks
 		public static string HashStream (Stream stream)
 		{
 			stream.Position = 0;
-			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
-			var hasher = new System.IO.Hashing.Crc64 ();
-			hasher.Append (stream);
-			byte [] hash = hasher.GetCurrentHash ();
-			XorLength (hash, (ulong) stream.Length);
-			return ToHexString (hash);
-		}
-
-		/// XOR the data length into the hash to avoid collisions on zero-filled inputs.
-		static void XorLength (Span<byte> hash, ulong length)
-		{
-			ref var crc = ref Unsafe.As<byte, ulong> (ref hash [0]);
-			crc ^= length;
+			using var hasher = new Crc64 ();
+			return ToHexString (hasher.ComputeHash (stream));
 		}
 
 		public static string ToHexString (byte[] hash)
