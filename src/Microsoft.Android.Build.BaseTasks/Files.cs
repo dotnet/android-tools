@@ -536,9 +536,10 @@ namespace Microsoft.Android.Build.Tasks
 
 		public static string HashBytes (byte [] bytes)
 		{
-			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
 			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
-			System.IO.Hashing.Crc64.Hash (bytes, hash);
+			var hasher = new System.IO.Hashing.Crc64 ();
+			hasher.Append (bytes);
+			byte [] hash = hasher.GetCurrentHash ();
 			XorLength (hash, (ulong) bytes.Length);
 			return ToHexString (hash);
 		}
@@ -552,8 +553,7 @@ namespace Microsoft.Android.Build.Tasks
 				hasher.Append (file);
 				length = file.Length;
 			}
-			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
-			hasher.GetCurrentHash (hash);
+			byte [] hash = hasher.GetCurrentHash ();
 			XorLength (hash, (ulong) length);
 			return ToHexString (hash);
 		}
@@ -572,8 +572,7 @@ namespace Microsoft.Android.Build.Tasks
 			// NOTE: System.IO.Hashing.Crc64 produces different output than the Crc64 class in this repo
 			var hasher = new System.IO.Hashing.Crc64 ();
 			hasher.Append (stream);
-			Span<byte> hash = stackalloc byte[CRC64_SIZE_IN_BYTES];
-			hasher.GetCurrentHash (hash);
+			byte [] hash = hasher.GetCurrentHash ();
 			XorLength (hash, (ulong) stream.Length);
 			return ToHexString (hash);
 		}
