@@ -86,7 +86,7 @@ namespace Xamarin.Android.Tools
 				Directory.CreateDirectory (parentDir);
 
 			try {
-				Directory.Move (sourcePath, targetPath);
+				MoveDirectoryWithRetry (sourcePath, targetPath, logger);
 			}
 			catch (Exception ex) {
 				logger (TraceLevel.Error, $"Failed to move to '{targetPath}': {ex.Message}");
@@ -107,6 +107,55 @@ namespace Xamarin.Android.Tools
 			// Delete backup only after move and caller validation succeed
 			if (backupPath is not null)
 				TryDeleteDirectory (backupPath, "old backup", logger);
+		}
+
+		/// <summary>
+		/// Calls <see cref="Directory.Move"/> with retry and exponential backoff for transient
+		/// failures on Windows. Anti-virus minifilter drivers (e.g. Windows Defender Real-Time
+		/// Protection) may asynchronously scan files just extracted from a zip archive, holding
+		/// read handles that cause <see cref="Directory.Move"/> to fail with
+		/// <see cref="UnauthorizedAccessException"/> or an <see cref="IOException"/> indicating
+		/// the file is in use. Retrying after a short delay typically succeeds once the scan
+		/// completes.
+		/// </summary>
+		static void MoveDirectoryWithRetry (string sourcePath, string targetPath, Action<TraceLevel, string> logger)
+		{
+			const int maxRetries = 3;
+			int delayMs = 500;
+			for (int attempt = 0; ; attempt++) {
+				try {
+					Directory.Move (sourcePath, targetPath);
+					return;
+				}
+				catch (Exception ex) when (attempt < maxRetries && IsRetryableMoveError (ex)) {
+					logger (TraceLevel.Warning,
+						$"Directory.Move failed (attempt {attempt + 1}/{maxRetries + 1}), retrying in {delayMs}ms: {ex.Message}");
+					Thread.Sleep (delayMs);
+					delayMs *= 2;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Returns <c>true</c> for exceptions that indicate a transient sharing-violation-style
+		/// failure that may succeed if retried (e.g. an anti-virus scanner still holding a handle).
+		/// </summary>
+		static bool IsRetryableMoveError (Exception ex)
+		{
+			if (ex is UnauthorizedAccessException)
+				return true;
+			if (ex is IOException io) {
+				// Windows: ERROR_SHARING_VIOLATION (0x80070020) and ERROR_LOCK_VIOLATION (0x80070021)
+				// surface as IOException with these HResult values. Prefer HResult over message
+				// matching, which is fragile across locales and runtime versions.
+				int hr = io.HResult & 0xFFFF;
+				if (hr == 0x20 /* ERROR_SHARING_VIOLATION */ || hr == 0x21 /* ERROR_LOCK_VIOLATION */)
+					return true;
+				// Fallback for runtimes/platforms where HResult is not set: check the message.
+				if (io.Message.IndexOf ("being used by another process", StringComparison.OrdinalIgnoreCase) >= 0)
+					return true;
+			}
+			return false;
 		}
 
 		/// <summary>
