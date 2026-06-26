@@ -1,0 +1,16 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!--
+      Enable the .NET code-analysis (CA) analyzers shipped with the SDK on
+      all target frameworks (including netstandard2.0). The SDK only turns
+      them on by default for .NET 5+ targets, but these libraries multi-target
+      netstandard2.0 where ConfigureAwait(false) discipline matters most.
+      The set of enabled rules is controlled by .editorconfig at the repo root.
+    -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+</Project>
